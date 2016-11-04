@@ -62,7 +62,7 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
     for (j = 0; j < arry; j++) {
       /* copy column data */
       for (i = 0; i < arrx; i++) {
-        pix_obs[i] = sig_cte[i*arry + j];
+        pix_obs[i] = sig_cte[i*arry + j];//This is non contiguous access even though 'i' & 'j' are inverted as if this was accounted for.
         pix_cur[i] = pix_obs[i];
         pix_read[i] = 0.0;
 

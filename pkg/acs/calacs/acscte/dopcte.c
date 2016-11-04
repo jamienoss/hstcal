@@ -72,7 +72,7 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */
     int numamps;               /* number of amps on chip */
     int amp;                   /* index amp A:0, B:1, etc. */
-    char * amploc;             /* pointer to amp character in AMPSORDER */
+    char * amploc = NULL;      /* pointer to amp character in AMPSORDER */
     int amp_arr1, amp_arr2;    /* int for C array dimension sizes */
     int amp_xsize, amp_ysize;  /* int for amp array size (x/y in CCD coords) */
     int amp_xbeg, amp_xend;    /* int for beg and end of amp arrays on chip */
@@ -81,15 +81,15 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
     /* make arrays to hold data amp by amp.
        these can be large arrays so it's best to declare them as pointers and
        get the space for the ararys using malloc */
-    double * amp_sci_arr; /* original sci data */
-    double * amp_err_arr; /* original err data */
-    double * amp_sig_arr; /* decomposed signal */
-    double * amp_nse_arr; /* decomposed readout error */
-    double * amp_cor_arr; /* cte corrected data */
+    double * amp_sci_arr = NULL; /* original sci data */
+    double * amp_err_arr = NULL; /* original err data */
+    double * amp_sig_arr = NULL; /* decomposed signal */
+    double * amp_nse_arr = NULL; /* decomposed readout error */
+    double * amp_cor_arr = NULL; /* cte corrected data */
 
     /* in this algorithm each pixel has it's own CTE scaling,
        so we need an array for that. */
-    double * cte_frac_arr;
+    double * cte_frac_arr = NULL;
 
     /* functions from calacs/lib */
     void parseWFCamps (char *acsamps, int chip, char *ccdamp);
@@ -174,12 +174,12 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         amp_arr2 = amp_xsize;
 
         /* allocate space to hold this amp's data in its various forms */
-        amp_sci_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_err_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_sig_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_nse_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_cor_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        cte_frac_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
+        assert(amp_sci_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
+        assert(amp_err_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
+        assert(amp_sig_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
+        assert(amp_nse_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
+        assert(amp_cor_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
+        assert(cte_frac_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
 
         /* read data from the SingleGroup into an array containing data from
            just one amp */
@@ -212,10 +212,37 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         }
 
         /* perform CTE correction */
+        /* OLD ACS CTE correction
         if (FixYCte(amp_arr1, amp_arr2, amp_sig_arr, amp_cor_arr, pars.sim_nit,
                     pars.shft_nit, pars.sub_thresh, cte_frac_arr, pars.levels,
-                    dpde_l, chg_leak_lt, chg_open_lt, acs->onecpu)) {
-            return (status);
+                    dpde_l, chg_leak_lt, chg_open_lt, acs->onecpu))
+        */
+        double * pixDontKnowWhatThisIsYet = NULL;
+
+        //correctedColumn isn't needed - can be done in place (when all mem transposed to column major)
+        double * correctedColumn = NULL;
+        assert(correctedColumn = (double*)malloc(sizeof(*amp_sig_arr)*amp_arr1));
+
+        //Correct image one column at a time
+        for (int j = 0; j < amp_arr2; ++j)
+        {
+            //memcpy(correctedColumn, amp_sig_arr[ /*beginning of column*/ ], sizeof(*amp_sig_arr)*amp_arr1);
+            for (int j = 0; j < amp_arr1; ++j)
+            {
+                //Grrrr for having to do this (will go back and transpose)
+                correctedColumn[j] = amp_sig_arr[]
+            }
+
+            /* perform CTE correction */
+            for (int i = 0; i < pars->n_par; ++i)
+            {
+                if (sim_colreadout_l(correctedColumn, pixDontKnowWhatThisIsYet, pars))//JN too many attributes hard wired into this, either write ACS ver or make generic (latter!)
+                //if (sim_colreadout_l(amp_sig_arr[  ], pixDontKnowWhatThisIsYet, pars, amp_arr1))
+                    return (status);
+            }
+
+            //copy corrected column back into original array
+            //memcpy(amp_sig_arr[ /*beginning of column*/ ], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
         }
 
         /* add readout noise back and convert corrected data back to DN.

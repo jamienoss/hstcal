@@ -1261,27 +1261,34 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
             REDO=0; /*FALSE*/
             do { /*replacing goto 9999*/
                 /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-                for (j=0; j<RAZ_ROWS; j++){
+                for (int j = 0; j < RAZ_ROWS; ++j){
                     pix_modl[j] =  Pix(rz.sci.data,i,j);
                     pix_ctef[j] =  Pix(pixz_fff.sci.data,i,j);
                 }
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                for (NITINV=1; NITINV<=cte->n_forward; NITINV++){
-                    for (j=0; j<RAZ_ROWS; j++){
+                for (int NITINV = 1; NITINV <= cte->n_forward; ++NITINV)
+                {
+                    memcpy(pix_read, pix_modl, sizeof(pix_modl)*RAZ_ROWS);
+                    /*comment out - now do in place with single array as the 1st thing sim_colreadout does (did) is
+                     * copy the data and then the loop that calls this func only swaps them back again at the end.
+                     */
+                    /*for (j=0; j<RAZ_ROWS; j++)
+                    {
                         pix_curr[j]=pix_modl[j];
                         pix_read[j]=pix_modl[j];
-                        pix_ctef[j]=Pix(pixz_fff.sci.data,i,j);
+                        pix_ctef[j]=Pix(pixz_fff.sci.data,i,j); //JN this is already assigned on line ~1266 (just above)
                     }
+                    */
 
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                     for (NITCTE=1; NITCTE<=cte->n_par; NITCTE++){
-                        sim_colreadout_l(pix_curr, pix_read, pix_ctef, cte);
+                        sim_colreadout_l(pix_read, pix_ctef, cte, RAZ_ROWS);
 
                         /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
-                        for (j=0; j< RAZ_ROWS; j++){
+                        /*for (j=0; j< RAZ_ROWS; j++){
                             pix_curr[j]=pix_read[j];
-                        }
+                        }*/
                     } /* end NITCTE */
 
                     /*DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
@@ -1360,7 +1367,7 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 
         free(pix_obsd);
         free(pix_modl);
-        free(pix_curr);
+        //free(pix_curr);
         free(pix_init);
         free(pix_read);
         free(pix_ctef);
@@ -1412,19 +1419,17 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
   the ttrap reference to the image array has to be -1 for C
   */
 
-int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
-
+int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, const int nRows)
+{
     extern int status;
     int j;
     int ttrap;
 
-    int w;
     double ftrap;
     double pix_1;
     double padd_2;
     double padd_3;
     double prem_3;
-    double pmax;
     double fcarry;
 
     padd_3=0.0;
@@ -1432,8 +1437,6 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
     padd_2=0.0;
     fcarry=0.0;
     pix_1=0.0;
-    w=0;
-    j=0;
     ftrap=0.0;
     ttrap=0;
 
@@ -1446,24 +1449,26 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
 
     /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
       PMAX SHOULD ALWAYS BE POSITIVE HERE  */
-    pmax=10.;
-    for(j=0; j<RAZ_ROWS; j++){
-        pixo[j] = pixi[j];
-        if (pixo[j] > pmax)
+    double pmax = 10.;
+    for(int j = 0; j < nRows; ++j)
+    {
+        pmax = max(pixo[j], pmax);
+        /*if (pixo[j] > pmax)
             pmax=pixo[j];
+            */
     }
 
     /*GO THROUGH THE TRAPS ONE AT A TIME, FROM HIGHEST TO LOWEST Q,
       AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
-    for (w = cte->cte_traps-1; w>=0; w--){
-        if ( cte->qlevq_data[w] <= pmax ) {
-
+    for (int w = cte->cte_traps-1; w >= 0; --w){
+        if (cte->qlevq_data[w] <= pmax)
+        {
             ftrap = 0.0e0;
             ttrap = cte->cte_len; /*for referencing the image at 0*/
             fcarry = 0.0e0;
 
             /*GO UP THE COLUMN PIXEL BY PIXEL*/
-            for(j=0; j<RAZ_ROWS;j++){
+            for(int j = 0; j < columnLength; ++j){
                 pix_1 = pixo[j];
 
 
