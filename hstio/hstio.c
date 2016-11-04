@@ -93,7 +93,6 @@
 ** Section 6.
 **      Functions to manipulate the header array.
 */
-# include "hstio.h"
 # include <fitsio.h>
 # include <ctype.h>
 # include <stdio.h>
@@ -102,12 +101,123 @@
 # include <sys/stat.h>
 # include <time.h>
 # include <unistd.h>
+# include <assert.h>
+# include <stdlib.h>
 
+# include "hstio.h"
+# include "err.h"
 /*
 ** String defined to allow determination of the HSTIO library version
 ** from the library file (*.a) or the executable using the library.
 */
 const char *hstio_version = HSTIO_VERSION;
+
+void initPtrRegister(PtrRegister * reg)
+{
+    reg->cursor = 0; //points to last ptr NOT next slot
+    reg->length = PTR_REGISTER_LENGTH;
+    reg->ptrs = calloc(reg->length+1, sizeof(*reg->ptrs));
+    assert(reg->ptrs);
+    reg->freeFunctions = calloc(reg->length+1, sizeof(*reg->freeFunctions));
+    if (!reg->freeFunctions)
+    {
+        free(reg->ptrs);
+        assert(0);
+    }
+    reg->ptrs[0] = reg; //this ptr
+    reg->freeFunctions[0] = &free;
+}
+void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
+{
+    if (!reg || !ptr || !freeFunc)
+        return;
+
+    //check ptr isn't already registered? - go on then.
+    for (int i = reg->cursor; i >= 0 ; --i)// i >= 0 prevents adding self again
+    {
+        if (reg->ptrs[i] == ptr)
+            return;
+    }
+
+    if (++reg->cursor >= reg->length)
+    {
+        reg->length += 10;
+        assert(realloc(&reg->ptrs, reg->length*sizeof(*reg->ptrs)));
+        assert(realloc(reg->freeFunctions, reg->length*sizeof(*reg->freeFunctions)));
+    }
+    reg->ptrs[reg->cursor] = ptr;
+    reg->freeFunctions[reg->cursor] = freeFunc;
+}
+void freePtr(PtrRegister * reg, void * ptr)
+{
+    //Can't be used to free itself, use freeReg(), use of i > 0 in below for is reason.
+    if (!reg || !ptr)
+        return;
+
+    unsigned i;
+    for (i = reg->cursor; i > 0 ; --i)
+    {
+        if (reg->ptrs[i] == ptr)
+            break;
+    }
+
+    //call function to free ptr
+    reg->freeFunctions[i](ptr);
+
+    if (i == reg->cursor)
+    {
+        reg->ptrs[i] = NULL;
+        reg->freeFunctions[i] = NULL;
+    }
+    else
+    {
+        //move last one into gap to close - not a stack so who cares
+        reg->ptrs[i] = reg->ptrs[reg->cursor];
+        reg->ptrs[reg->cursor] = NULL;
+        reg->freeFunctions[i] = reg->freeFunctions[reg->cursor];
+        reg->freeFunctions[reg->cursor] = NULL;
+    }
+    --reg->cursor;
+}
+void freeAll(PtrRegister * reg)
+{
+    if (!reg || reg->length == 0 || reg->cursor == 0)
+        return;
+
+    for (unsigned i = 1; i < reg->cursor; ++i)
+    {
+        if (reg->freeFunctions[i] && reg->ptrs[i])
+        {
+            reg->freeFunctions[i](reg->ptrs[i]);
+            reg->ptrs[i] = NULL;
+            reg->freeFunctions[i] = NULL;
+        }
+    }
+    reg->cursor = 0;
+}
+void freeReg(PtrRegister * reg)
+{
+    if (!reg || reg->length == 0)
+        return;
+
+    if (reg->cursor > 0)
+        freeAll(reg);
+
+    reg->cursor = 0;
+    reg->length = 0;
+    // free 'itself'
+    reg->freeFunctions[0](reg->ptrs);
+    reg->ptrs[0] = NULL;
+    reg->freeFunctions[0](reg->freeFunctions);
+    reg->freeFunctions[0] = NULL;
+}
+void freeOnExit(PtrRegister * reg)
+{
+    //Free everything registered
+    freeAll(reg);
+    //Free itself
+    freeReg(reg);
+}
 
 /*
 ** Section 1.
@@ -285,6 +395,7 @@ void initFloatData(FloatTwoDArray *x) {
         x->tot_ny = 0;
         x->nx = 0;
         x->ny = 0;
+        x->storageOrder = ROWMAJOR;
         x->data = NULL;
 # if defined (DEBUG)
         printf("initFloatData: %x %x %d\n",
@@ -292,16 +403,23 @@ void initFloatData(FloatTwoDArray *x) {
 # endif
 }
 
-int allocFloatData(FloatTwoDArray *x, int i, int j) {
+int allocFloatData(FloatTwoDArray *x, int i, int j, Bool zeroInitialize) {
+    //WARNING: target (x) must be initialized by caller
 # if defined (DEBUG)
         printf("allocFloatData-1: %x %x %d\n",
                 (int)x,(int)(x->buffer),x->buffer_size);
 # endif
         if (x->buffer == NULL || x->buffer_size != (i * j)) {
             if (x->buffer != NULL)
+            {
                 free(x->buffer);
+                x->buffer = NULL;
+            }
             x->buffer_size = i * j;
-            x->buffer = (float *)calloc(x->buffer_size, sizeof(float));
+            if (zeroInitialize)
+                x->buffer = calloc(x->buffer_size, sizeof(*x->buffer));
+            else
+                x->buffer = malloc(x->buffer_size * sizeof(*x->buffer));
             if (x->buffer == NULL) {
                 initFloatData(x);
                 error(NOMEM,"Allocating SciData");
@@ -321,6 +439,8 @@ int allocFloatData(FloatTwoDArray *x, int i, int j) {
 }
 
 void freeFloatData(FloatTwoDArray *x) {
+        if (!x)
+            return;
 # if defined (DEBUG)
         printf("freeFloatData: %x %x %d\n",
                 (int)x,(int)(x->buffer),x->buffer_size);
@@ -330,6 +450,86 @@ void freeFloatData(FloatTwoDArray *x) {
         initFloatData(x);
 }
 
+int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum StorageOrder targetStorageOrder)
+{
+    if (!target || !source)
+        return -1;
+
+    //initFloatData(target);
+
+    //should this check be raise higher up the call stack also?
+    if (targetStorageOrder != source->storageOrder)
+    {
+        //assumes target initialized
+        if (!target->buffer)
+        {
+            if (allocFloatData(target, source->nx, source->ny, False))
+                return -1; //allocFloatData() initializes before returning
+        }
+        return swapFloatStorageOrder(target, source, targetStorageOrder);
+        //fall through and copy normally
+    }
+
+    if (allocFloatData(target, source->nx, source->ny, False))
+        return -1; //allocFloatData() initializes before returning
+
+    //allocFloatData() correctly initializes all other members leaving only buffer (data points to buffer)
+    memcpy(target->buffer, source->buffer, source->nx*source->ny*sizeof(*source->buffer));
+    return 0;
+}
+
+int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source, enum StorageOrder targetStorageOrder)
+{
+    //this probably breaks use of Pix on target? Do we need to swap nx & ny?
+    if (!target || !source)
+        return -1;
+
+    target->storageOrder = targetStorageOrder;
+    if (targetStorageOrder == source->storageOrder)
+        return 0;
+
+    const unsigned nRows = target->ny;
+    const unsigned nCols = target->nx;
+
+    for (unsigned j = 0; j < nCols; ++j)
+    {
+        for (unsigned i = 0; i < nRows; ++i)
+        {
+            if (targetStorageOrder == COLUMNMAJOR)
+                target->data[j*nRows + i] = source->data[i*nCols + j];
+            else
+                target->data[i*nCols + j] = source->data[j*nRows + i];
+        }
+    }
+    return 0;
+}
+
+int swapShortStorageOrder(ShortTwoDArray * target, const ShortTwoDArray * source, enum StorageOrder targetStorageOrder)
+{
+    //this probably breaks use of Pix on target? Do we need to swap nx & ny?
+    if (!target || !source)
+        return -1;
+
+    target->storageOrder = targetStorageOrder;
+    if (targetStorageOrder == source->storageOrder)
+        return 0;
+
+    const unsigned nRows = target->ny;
+    const unsigned nCols = target->nx;
+
+    for (unsigned j = 0; j < nCols; ++j)
+    {
+        for (unsigned i = 0; i < nRows; ++i)
+        {
+            if (targetStorageOrder == COLUMNMAJOR)
+                target->data[j*nRows + i] = source->data[i*nCols + j];
+            else
+                target->data[i*nCols + j] = source->data[j*nRows + i];
+        }
+    }
+    return 0;
+}
+
 void initShortData(ShortTwoDArray *x) {
         x->buffer = NULL;
         x->buffer_size = 0;
@@ -337,6 +537,7 @@ void initShortData(ShortTwoDArray *x) {
         x->tot_ny = 0;
         x->nx = 0;
         x->ny = 0;
+        x->storageOrder = ROWMAJOR;
         x->data = NULL;
 # if defined (DEBUG)
         printf("initShortData: %x %x %d\n",
@@ -344,7 +545,7 @@ void initShortData(ShortTwoDArray *x) {
 # endif
 }
 
-int allocShortData(ShortTwoDArray *x, int i, int j) {
+int allocShortData(ShortTwoDArray *x, int i, int j, Bool zeroInitialize) {
 # if defined (DEBUG)
         printf("allocShortData-1: %x %x %d\n",
                 (int)x,(int)(x->buffer),x->buffer_size);
@@ -353,7 +554,10 @@ int allocShortData(ShortTwoDArray *x, int i, int j) {
             if (x->buffer != NULL)
                 free(x->buffer);
             x->buffer_size = i * j;
-            x->buffer = (short *)calloc(x->buffer_size, sizeof(short));
+            if (zeroInitialize)
+                x->buffer = calloc(x->buffer_size, sizeof(*x->buffer));
+            else
+                x->buffer = malloc(x->buffer_size * sizeof(*x->buffer));
             if (x->buffer == NULL) {
                 initShortData(x);
                 error(NOMEM,"Allocating DQData");
@@ -380,6 +584,33 @@ void freeShortData(ShortTwoDArray *x) {
         if (x->buffer != NULL)
             free(x->buffer);
         initShortData(x);
+}
+int copyShortData(ShortTwoDArray * target, const ShortTwoDArray * source, enum StorageOrder targetStorageOrder)
+{
+    if (!target || !source)
+        return -1;
+
+    //initShortData(target);
+
+    //should this check be raise higher up the call stack also?
+    if (targetStorageOrder != source->storageOrder)
+    {
+        //assumes target initialized
+        if (!target->buffer)
+        {
+            if (allocShortData(target, source->nx, source->ny, False))
+                return -1; //allocFloatData() initializes before returning
+        }
+        return swapShortStorageOrder(target, source, targetStorageOrder);
+        //fall through and copy normally
+    }
+
+    if (allocShortData(target, source->nx, source->ny, False))
+        return -1; //allocFloatData() initializes before returning
+
+    //allocFloatData() correctly initializes all other members leaving only buffer (data points to buffer)
+    memcpy(target->buffer, source->buffer, source->nx*source->ny*sizeof(*source->buffer));
+    return 0;
 }
 
 void initFloatLine (FloatHdrLine *x) {
@@ -468,7 +699,7 @@ void initHdr(Hdr *h) {
         h->array = NULL;
 }
 
-int allocHdr(Hdr *h, int n) {
+int allocHdr(Hdr *h, int n, Bool zeroInitialize) {
 # if defined (DEBUG)
         printf("allocHdr-1: %x %d %d %x %d\n",
                 (int)h,h->nlines,h->nalloc,(int)(h->array),n);
@@ -478,7 +709,11 @@ int allocHdr(Hdr *h, int n) {
             if (h->array != NULL)
                 free(h->array);
             h->nalloc = n;
-            h->array = (HdrArray *)calloc(n,sizeof(HdrArray));
+            if (zeroInitialize)
+                h->array = calloc(n,sizeof(*h->array));
+            else
+                h->array = malloc(n * sizeof(*h->array));
+
             if (h->array == NULL) {
                 h->nalloc = 0;
                 error(NOMEM,"Allocating Hdr");
@@ -522,17 +757,21 @@ void freeHdr(Hdr *h) {
         printf("freeHdr: %x %d %d %x\n",
                 (int)h,h->nlines,h->nalloc,(int)(h->array));
 # endif
-        if (h != NULL && h->array != NULL)
+        if (!h)
+        	return;
+        if (h->array)
             free(h->array);
-        if (h != NULL)
-            initHdr(h);
+        initHdr(h);
 }
 
-int copyHdr(Hdr *to, Hdr *from) {
-        int i;
-        if (allocHdr(to,from->nalloc)) return -1;
-        for (i = 0; i < from->nlines; ++i)
-            strcpy(to->array[i],from->array[i]);
+int copyHdr(Hdr *to, const Hdr *from) {
+        if (!to || !from)
+            return -1;
+        //allcoHdr only allocates if to->array == NULL or sizes differ
+        if (allocHdr(to,from->nalloc, False)) return -1;
+        memcpy(to->array, from->array, to->nalloc*sizeof(*to->array));
+        //for (unsigned i = 0; i < from->nlines; ++i)
+        //    strcpy(to->array[i],from->array[i]);
         to->nlines = from->nlines;
         return 0;
 }
@@ -550,9 +789,9 @@ void initFloatHdrData(FloatHdrData *x) {
         initFloatData(&(x->data));
 }
 
-int allocFloatHdrData(FloatHdrData *x, int i, int j) {
-        if (allocFloatData(&(x->data),i,j)) return -1;
-        if (allocHdr(&(x->hdr),HdrUnit)) return -1;
+int allocFloatHdrData(FloatHdrData *x, int i, int j, Bool zeroInitialize) {
+        if (allocFloatData(&(x->data),i,j, zeroInitialize)) return -1;
+        if (allocHdr(&(x->hdr),HdrUnit, zeroInitialize)) return -1;
         x->section.x_beg = 0;
         x->section.y_beg = 0;
         x->section.sx = i;
@@ -560,10 +799,38 @@ int allocFloatHdrData(FloatHdrData *x, int i, int j) {
         return 0;
 }
 
+int copyFloatHdrData(FloatHdrData * target, const FloatHdrData * src, enum StorageOrder targetStorageOrder)
+{
+    if (!target || !src)
+        return -1;
+
+    //initFloatHdrData(target);
+    target->iodesc = src->iodesc;
+
+    //Since DataSection section refers to image IO, keep as source (I think?).
+    copyDataSection(&target->section, &src->section);//No allocations
+
+    //initHdr(&target->hdr);
+    if (copyHdr(&target->hdr, &src->hdr))//This allocates
+        return -1;
+
+    if (copyFloatData(&target->data, &src->data, targetStorageOrder))
+        return -1;
+    return 0;
+}
+
 void freeFloatHdrData(FloatHdrData *x) {
         freeFloatData(&(x->data));
         freeHdr(&(x->hdr));
         initFloatHdrData(x);
+}
+
+void copyDataSection(DataSection * dest, const DataSection * src)
+{
+    dest->x_beg = src->x_beg;
+    dest->y_beg = src->y_beg;
+    dest->sx = src->sx;
+    dest->sy = src->sy;
 }
 
 void initShortHdrData(ShortHdrData *x) {
@@ -576,14 +843,34 @@ void initShortHdrData(ShortHdrData *x) {
         initShortData(&(x->data));
 }
 
-int allocShortHdrData(ShortHdrData *x, int i, int j) {
-        if (allocShortData(&(x->data),i,j)) return -1;
-        if (allocHdr(&(x->hdr),HdrUnit)) return -1;
+int allocShortHdrData(ShortHdrData *x, int i, int j, Bool zeroInitialize) {
+        if (allocShortData(&(x->data),i,j, zeroInitialize)) return -1;
+        if (allocHdr(&(x->hdr),HdrUnit, zeroInitialize)) return -1;
         x->section.x_beg = 0;
         x->section.y_beg = 0;
         x->section.sx = i;
         x->section.sy = j;
         return 0;
+}
+
+int copyShortHdrData(ShortHdrData * target, const ShortHdrData * src, enum StorageOrder targetStorageOrder)
+{
+    if (!target || !src)
+        return -1;
+
+    //initShortHdrData(target);
+    target->iodesc = src->iodesc;
+
+    //Since DataSection section refers to image IO, keep as source (I think?).
+    copyDataSection(&target->section, &src->section);//No allocations
+
+    //initHdr(&target->hdr);
+    if (copyHdr(&target->hdr, &src->hdr))//This allocates
+        return -1;
+
+    if (copyShortData(&target->data, &src->data, targetStorageOrder))
+        return -1;
+    return 0;
 }
 
 void freeShortHdrData(ShortHdrData *x) {
@@ -602,7 +889,7 @@ void initFloatHdrLine (FloatHdrLine *x) {
 
 int allocFloatHdrLine (FloatHdrLine *x, int i) {
         if (allocFloatLine (x, i)) return (-1);
-        if (allocHdr (&(x->hdr),HdrUnit)) return (-1);
+        if (allocHdr (&(x->hdr),HdrUnit, True)) return (-1);
         return (0);
 }
 
@@ -623,7 +910,7 @@ void initShortHdrLine (ShortHdrLine *x) {
 
 int allocShortHdrLine (ShortHdrLine *x, int i) {
         if (allocShortLine (x, i)) return (-1);
-        if (allocHdr (&(x->hdr),HdrUnit)) return (-1);
+        if (allocHdr (&(x->hdr),HdrUnit, True)) return (-1);
         return (0);
 }
 
@@ -638,21 +925,177 @@ void initSingleGroup(SingleGroup *x) {
         x->filename = NULL;
         x->group_num = 0;
         x->globalhdr = NULL;
+
         initFloatHdrData(&(x->sci));
         initShortHdrData(&(x->dq));
         initFloatHdrData(&(x->err));
 }
 
-int allocSingleGroup(SingleGroup *x, int i, int j) {
-        if (x->globalhdr == NULL) {
-            x->globalhdr = (Hdr *)calloc(1,sizeof(Hdr));
-            if (x->globalhdr == NULL) return -1;
-            initHdr(x->globalhdr);
+int allocSingleGroup(SingleGroup *x, int i, int j, Bool zeroInitialize)
+{
+    if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize) ||
+            allocFloatHdrData(&(x->sci),i,j, zeroInitialize)  ||
+            allocShortHdrData(&(x->dq),i,j, zeroInitialize)   ||
+            allocFloatHdrData(&(x->err),i,j, zeroInitialize))
+        return ALLOCATION_PROBLEM;
+    return 0;
+}
+
+int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize)
+{
+    if (*hdr == NULL)
+    {
+        if (zeroInitialize)
+            *hdr = calloc(1,sizeof(*hdr));
+        else
+            *hdr = malloc(sizeof(*hdr));
+
+        if (*hdr == NULL)
+            return ALLOCATION_PROBLEM;
+        initHdr(*hdr);
+    }
+    return 0;
+}
+
+int allocSingleGroupExts(SingleGroup *x, int i, int j, unsigned extension, Bool zeroInitialize)
+{
+    if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize))
+        return ALLOCATION_PROBLEM;
+
+    if (extension & SCIEXT)
+    {
+        if (allocFloatHdrData(&(x->sci),i,j, zeroInitialize))
+            return ALLOCATION_PROBLEM;
+    }
+    if (extension & ERREXT)
+    {
+        if (allocFloatHdrData(&(x->err),i,j, zeroInitialize))
+            return ALLOCATION_PROBLEM;
+    }
+    if (extension & DQEXT)
+    {
+        if (allocShortHdrData(&(x->dq),i,j, zeroInitialize))
+            return ALLOCATION_PROBLEM;
+    }
+    return 0;
+}
+
+void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder)
+{
+    if (!group)
+        return;
+
+    group->sci.data.storageOrder = storageOrder;
+    group->err.data.storageOrder = storageOrder;
+    group->dq.data.storageOrder = storageOrder;
+
+}
+
+void copyOffsetFloatData(float * output, const float * input,
+        unsigned nRows, unsigned nColumns,
+        unsigned outputOffset, unsigned inputOffset,
+        unsigned outputSkipLength, unsigned inputSkipLength)
+{
+    //WARNING - assumes row major storage
+#ifdef _OPENMP
+    #pragma omp parallel for shared(output, input) schedule(static)
+#endif
+    for (unsigned ithRow = 0; ithRow < nRows; ++ithRow)
+        memcpy(output + outputOffset + ithRow*outputSkipLength, input + inputOffset + ithRow*inputSkipLength, nColumns*sizeof(*output));
+}
+void copyOffsetShortData(short * output, const short * input,
+        unsigned nRows, unsigned nColumns,
+        unsigned outputOffset, unsigned inputOffset,
+        unsigned outputSkipLength, unsigned inputSkipLength)
+{
+    //WARNING - assumes row major storage
+#ifdef _OPENMP
+    #pragma omp parallel for shared(output, input) schedule(static)
+#endif
+    for (unsigned ithRow = 0; ithRow < nRows; ++ithRow)
+        memcpy(output + outputOffset + ithRow*outputSkipLength, input + inputOffset + ithRow*inputSkipLength, nColumns*sizeof(*output));
+}
+
+void copyOffsetSingleGroup(SingleGroup * output, const SingleGroup * input,
+        unsigned nRows, unsigned nColumns,
+		unsigned outputOffset, unsigned inputOffset,
+		unsigned outputSkipLength, unsigned inputSkipLength)
+{
+    if (!output || !input)
+        return;
+    //WARNING - assumes row major storage
+    assert(output->sci.data.storageOrder == ROWMAJOR && output->sci.data.storageOrder == ROWMAJOR);
+
+    //sci data
+    if (output->sci.data.data && input->sci.data.data)
+        copyOffsetFloatData(output->sci.data.data, input->sci.data.data, nRows, nColumns, outputOffset, inputOffset, outputSkipLength, inputSkipLength);
+    //err data
+    if (output->err.data.data && input->err.data.data)
+        copyOffsetFloatData(output->err.data.data, input->err.data.data, nRows, nColumns, outputOffset, inputOffset, outputSkipLength, inputSkipLength);
+    //dq data
+    if (output->dq.data.data && input->dq.data.data)
+        copyOffsetShortData(output->dq.data.data, input->dq.data.data, nRows, nColumns, outputOffset, inputOffset, outputSkipLength, inputSkipLength);
+}
+
+
+int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder)
+{
+    //WARNING assumes target pre allocated and initialized (entire tree). This way data can be copied to pre
+    //allocated target, i.e. copy(a, b) .. do something .. copy(b, a)
+    //NOTE: If structs contained total size we could just use malloc & memcpy and be done with it.
+
+    if (!target || !source)
+        return ALLOCATION_PROBLEM;
+
+    setStorageOrder(target, targetStorageOrder);
+
+    if (source->filename)
+    {
+        size_t filenameLength = strlen(source->filename)+1;
+        if (!target->filename || (target->filename && strlen(target->filename) != filenameLength))
+        {
+            if (target->filename)
+                free(target->filename);
+            target->filename = malloc(filenameLength*sizeof(*source->filename));
         }
-        if (allocFloatHdrData(&(x->sci),i,j)) return -1;
-        if (allocShortHdrData(&(x->dq),i,j)) return -1;
-        if (allocFloatHdrData(&(x->err),i,j)) return -1;
-        return 0;
+        if (!target->filename)
+        {
+            initSingleGroup(target);
+            return ALLOCATION_PROBLEM;
+        }
+        memcpy(target->filename, source->filename, filenameLength);
+    }
+
+    target->group_num = source->group_num;
+
+    //initHdr(target->globalhdr);
+    copyHdr(target->globalhdr, source->globalhdr); //This allocates
+
+    if (source->sci.data.data)
+    {
+        if (copyFloatHdrData(&target->sci, &source->sci, targetStorageOrder))
+        {
+            initSingleGroup(target);
+            return ALLOCATION_PROBLEM;
+        }
+    }
+    if (source->err.data.data)
+    {
+        if (copyFloatHdrData(&target->err, &source->err, targetStorageOrder))
+        {
+            initSingleGroup(target);
+            return ALLOCATION_PROBLEM;
+        }
+    }
+    if (source->dq.data.data)
+    {
+        if (copyShortHdrData(&target->dq, &source->dq, targetStorageOrder))
+        {
+            initSingleGroup(target);
+            return ALLOCATION_PROBLEM;
+        }
+    }
+    return 0;
 }
 
 void freeSingleGroup(SingleGroup *x) {
@@ -723,11 +1166,11 @@ int allocSingleNicmosGroup(SingleNicmosGroup *x, int i, int j) {
             if (x->globalhdr == NULL) return -1;
             initHdr(x->globalhdr);
         }
-        if (allocFloatHdrData(&(x->sci),i,j)) return -1;
-        if (allocFloatHdrData(&(x->err),i,j)) return -1;
-        if (allocShortHdrData(&(x->dq),i,j)) return -1;
-        if (allocShortHdrData(&(x->smpl),i,j)) return -1;
-        if (allocFloatHdrData(&(x->intg),i,j)) return -1;
+        if (allocFloatHdrData(&(x->sci),i,j, True)) return -1;
+        if (allocFloatHdrData(&(x->err),i,j, True)) return -1;
+        if (allocShortHdrData(&(x->dq),i,j, True)) return -1;
+        if (allocShortHdrData(&(x->smpl),i,j, True)) return -1;
+        if (allocFloatHdrData(&(x->intg),i,j, True)) return -1;
         return 0;
 }
 
@@ -959,6 +1402,7 @@ void closeSingleGroupLine (SingleGroupLine *x) {
 
 int getFloatHD(char *fname, char *ename, int ever, FloatHdrData *x) {
         IODesc *xio;
+        assert(x);
         x->iodesc = openInputImage(fname,ename,ever);
         xio = (IODesc *)(x->iodesc);
         if (hstio_err()) return -1;
@@ -2009,7 +2453,7 @@ int getHeader(IODescPtr iodesc_, Hdr *hd) {
         }
 
         /* allocate space for the header cards */
-        if (allocHdr(hd, ncards) == -1) return -1;
+        if (allocHdr(hd, ncards, True) == -1) return -1;
 
         /* translate the data */
         hd->nlines = 0;
@@ -2223,7 +2667,7 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
                 iodesc->dims[1] = getIntKw(kw);
             }
 
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], False)) return -1;
             for (j = 0; j < iodesc->dims[1]; ++j) {
                 for (i = 0; i < iodesc->dims[0]; ++i) {
                     PPix(da, i, j) = val;
@@ -2235,7 +2679,7 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
             /* CFITSIO TODO: Should we verify the type is correct
                here?  Original code gets type, but then does nothing
                with it. */
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
             fpixel[0] = 1;
             fpixel[1] = 1;
             if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, iodesc->dims[0], 0,
@@ -2248,16 +2692,37 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
             /* CFITSIO TODO: Should we verify the type is correct
                here?  Original code gets type, but then does nothing
                with it. */
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
 
             fpixel[0] = 1;
-            for (i = 0; i < iodesc->dims[1]; ++i) {
-                fpixel[1] = i + 1;
-                if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, iodesc->dims[0], 0,
-                                  (float *)&(PPix(da, 0, i)), &anynul, &status)) {
-                    ioerr(BADREAD,iodesc, status);
-                    return -1;
+            if (da->storageOrder == ROWMAJOR)
+            {
+                for (i = 0; i < iodesc->dims[1]; ++i) {
+                    fpixel[1] = i + 1;
+                    if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, iodesc->dims[0], 0,
+                            &(PPix(da, 0, i)), &anynul, &status)) {
+                        ioerr(BADREAD,iodesc, status);
+                        return -1;
+                    }
                 }
+            }
+            else
+            {
+                unsigned nColumns = iodesc->dims[0];
+                float * row = malloc(nColumns*sizeof(float));
+                assert(row);
+                for (i = 0; i < iodesc->dims[1]; ++i)
+                {
+                    fpixel[1] = i + 1;
+                    if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, nColumns, 0,
+                            row, &anynul, &status)) {
+                        ioerr(BADREAD,iodesc, status);
+                        return -1;
+                    }
+                    for (unsigned j = 0; j < nColumns; ++j)
+                        PPixColumnMajor(da, i, j) = row[j];
+                }
+                free(row);
             }
         } else {
             ioerr(BADDIMS,iodesc,0);
@@ -2562,7 +3027,7 @@ int getShortData(IODescPtr iodesc_, ShortTwoDArray *da) {
                 iodesc->dims[1] = getIntKw(kw);
             }
 
-            if (allocShortData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocShortData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
             for (j = 0; j < iodesc->dims[1]; ++j)
                 for (i = 0; i < iodesc->dims[0]; ++i)
                     PPix(da, i, j) = val;
@@ -2571,7 +3036,7 @@ int getShortData(IODescPtr iodesc_, ShortTwoDArray *da) {
             /* CFITSIO TODO: Should we verify the type is correct
                here?  Original code gets type, but then does nothing
                with it. */
-            if (allocShortData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocShortData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
             fpixel[0] = 1;
             fpixel[1] = 1;
             if (fits_read_pix(iodesc->ff, TSHORT, fpixel, iodesc->dims[0], NULL,
@@ -2583,7 +3048,7 @@ int getShortData(IODescPtr iodesc_, ShortTwoDArray *da) {
             /* CFITSIO TODO: Should we verify the type is correct
                here?  Original code gets type, but then does nothing
                with it. */
-            if (allocShortData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocShortData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
             fpixel[0] = 1;
             for (i = 0; i < iodesc->dims[1]; ++i) {
                 fpixel[1] = i + 1;

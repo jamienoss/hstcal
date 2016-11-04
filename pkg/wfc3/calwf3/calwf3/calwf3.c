@@ -6,7 +6,7 @@
 
 # include "wf3.h"
 # include "calwf3.h"
-# include "wf3err.h"
+# include "err.h"
 # include "wf3corr.h"
 # include "wf3asn.h"	/* Contains association table structures */
 
@@ -104,7 +104,7 @@
 
  */
 
-int CalWf3Run (char *input, int printtime, int save_tmp, int verbose, int debug, int onecpu) {
+int CalWf3Run (char *input, int printtime, int save_tmp, int verbose, int debug, unsigned nThreads, Bool fastCTE) {
 
 	/* arguments:
 	   char *input	i: name of the FITS file/table to be processed
@@ -132,7 +132,7 @@ int CalWf3Run (char *input, int printtime, int save_tmp, int verbose, int debug,
 	void initAsnInfo (AsnInfo *);
 	void freeAsnInfo (AsnInfo *);
 	int LoadAsn (AsnInfo *);
-	int ProcessCCD (AsnInfo *, WF3Info *, int *, int, int);
+	int ProcessCCD (AsnInfo *, WF3Info *, int *, int, unsigned, Bool);
 	int ProcessIR  (AsnInfo *, WF3Info *, int);
 	int Wf3Dth (const char *, char *, int, int, int);
 	char* BuildDthInput (AsnInfo *, int, char *);
@@ -209,7 +209,7 @@ int CalWf3Run (char *input, int printtime, int save_tmp, int verbose, int debug,
 		if (asn.verbose) {
 			trlmessage ("CALWF3: processing a UVIS product");
 		}
-		if (ProcessCCD (&asn, &wf3hdr, &save_tmp, printtime, onecpu)) {
+		if (ProcessCCD (&asn, &wf3hdr, &save_tmp, printtime, nThreads, fastCTE)) {
 			if (status == NOTHING_TO_DO) {
 				trlwarn ("No processing desired for CCD data.");
 			} else {

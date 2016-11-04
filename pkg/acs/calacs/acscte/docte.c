@@ -7,13 +7,15 @@
 */
 # include <string.h>
 # include <stdio.h>
+# include <time.h>
 
 # include "hstio.h"
 
 # include "acs.h"
 # include "acsinfo.h"
-# include "acserr.h"
-
+# include "err.h"
+# include "../../../../ctegen2/ctegen2.h"
+# include "pcte.h"
 
 static void PCTEMsg (ACSInfo *, int);
 static int OscnTrimmed (Hdr*, Hdr *);
@@ -34,7 +36,8 @@ int DoCTE (ACSInfo *acs_info) {
     int i;        /* loop index */
     Bool subarray;
     int CCDHistory (ACSInfo *, Hdr *);
-    int doPCTE (ACSInfo *, SingleGroup *);
+    int doPCTEGen1 (ACSInfo *, SingleGroup *);
+    int doPCTEGen2 (ACSInfo *,  CTEParamsFast * pars, SingleGroup *);
     int pcteHistory (ACSInfo *, Hdr *);
     int GetACSGrp (ACSInfo *, Hdr *);
     int OmitStep (int);
@@ -148,12 +151,75 @@ int DoCTE (ACSInfo *acs_info) {
     /* perform CTE correction */
     PCTEMsg(&acs[0], 1);
 
-    if (acs_info->pctecorr == PERFORM) {
-        for (i = 0; i < acs_info->nimsets; i++) {
-            if (doPCTE(&acs[i], &x[i])) {
-                return status;
+    if (acs_info->pctecorr == PERFORM)
+    {
+        PtrRegister ptrReg;//move this up later
+        initPtrRegister(&ptrReg);
+        CTEParamsFast ctePars;
+        if (acs_info->gen1cte == NO)
+        {
+            //NOTE: The char * below should be const but this would require a massive refactoring.
+            char * cteTabFilename = (acs->pcteTabNameFromCmd && *acs->pcteTabNameFromCmd != '\0') ? acs->pcteTabNameFromCmd : acs->pcte.name;
+
+            sprintf(MsgText, "(pctecorr) Reading CTE parameters from PCTETAB file: '%s'...", cteTabFilename);
+            trlmessage(MsgText);
+            //Get parameters from PCTETAB reference file
+            addPtr(&ptrReg, &ctePars, &freeCTEParamsFast);
+            unsigned nScaleTableColumns = N_COLUMNS_FOR_RAZ_CDAB_ALIGNED_IMAGE;
+            initCTEParamsFast(&ctePars, TRAPS, 0, 0, nScaleTableColumns, acs_info->nThreads);
+            ctePars.refAndIamgeBinsIdenticle = True;
+            ctePars.verbose = acs->verbose = 0 ? False : True;
+            if ((status = allocateCTEParamsFast(&ctePars)))
+            {
+                freeOnExit(&ptrReg);
+                return (status);
             }
+            if (getCTEParsFast (cteTabFilename, &ctePars))// || compareCTEParamsFast(chipImage, &pars))
+            {
+                freeOnExit(&ptrReg);
+                return (status);
+            }
+
+            ctePars.scale_frac = (acs->expstart - ctePars.cte_date0) / (ctePars.cte_date1 - ctePars.cte_date0);
+            if (PutKeyDbl(x[0].globalhdr, "PCTEFRAC", ctePars.scale_frac, "CTE scaling factor"))
+            {
+                trlerror("(pctecorr) Error writing PCTEFRAC to image header");
+                freeOnExit(&ptrReg);
+                return (status = HEADER_PROBLEM);
+            }
+
+            sprintf(MsgText, "(pctecorr) Read noise level PCTERNCL: %f", ctePars.rn_amp);
+            trlmessage(MsgText);
+            sprintf(MsgText, "(pctecorr) Readout simulation forward modeling iterations PCTENFOR: %i",
+                    ctePars.n_forward);
+            trlmessage(MsgText);
+            sprintf(MsgText, "(pctecorr) Number of iterations used in the parallel transfer PCTENPAR: %i",
+                    ctePars.n_par);
+            trlmessage(MsgText);
+            sprintf(MsgText, "(pctecorr) CTE_FRAC: %f", ctePars.scale_frac);
+            trlmessage(MsgText);
+
+            trlmessage("(pctecorr) PCTETAB read");
         }
+
+        for (i = 0; i < acs_info->nimsets; i++)
+        {
+            clock_t begin = (double)clock();
+            if (acs_info->gen1cte == YES)//make explicit as not using bool
+            {
+                if ((status = doPCTEGen1(&acs[i], &x[i])))
+                    return status;
+            }
+            else
+            {
+                if ((status = doPCTEGen2(&acs[i], &ctePars, &x[i])))
+                    return status;
+            }
+            double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
+            sprintf(MsgText,"(pctecorr) CTE run time for current amp: %.2f(s) with %i procs/threads\n", time_spent/acs_info->nThreads, acs_info->nThreads);
+            trlmessage(MsgText);
+        }
+        freeOnExit(&ptrReg);
 
         PrSwitch("pctecorr", COMPLETE);
 

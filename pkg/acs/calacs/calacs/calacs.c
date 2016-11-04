@@ -6,10 +6,11 @@
 # include "hstio.h"
 
 # include "acs.h"
-# include "calacs.h"
-# include "acserr.h"
+//# include "acsinfo.h"
+# include "err.h"
 # include "acscorr.h"
 # include "acsasn.h"    /* Contains association table structures */
+# include "calacs.h"
 
 # include "acsrej.h"    /* For ACSRej_0 */
 
@@ -61,7 +62,7 @@ static void SetACSSw (CalSwitch *, CalSwitch *, CalSwitch *, CalSwitch *);
 static void ResetACSSw (CalSwitch *, CalSwitch *);
 
 
-int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug, int onecpu) {
+int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd) {
 
     /* arguments:
        char *input     i: name of the FITS file/table to be processed
@@ -89,7 +90,7 @@ int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug,
     void initAsnInfo (AsnInfo *);
     void freeAsnInfo (AsnInfo *);
     int LoadAsn (AsnInfo *);
-    int ProcessCCD (AsnInfo *, ACSInfo *, int *, int, int);
+    int ProcessACSCCD (AsnInfo *, ACSInfo *, int *, int, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd);
     int ProcessMAMA (AsnInfo *, ACSInfo *, int);
     int AcsDth (char *, char *, int, int, int);
     char *BuildDthInput (AsnInfo *, int);
@@ -158,7 +159,7 @@ int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug,
         if (asn.verbose) {
             trlmessage ("CALACS: processing a CCD product");
         }
-        if (ProcessCCD(&asn, &acshdr, &save_tmp, printtime, onecpu)) {
+        if (ProcessACSCCD(&asn, &acshdr, &save_tmp, printtime, nThreads, gen1cte, pcteTabNameFromCmd)) {
             if (status == NOTHING_TO_DO) {
                 trlwarn ("No processing desired for CCD data.");
             } else {
@@ -341,7 +342,7 @@ char *BuildDthInput (AsnInfo *asn, int prod) {
 }
 
 
-int ProcessCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, int onecpu) {
+int ProcessACSCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd) {
 
     extern int status;
 
@@ -369,7 +370,7 @@ int ProcessCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, int
     void FreeRefFile (RefFileInfo *);
     int ACSRefInit (ACSInfo *, CalSwitch *, RefFileInfo *);
     int ACSccd (char *, char *, CalSwitch *, RefFileInfo *, int, int);
-    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int);
+    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int, int, const char *);
     int ACS2d (char *, char *,CalSwitch *, RefFileInfo *, int, int);
     int GetAsnMember (AsnInfo *, int, int, int, ACSInfo *);
     int GetSingle (AsnInfo *, ACSInfo *);
@@ -535,7 +536,7 @@ int ProcessCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, int
                 if (acshdr->sci_basic_cte == PERFORM) {
                     if (ACScte(acshdr->blv_tmp, acshdr->blc_tmp,
                                &acscte_sci_sw, &sciref, printtime,
-                               asn->verbose, onecpu)) {
+                               asn->verbose, nThreads, gen1cte, pcteTabNameFromCmd)) { //this is the line
                         return (status);
                     }
                 }

@@ -1,7 +1,11 @@
 # include <string.h>
 # include "hstio.h"
 # include "wf3.h"
-# include "wf3err.h"
+# include "err.h"
+
+# ifdef _OPENMP
+#  include <omp.h>
+# endif
 
 /* These routines facilitate moving between the regular WFC3 image structre
    to the RAZ image structure used in the CTE correction and Sink pixel flagging
@@ -25,56 +29,108 @@
 
 
 /*convert the sci and dq extensions to the long format*/
-int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
+int makeRAZ(const SingleGroup *cd, const SingleGroup *ab, SingleGroup *raz)
+{
+    /*
 
+         convert a raw file to raz file: CDAB longwise amps, save data array
+         for comparison with what jay has during testing
+
+         -->do an additional bias correction using the  residual bias level measured for each amplifier from the
+         steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
+
+         ---> convert into electrons at the end
+         ---> add supplemental bias info to the header
+
+         allocate contiguous 2d array on the heap
+         with pointers and return the pointer to the head of the array
+
+         The Following macros are used to represent 2-d indexing.
+         Two dimensional arrays are stored in FITS order.
+
+         ny
+         ^
+         N | a05   a15   a25   a35
+         A | a04   a14   a24   a34
+         X | a03   a13   a23   a33
+         I | a02   a12   a22   a32
+         S | a01   a11   a21   a31
+         2 | a00   a10   a20   a30
+         ---------------------------> nx
+         NAXIS1
+
+         NAXIS1 is 4 and NAXIS2 is 6
+         PIX(a,1,4) accesses a14
+
+         In the raz image, each quadrant has been rotated such that the readout amp is located at the lower left.
+         The reoriented four quadrants are then arranged into a single 8412x2070 image (science pixels plus overscan),
+         with amps C, D, A, and B, in that order. In the raz image, pixels are all parallel-shifted down,
+         then serial-shifted to the left.
+
+  */
     extern int status;
-    int subcol = (RAZ_COLS/4); /* for looping over quads  */
-    int i,j;
 
-        for (i=0; i<subcol; i++){
-            for (j=0; j<RAZ_ROWS; j++){
-                Pix(raz->sci.data,i,j)=Pix(cd->sci.data,i,j);
-                Pix(raz->sci.data,i+subcol,j)=Pix(cd->sci.data,subcol*2-i-1,j);
-                Pix(raz->sci.data,i+2*subcol,j)=Pix(ab->sci.data,i,RAZ_ROWS-j-1);
-                Pix(raz->sci.data,i+3*subcol,j)=Pix(ab->sci.data,subcol*2-i-1,RAZ_ROWS-j-1);
+    const unsigned nColumns = raz->sci.data.nx;
+    const unsigned nRows = raz->sci.data.ny;
+    const unsigned nColumnsPerChip = nColumns / 4; /* for looping over quads  */
 
-                Pix(raz->dq.data,i,j)=Pix(cd->dq.data,i,j);
-                Pix(raz->dq.data,i+subcol,j)=Pix(cd->dq.data,subcol*2-i-1,j);
-                Pix(raz->dq.data,i+2*subcol,j)=Pix(ab->dq.data,i,RAZ_ROWS-j-1);
-                Pix(raz->dq.data,i+3*subcol,j)=Pix(ab->dq.data,subcol*2-i-1,RAZ_ROWS-j-1);
-            }
-        }
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+    #pragma omp parallel for num_threads(nThreads) shared(raz, cd, ab) schedule(static)
+#endif
+	for (unsigned i = 0; i < nRows; ++i)
+	{
+		for (unsigned j = 0; j < nColumnsPerChip; ++j)
+		{
+		    //sci data
+			Pix(raz->sci.data, j, i) = Pix(cd->sci.data, j, i);
+			Pix(raz->sci.data, j+nColumnsPerChip, i) = Pix(cd->sci.data, nColumnsPerChip*2-j-1, i);
+			Pix(raz->sci.data, j+2*nColumnsPerChip, i) = Pix(ab->sci.data, j, nRows-i-1);
+			Pix(raz->sci.data, j+3*nColumnsPerChip, i) = Pix(ab->sci.data, nColumnsPerChip*2-j-1, nRows-i-1);
 
-    return(status);
+			//dq data
+			Pix(raz->dq.data, j, i) = Pix(cd->dq.data, j, i);
+			Pix(raz->dq.data, j+nColumnsPerChip, i) = Pix(cd->dq.data, nColumnsPerChip*2-j-1, i);
+			Pix(raz->dq.data, j+2*nColumnsPerChip, i) = Pix(ab->dq.data, j, nRows-i-1);
+			Pix(raz->dq.data, j+3*nColumnsPerChip, i) = Pix(ab->dq.data, nColumnsPerChip*2-j-1, nRows-i-1);
+		}
+	}
 
+    return status;
 }
 
 
 /* Transform a RAZ format image back into the separate input arrays calwf3 likes*/
-int undoRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
-
+int undoRAZ(SingleGroup *cd, SingleGroup *ab, const SingleGroup *raz)
+{
     extern int status;
-    int subcol = (RAZ_COLS/4); /* for looping over quads  */
-    int i,j;
+
+    const unsigned nColumns = raz->sci.data.nx;
+    const unsigned nRows = raz->sci.data.ny;
+    const unsigned nColumnsPerChip = nColumns / 4; /* for looping over quads  */
 
     /*REVERSE THE AMPS TO THE RAW FORMAT*/
-    for (i=0; i< subcol; i++){
-        for (j=0; j<RAZ_ROWS; j++){
-             Pix(cd->sci.data,i,j) = Pix(raz->sci.data,i,j);
-             Pix(cd->sci.data,subcol*2-i-1,j) = Pix(raz->sci.data,i+subcol,j);
-             Pix(ab->sci.data,i,RAZ_ROWS-j-1) = Pix(raz->sci.data,i+2*subcol,j);
-             Pix(ab->sci.data,subcol*2-i-1,RAZ_ROWS-j-1) = Pix(raz->sci.data,i+3*subcol,j);
+   #ifdef _OPENMP
+       const unsigned nThreads = omp_get_num_procs();
+       #pragma omp parallel for num_threads(nThreads) shared(raz, cd, ab) schedule(static)
+   #endif
+    for (unsigned j = 0; j < nRows; ++j)
+    {
+        for (unsigned i = 0; i < nColumnsPerChip; ++i)
+        {
+             Pix(cd->sci.data, i, j) = Pix(raz->sci.data, i, j);
+             Pix(cd->sci.data, nColumnsPerChip*2-i-1, j) = Pix(raz->sci.data, i+nColumnsPerChip, j);
+             Pix(ab->sci.data, i, nRows-j-1) = Pix(raz->sci.data, i+2*nColumnsPerChip, j);
+             Pix(ab->sci.data, nColumnsPerChip*2-i-1, nRows-j-1) = Pix(raz->sci.data, i+3*nColumnsPerChip, j);
 
-             Pix(cd->dq.data,i,j) = Pix(raz->dq.data,i,j);
-             Pix(cd->dq.data,subcol*2-i-1,j) = Pix(raz->dq.data,i+subcol,j);
-             Pix(ab->dq.data,i,RAZ_ROWS-j-1) = Pix(raz->dq.data,i+2*subcol,j);
-             Pix(ab->dq.data,subcol*2-i-1,RAZ_ROWS-j-1) = Pix(raz->dq.data,i+3*subcol,j);
-
-
+             Pix(cd->dq.data, i, j) = Pix(raz->dq.data, i, j);
+             Pix(cd->dq.data, nColumnsPerChip*2-i-1, j) = Pix(raz->dq.data, i+nColumnsPerChip, j);
+             Pix(ab->dq.data, i, nRows-j-1) = Pix(raz->dq.data, i+2*nColumnsPerChip, j);
+             Pix(ab->dq.data, nColumnsPerChip*2-i-1, nRows-j-1) = Pix(raz->dq.data, i+3*nColumnsPerChip, j);
         }
     }
-    return (status);
 
+    return status;
 }
 
 

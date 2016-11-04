@@ -5,7 +5,7 @@
 # include "hstio.h"
 # include "acs.h"
 # include "acsinfo.h"
-# include "acserr.h"
+# include "err.h"
 
 static int divFlat (SingleGroup *, char *, ACSInfo *);
 
@@ -258,7 +258,7 @@ static int divFlat (SingleGroup *x, char *flatname, ACSInfo *acs2d) {
     
     /* Initialize shifted spot arrays */
     initSingleGroup(&outspot);
-    allocSingleGroup(&outspot, inspot.sci.data.nx, inspot.sci.data.ny);
+    allocSingleGroup(&outspot, inspot.sci.data.nx, inspot.sci.data.ny, True);
     
     parseObsDate(x->globalhdr, &date);
     status = GetSpotTab(acs2d->spot.name, date, &shiftx, &shifty);

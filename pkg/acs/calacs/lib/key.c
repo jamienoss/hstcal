@@ -2,7 +2,7 @@
 # include <ctype.h>                 /* for isspace */
 # include <string.h>                /* for strcpy, strlen */
 # include "hstio.h"
-# include "acserr.h"
+# include "err.h"
 # include "acs.h"                /* for message output */
 
 static void KeyMissing (char *);    /* prints error message */
@@ -155,6 +155,40 @@ int *value        o: value gotten
     return (status);
 }
 
+/* unsigned int */
+
+unsigned GetKeyUInt (Hdr *hd, char *keyword,
+    int use_def, int def, int *value) {
+
+/* arguments:
+Hdr *hd           i: pointer to header to be updated
+char *keyword     i: name of keyword
+int use_def       i: if true and keyword not found, return default
+unsigned def           i: value to be returned if keyword not found
+unsigned *value        o: value gotten
+*/
+
+    extern int status;
+    FitsKw key;		/* location of keyword in header */
+
+    key = findKw (hd, keyword);
+    if (key == NotFound) {
+        if (use_def) {
+            *value = def;
+        } else {
+            KeyMissing (keyword);
+            return (status = KEYWORD_MISSING);
+        }
+    } else {
+        *value = getIntKw (key);
+        if (hstio_err()) {
+            KeyMissing (keyword);
+            return (status = HEADER_PROBLEM);
+        }
+    }
+
+    return (status);
+}
 /* ------------------------------------------------------------------*/
 /*                          GetKeyBool                                  */
 /* ------------------------------------------------------------------*/

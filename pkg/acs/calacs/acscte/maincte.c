@@ -13,8 +13,12 @@ int status = 0;			/* zero is OK */
 
 # include "acs.h"
 # include "acsinfo.h"
-# include "acserr.h"
+# include "err.h"
 # include "acscorr.h"		/* calibration switch names for acsccd */
+
+# ifdef _OPENMP
+#  include <omp.h>
+# endif
 
 static void FreeNames (char *, char *, char *, char *);
 
@@ -33,8 +37,12 @@ int main (int argc, char **argv) {
     /*int switch_on = 0;*/	/* was any switch specified? */
     int printtime = NO;	/* print time after each step? */
     int verbose = NO;	/* print additional info? */
-    int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
+    int quiet = NO;	/* print additional info? */
+    int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
+    unsigned nThreads = 0;
+    char pcteTabNameFromCmd[255];
+    *pcteTabNameFromCmd = '\0';
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -59,7 +67,7 @@ int main (int argc, char **argv) {
     void FreeRefFile (RefFileInfo *);
     void initSwitch (CalSwitch *);
 
-    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int);
+    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int, int, const char * pcteTabNameFromCmd);
     int DefSwitch (char *);
     int MkName (char *, char *, char *, char *, char *, int);
     void WhichError (int);
@@ -98,19 +106,59 @@ int main (int argc, char **argv) {
     for (i = 1;  i < argc;  i++) {
 
         if (argv[i][0] == '-') {
-            for (j = 1;  argv[i][j] != '\0';  j++) {
-                if (argv[i][j] == 't') {
-                    printtime = YES;
-                } else if (argv[i][j] == 'v') {
-                    verbose = YES;
-                } else if (argv[i][j] == 'q') {
-                    quiet = YES;
-                } else if (argv[i][j] == '1') {
-                    onecpu = YES;
-                } else {
-                    printf (MsgText, "Unrecognized option %s\n", argv[i]);
-                    FreeNames (inlist, outlist, input, output);
-                    exit (1);
+            if (strncmp(argv[i], "--gen1cte", 9) == 0)
+            {
+                gen1cte = YES;
+                continue;
+            }
+            else if (strncmp(argv[i], "--nthreads", 10) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - number of threads not specified\n");
+                    exit(1);
+                }
+                ++i;
+                nThreads = (unsigned)atoi(argv[i]);
+                if (nThreads < 1)
+                    nThreads = 1;
+#ifndef _OPENMP
+                printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+                nThreads = 1;
+#endif
+                continue;
+            }
+            else if (strncmp(argv[i], "--pctetab", 9) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - no pctetab specified\n");
+                    exit(1);
+                }
+                ++i;
+                strcpy(pcteTabNameFromCmd, argv[i]);
+                continue;
+            }
+            else
+            {
+                if (argv[i][1] == '-')
+                {
+                    printf ("Unrecognized option %s\n", argv[i]);
+                    exit (ERROR_RETURN);
+                }
+                for (j = 1;  argv[i][j] != '\0';  j++) {
+                    if (argv[i][j] == 't') {
+                        printtime = YES;
+                    } else if (argv[i][j] == 'v') {
+                        verbose = YES;
+                    } else if (argv[i][j] == 'q') {
+                        quiet = YES;
+                    } else if (argv[i][j] == '1') {
+                        onecpu = YES;
+                    } else {
+                        printf ("Unrecognized option %s\n", argv[i]);
+                        break;
+                    }
                 }
             }
         } else if (inlist[0] == '\0') {
@@ -122,7 +170,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  acscte [-t] [-v] [-q] [-1] input output\n");
+        printf ("syntax:  acscte [-t] [-v] [-q] [-1|--nthreads <N>] [--gen1cte] [--pctetab <path>] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -131,6 +179,53 @@ int main (int argc, char **argv) {
 
     /* Copy command-line value for QUIET to structure */
     SetTrlQuietMode(quiet);
+
+    if (gen1cte == YES)
+    {
+        sprintf (MsgText, "Using older gen1 CTE algorithm");
+        trlwarn (MsgText);
+    }
+
+    if (*pcteTabNameFromCmd != '\0')
+    {
+        sprintf (MsgText, "Using cmd line specified PCTETAB file: '%s'", pcteTabNameFromCmd);
+        trlwarn (MsgText);
+    }
+
+#ifdef _OPENMP
+    unsigned ompMaxThreads = omp_get_num_procs();
+#endif
+    if (onecpu)
+    {
+        if (nThreads )
+        {
+            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+            trlwarn(MsgText);
+        }
+        nThreads = 1;
+    }
+    else if (!nThreads)//unset
+    {
+#ifdef _OPENMP
+        nThreads = ompMaxThreads;
+#else
+        nThreads = 1;
+#endif
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
 
     /* Was no calibration switch specified on command line?
        default values (mostly PERFORM)
@@ -195,8 +290,8 @@ int main (int argc, char **argv) {
         }
 
         /* Calibrate the current input file. */
-        if (ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
-                    onecpu)) {
+        if ((status = ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
+                    nThreads, gen1cte, pcteTabNameFromCmd))) {
             sprintf (MsgText, "Error processing %s.", input);
             trlerror (MsgText);
             WhichError (status);

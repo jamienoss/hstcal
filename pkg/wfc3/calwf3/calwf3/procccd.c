@@ -6,7 +6,7 @@
 
 # include "wf3.h"
 # include "calwf3.h"
-# include "wf3err.h"
+# include "err.h"
 # include "wf3corr.h"
 # include "wf3asn.h"	/* Contains association table structures */
 
@@ -58,7 +58,7 @@
 
  */
 
-int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int onecpu) {
+int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, unsigned nThreads, Bool fastCTE) {
 
     extern int status;
 
@@ -90,6 +90,7 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int
     void FreeRefFile (RefFileInfo *);
     int  CCDRefInit (WF3Info *, CCD_Switch *, RefFileInfo *);
     int  WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
+    int  WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned);
     int  WF3ccd (char *, char *, CCD_Switch *, RefFileInfo *, int, int);
     int  WF32d (char *, char *,CCD_Switch *, RefFileInfo *, int, int);
     int  GetAsnMember (AsnInfo *, int, int, int, WF3Info *);
@@ -264,9 +265,16 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int
 
                      */
 
-
-                    if ( WF3cte(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu) )
-                        return (status);
+                    int ret = status;
+                    if (fastCTE)
+                        ret = WF3cteFast(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, nThreads);
+                    else
+                    {
+                        int onecpu = nThreads <= 1 ? YES : NO;
+                        ret = WF3cte(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu);
+                    }
+                    if (ret)
+                        return status;
 
                     if (wf3hdr->sci_basic_ccd == PERFORM) {
 

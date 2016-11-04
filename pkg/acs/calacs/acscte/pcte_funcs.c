@@ -7,7 +7,7 @@
 #include "hstio.h"
 
 #include "acs.h"
-#include "acserr.h"
+#include "err.h"
 #include "pcte.h"
 
 /*
@@ -17,7 +17,7 @@
  * develops and as new instruments are added.
  * - MRD 18 Feb. 2011
  */
-int PixCteParams (char *filename, const double expstart, CTEParams *pars) {
+int PixCteParams (char *filename, const double expstart, ACSCTEParams *pars) {
 
   extern int status; /* variable for return status */
 
@@ -281,7 +281,8 @@ int PixCteParams (char *filename, const double expstart, CTEParams *pars) {
   c_tbtclo(tbl_ptr);
 
   /* calculate cte_frac */
-  pars->cte_frac = CalcCteFrac(expstart, scalemjd, scaleval);
+   if ((status = CalcCteFrac(&pars->cte_frac, expstart, scalemjd, scaleval)))
+       return status;
   /****************************************************************************/
 
   /****************************************************************************/
@@ -423,7 +424,7 @@ int PixCteParams (char *filename, const double expstart, CTEParams *pars) {
  * will be user tunable in this manner, this is just the recipe.
  * MRD 17 Mar. 2011
  */
-int CompareCteParams(SingleGroup *x, CTEParams *pars) {
+int CompareCteParams(SingleGroup *x, ACSCTEParams *pars) {
 
   extern int status;
 
@@ -549,8 +550,10 @@ int CompareCteParams(SingleGroup *x, CTEParams *pars) {
  * CalcCteFrac calculates the multiplicative factor that accounts for the
  * worsening of CTE over time.
  */
-double CalcCteFrac(const double expstart, const double scalemjd[NUM_SCALE],
-                   const double scaleval[NUM_SCALE]) {
+int CalcCteFrac(double * cte_frac, const double expstart, const double scalemjd[NUM_SCALE], const double scaleval[NUM_SCALE])
+{
+
+  extern int status;
 
   /* iteration variables */
   int i;
@@ -559,9 +562,7 @@ double CalcCteFrac(const double expstart, const double scalemjd[NUM_SCALE],
   double mjd_pt1 = 0;
   double mjd_pt2 = 0;      /* the MJD points at which the scaling is defined */
   double cte_pt1, cte_pt2; /* the CTE frac points at which the scaling is defined */
-
-  /* return value */
-  double cte_frac;
+  Bool good2Go = False;
 
   /* find the values that bound this exposure */
   for (i = 0; i < NUM_SCALE-1; i++) {
@@ -570,24 +571,35 @@ double CalcCteFrac(const double expstart, const double scalemjd[NUM_SCALE],
       mjd_pt2 = scalemjd[i+1];
       cte_pt1 = scaleval[i];
       cte_pt2 = scaleval[i+1];
+      good2Go = True;
       break;
     }
   }
 
   /* it's possible this exposure is not bounded by any of defining points,
    * in that case we're extrapolating based on the last two points. */
-  if (expstart >= scalemjd[NUM_SCALE-1] && mjd_pt1 == 0 && mjd_pt2 == 0) {
+  if (expstart >= scalemjd[NUM_SCALE-1] && mjd_pt1 == 0 && mjd_pt2 == 0)
+  {
     mjd_pt1 = scalemjd[NUM_SCALE-2];
     mjd_pt2 = scalemjd[NUM_SCALE-1];
     cte_pt1 = scaleval[NUM_SCALE-2];
     cte_pt2 = scaleval[NUM_SCALE-1];
+    good2Go = True;
   } else if (mjd_pt1 == 0 && mjd_pt2 == 0) {
     trlerror("(pctecorr) No suitable CTE scaling data found in PCTETAB");
+    return (status = NO_GOOD_DATA);
   }
 
-  cte_frac = ((cte_pt2 - cte_pt1) / (mjd_pt2 - mjd_pt1)) * (expstart - mjd_pt1) + cte_pt1;
+  if (!good2Go)
+  {
+      *cte_frac = 0; //Init anyhow
+      trlerror("(pctecorr) No suitable CTE scaling fraction computed");
+      return (status = INVALID_VALUE);
+  }
 
-  return cte_frac;
+  *cte_frac = ((cte_pt2 - cte_pt1) / (mjd_pt2 - mjd_pt1)) * (expstart - mjd_pt1) + cte_pt1;
+
+  return status;
 }
 
 /*

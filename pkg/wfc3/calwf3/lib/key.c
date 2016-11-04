@@ -3,7 +3,7 @@
 # include <string.h>                /* for strcpy, strlen */
 # include "hstio.h"
 # include "wf3.h"                /* for message output */
-# include "wf3err.h"
+# include "err.h"
 
 static void KeyMissing (char *);    /* prints error message */
 
@@ -58,9 +58,7 @@ double *value     o: value gotten
 */
 
     extern int status;
-    FitsKw key;		/* location of keyword in header */
-
-    key = findKw (hd, keyword);
+    FitsKw key = findKw (hd, keyword); /* location of keyword in header */
     if (key == NotFound) {
         if (use_def) {
             *value = def;

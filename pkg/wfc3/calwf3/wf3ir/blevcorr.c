@@ -101,7 +101,7 @@ int blevcorr (WF3Info *wf3, SingleNicmosGroup *input) {
 	int pixcount;		/* counter for reference pixels */
            
 	/* Function definitions */
-	int resistmean(float *, int, float, float *,float *,float *,float *);
+	int resistmean(const float *, int, float, float *,float *,float *,float *);
 
 	/* Set defaults */
 	sigrej = 3.0; /*sigma rejection limit for mean calculation*/

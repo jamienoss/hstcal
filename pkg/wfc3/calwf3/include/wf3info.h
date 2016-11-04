@@ -81,6 +81,8 @@
     for chip1 will be saved in the structure for use in fluxcorr.
  
 */
+#ifndef WF3INFO_INCL
+#define WF3INFO_INCL
 
 # include "msg.h"
 
@@ -262,3 +264,4 @@ typedef struct {
 	FloatHdrData *zerr;
 } NlinData;
 
+#endif

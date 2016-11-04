@@ -4,7 +4,7 @@
 # include "hstio.h"
 # include "wf3.h"
 # include "wf3info.h"
-# include "wf3err.h"
+# include "err.h"
 # include "cte.h"
 
 
@@ -52,7 +52,6 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 
 	initSingleGroupLine (&y);
 	scilines = x->sci.data.ny;
-
 
 	/* Initialize local variables */
 	rx = 1;

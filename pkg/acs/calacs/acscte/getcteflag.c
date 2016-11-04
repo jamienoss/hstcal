@@ -4,7 +4,7 @@
 # include "hstio.h"
 # include "acs.h"
 # include "acsinfo.h"
-# include "acserr.h"        /* defines error codes */
+# include "err.h"        /* defines error codes */
 
 
 static int checkPCTE (Hdr *, ACSInfo *, int *, int *);
@@ -31,6 +31,7 @@ int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
     /* Get the values for the Calibration Switches from the
     **    header for processing.
     */
+
     if (GetcteSw (acs, phdr) )
         return(status);
 
@@ -38,8 +39,12 @@ int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
        just want to be safe...
     */
     if (acs->detector != MAMA_DETECTOR) {
+
         if (checkCCD (phdr, acs, &missing))
+        {
+
             return (status);
+        }
     }
 
     /* Check each reference file that we need. */
@@ -130,6 +135,7 @@ static int checkCCD (Hdr *phdr, ACSInfo *acs, int *missing) {
 
     if (acs->detector == MAMA_DETECTOR)
         return (status);
+
 
     if (GetTabRef (acs->refnames, phdr,
                    "CCDTAB", &acs->ccdpar, &calswitch))

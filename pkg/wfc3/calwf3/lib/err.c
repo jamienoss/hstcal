@@ -43,13 +43,6 @@ void asnmessage (char *message) {
         fflush(stdout);
 }
 
-void ctemessage (char *message) {
-	printf ("%s\n", message);
-        fflush(stdout);
-}
-
-
-
 void asnwarn (char *message) {
 
 	char line[SZ_LINE+1];
@@ -70,27 +63,4 @@ void asnerror (char *message) {
 	strcat (line,message);
 
     asnmessage(line);
-}
-
-
-void ctewarn (char *message) {
-
-	char line[SZ_LINE+1];
-	
-	/* Use macro for beginning of Warning message */
-	sprintf(line,"%s",WARN_PREFIX);
-	strcat (line,message);
-
-    ctemessage(line);
-}
-
-void cteerror (char *message) {
-		
-	char line[SZ_LINE+1];
-	
-	/* Use macro for beginning of Warning message */
-	sprintf(line,"%s",ERR_PREFIX);
-	strcat (line,message);
-
-    ctemessage(line);
 }
