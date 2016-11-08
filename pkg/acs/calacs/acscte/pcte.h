@@ -18,6 +18,10 @@
 #define NAMPS 4
 #define AMP_COLS 2048
 
+//New params needed for second gen CTE correction algorithm
+#define TRAPS 999 /*max number of traps per column = rows in pctetab[1], valid traps are < 999999 in qlev*/
+# define SZ_LINE           255 //from calwf3/msg.h
+
 /* structure to hold CTE parameters from reference file */
 typedef struct {
     double cte_frac;
@@ -32,6 +36,20 @@ typedef struct {
     double chg_leak[NUM_PSI * NUM_LOGQ];
     int levels[NUM_LEV];
     double col_scale[AMP_COLS * NAMPS];
+
+    //New params needed for second gen CTE correction algorithm
+    unsigned n_forward; /* number of forward modeling iterations */
+    unsigned n_par; /*number of iterations in parallel transfer */
+    unsigned cte_traps; /*number of valid TRAPS in file for reallocation*/
+    double qlevq_data[TRAPS];/*charge packet size in electrons*/
+    double dpdew_data[TRAPS];/*trap size in electrons*/
+
+    int cte_len; /*max length of cte trail */
+
+    char cte_name[SZ_LINE+1]; /*name of cte algorithm */
+    char cte_ver[SZ_LINE+1]; /*version of algorithm */
+    FloatHdrData *rprof; /*differential trail profile as image*/
+    FloatHdrData *cprof; /*cummulative trail profile as image*/
 } CTEParams;
 
 /* function prototypes */
@@ -59,3 +77,4 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             const int levels[NUM_LEV], const double dpde_l[NUM_LEV],
             const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
             const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV], int onecpu);
+//int sim_colreadout_l(double * pixo, const double * pixf, const CTEParams * cte, const unsigned nRows);
