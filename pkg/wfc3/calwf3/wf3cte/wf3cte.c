@@ -1165,25 +1165,21 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 
     extern int status;
 
-    /*looping vars*/
-    int NREDO, REDO;
+    /*looping vars*/ //Should never be declared externally to a loop!
     int NITINV, NITCTE;
-    int i;
-    int j,jj;
     double dmod;
     int jmax;
     float hardset=0.0f;
-    int totflux=0;
 
     double cte_ff; /*cte scaling based on observation date*/
     double setdbl=0.0;
 
     /*DEFINE TO MAKE PRIVATE IN PARALLEL RUN*/
-    double *pix_obsd=&setdbl;
-    double *pix_modl=&setdbl;
-    double *pix_curr=&setdbl;
-    double *pix_init=&setdbl;
-    double *pix_read=&setdbl;
+    double *pix_observed=&setdbl;
+    double *pix_model=&setdbl;
+    //double *pix_curr=&setdbl;
+    //double *pix_init=&setdbl;
+    //double *pix_read=&setdbl;
     double *pix_ctef=&setdbl;
 
     /*STARTING DEFAULTS*/
@@ -1222,8 +1218,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
     }
 
     /*SET UP THE SCALING ARRAY WITH INPUT DATA, hardset arrays for safety*/
-    for (i=0;i<RAZ_COLS;i++){
-        for(j=0;j<RAZ_ROWS;j++){
+    for (unsigned i = 0; i < RAZ_COLS; ++i){
+        for(unsigned j = 0; j < RAZ_ROWS; ++j){
             Pix(rc.sci.data,i,j)=hardset;
             Pix(rz.sci.data,i,j)=hardset;
             Pix(pixz_fff.sci.data,i,j)=hardset;
@@ -1233,43 +1229,67 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
         }
     }
 
+    //WARNING! update for removed variables
     #pragma omp parallel for schedule (dynamic,1) \
     private(dmod,i,j,jj,jmax,REDO,NREDO,totflux, \
-            pix_obsd,pix_modl,pix_curr,pix_init,\
+            pix_observed,pix_modl,pix_curr,pix_init,\
             pix_read,pix_ctef,NITINV,NITCTE)\
     shared(rc,rz,cte,pixz_fff)
 
-    for (i=0; i< RAZ_COLS; i++){
-        pix_obsd = (double *) calloc(RAZ_ROWS, sizeof(double));
-        pix_modl = (double *) calloc(RAZ_ROWS, sizeof(double));
-        pix_curr = (double *) calloc(RAZ_ROWS, sizeof(double));
-        pix_init = (double *) calloc(RAZ_ROWS, sizeof(double));
-        pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
-        pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
+    const double rnAmp = cte->rn_amp;
+    const unsigned nForward = cte->n_forward;
+    const unsigned nPar = cte->n_par;
+    assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
+    assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
+    assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
 
-        totflux=0;
+    for (unsigned i = 0; i < RAZ_COLS; ++i){
+        //pix_observed = (double *) calloc(RAZ_ROWS, sizeof(double));
+        //pix_model = (double *) calloc(RAZ_ROWS, sizeof(double));
+        //pix_curr = (double *) calloc(RAZ_ROWS, sizeof(double));
+        //pix_init = (double *) calloc(RAZ_ROWS, sizeof(double)); //Geez, this wasn't even being used!
+        //pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
+        //pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
+
+        unsigned totalFlux = 0;
         /*HORIZONTAL PRE/POST SCAN POPULATION */
-        for (j=0; j< RAZ_ROWS; j++){
+        for (unsigned j = 0; j < RAZ_ROWS; ++j){
+            pix_observed[j] = Pix(rz.sci.data,i,j);//look into moving this out to memcpy
+            //if (pix_observed[j] > 0)
+              //  totalFlux += 1;//We only care if this is > 0, loop should stop after that.
+            /*
             if(Pix(rz.dq.data,i,j)){
-                pix_obsd[j] = Pix(rz.sci.data,i,j); /*starts as input RAZ*/
+                pix_observed[j] = Pix(rz.sci.data,i,j); //starts as input RAZ
                 totflux += 1;
+            }
+            */
+        }
+        bool hasFlux = false;//Too much C++...
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+        {
+            if (pix_observed[j] > 0)
+            {
+                hasFlux = true;
+                break;
             }
         }
 
-        if (totflux >= 1) {/*make sure the column has flux in it*/
-            NREDO=0; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-            REDO=0; /*FALSE*/
+        if (hasFlux) {/*make sure the column has flux in it*/
+            unsigned NREDO=0; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            unsigned REDO=0; /*FALSE*/
             do { /*replacing goto 9999*/
                 /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-                for (int j = 0; j < RAZ_ROWS; ++j){
-                    pix_modl[j] =  Pix(rz.sci.data,i,j);
+                memcpy(pix_model, pix_observed, sizeof(pix_observed)*RAZ_ROWS);
+                for (unsigned j = 0; j < RAZ_ROWS; ++j){
+                    //pix_model[j] =  Pix(rz.sci.data,i,j); //Moved outside of DO loop as rz.sci.data isn't changed
                     pix_ctef[j] =  Pix(pixz_fff.sci.data,i,j);
                 }
+
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                for (int NITINV = 1; NITINV <= cte->n_forward; ++NITINV)
+                for (unsigned NITINV = 1; NITINV <= nForward; ++NITINV)
                 {
-                    memcpy(pix_read, pix_modl, sizeof(pix_modl)*RAZ_ROWS);
+                    //memcpy(pix_read, pix_model, sizeof(pix_model)*RAZ_ROWS);
                     /*comment out - now do in place with single array as the 1st thing sim_colreadout does (did) is
                      * copy the data and then the loop that calls this func only swaps them back again at the end.
                      */
@@ -1282,8 +1302,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
                     */
 
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                    for (NITCTE=1; NITCTE<=cte->n_par; NITCTE++){
-                        sim_colreadout_l(pix_read, pix_ctef, cte, RAZ_ROWS);
+                    for (unsigned NITCTE = 1; NITCTE <= nPar; ++NITCTE){
+                        sim_colreadout_l(pix_model, pix_ctef, cte, RAZ_ROWS, 1);
 
                         /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
                         /*for (j=0; j< RAZ_ROWS; j++){
@@ -1293,12 +1313,13 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 
                     /*DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
                       AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE*/
-                    for (j=0; j< RAZ_ROWS; j++){
-                        dmod =  (pix_obsd[j] - pix_read[j]);
-                        if (NITINV < cte->n_forward){
-                            dmod *= (dmod*dmod) /((dmod*dmod) + (cte->rn_amp * cte->rn_amp));
+                    for (unsigned j = 0; j < RAZ_ROWS; ++j){
+                        dmod =  (pix_observed[j] - pix_model[j]);
+                        if (NITINV < nForward){
+                            dmod *= (dmod*dmod) /((dmod*dmod) + (rnAmp*rnAmp));
                         }
-                        pix_modl[j] += dmod; /*dampen each pixel as the best is determined*/
+                        //pix_model[j] += dmod; /*dampen each pixel as the best is determined*/
+                        pix_model[j] = pix_observed + dmod; /*dampen each pixel as the best is determined*/
                     }
                 } /*NITINV end*/
 
@@ -1324,22 +1345,22 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 */
                 if (cte->fix_rocr) {
                     for (j=10; j< RAZ_ROWS-2; j++){
-                        if (  (( cte->thresh > pix_modl[j] ) &&
-                                    ( cte->thresh > (pix_modl[j] - pix_obsd[j]))) ||
+                        if (  (( cte->thresh > pix_model[j] ) &&
+                                    ( cte->thresh > (pix_model[j] - pix_observed[j]))) ||
 
-                                (((pix_modl[j] + pix_modl[j+1]) < -12.) &&
-                                 (pix_modl[j] + pix_modl[j+1] - pix_obsd[j] - pix_obsd[j+1] < -12.)) ||
+                                (((pix_model[j] + pix_model[j+1]) < -12.) &&
+                                 (pix_model[j] + pix_model[j+1] - pix_observed[j] - pix_observed[j+1] < -12.)) ||
 
-                                (((pix_modl[j] + pix_modl[j+1] + pix_modl[j+2]) < -15.) &&
-                                 ((pix_modl[j] + pix_modl[j+1] + pix_modl[j+2] -pix_obsd[j] -
-                                   pix_obsd[j+1] - pix_obsd[j+2]) <-15.))  ){
+                                (((pix_model[j] + pix_model[j+1] + pix_model[j+2]) < -15.) &&
+                                 ((pix_model[j] + pix_model[j+1] + pix_model[j+2] -pix_observed[j] -
+                                   pix_observed[j+1] - pix_observed[j+2]) <-15.))  ){
 
                             jmax=j;
 
                             /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
                             for (jj=j-10; jj<=j;jj++){
-                                if ( (pix_modl[jj] - pix_obsd[jj]) >
-                                        (pix_modl[jmax] - pix_obsd[jmax]) ) {
+                                if ( (pix_modl[jj] - pix_observed[jj]) >
+                                        (pix_model[jmax] - pix_observed[jmax]) ) {
                                     jmax=jj;
                                 }
                             }
@@ -1361,15 +1382,15 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 #pragma omp critical (cte)
         for (j=0; j< RAZ_ROWS; j++){
             if (Pix(rz.dq.data,i,j)){
-                Pix(rc.sci.data,i,j)= pix_modl[j];
+                Pix(rc.sci.data,i,j)= pix_model[j]; //Look into whether pix_model is def updated (i.e. if (hasFlux == 0)) etc
             }
         }
 
-        free(pix_obsd);
-        free(pix_modl);
+        free(pix_observed);
+        //free(pix_model);
         //free(pix_curr);
-        free(pix_init);
-        free(pix_read);
+        //free(pix_init);
+        free(pix_model);
         free(pix_ctef);
 
     } /*end i*/
@@ -1419,97 +1440,87 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
   the ttrap reference to the image array has to be -1 for C
   */
 
-int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, const int nRows)
+int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, const int nRows, const unsigned nIterations)
 {
     extern int status;
-    int j;
-    int ttrap;
 
-    double ftrap;
-    double pix_1;
-    double padd_2;
-    double padd_3;
-    double prem_3;
-    double fcarry;
-
-    padd_3=0.0;
-    prem_3=0.0;
-    padd_2=0.0;
-    fcarry=0.0;
-    pix_1=0.0;
-    ftrap=0.0;
-    ttrap=0;
-
-    FloatHdrData *rprof;
-    FloatHdrData *cprof;
-
-    /*from the reference table*/
-    rprof = cte->rprof;
-    cprof = cte->cprof;
-
-    /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
-      PMAX SHOULD ALWAYS BE POSITIVE HERE  */
-    double pmax = 10.;
-    for(int j = 0; j < nRows; ++j)
+    for (unsigned nthIter = 0; nthIter < nIterations; ++nthIter)//look into moving this further down
     {
-        pmax = max(pixo[j], pmax);
-        /*if (pixo[j] > pmax)
-            pmax=pixo[j];
-            */
-    }
+        double padd_3=0.0;
+        double prem_3=0.0;
+        double padd_2=0.0;
+        double fcarry=0.0;
+        double pix_1=0.0;
+        double ftrap=0.0;
+        int ttrap=0;
 
-    /*GO THROUGH THE TRAPS ONE AT A TIME, FROM HIGHEST TO LOWEST Q,
-      AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
-    for (int w = cte->cte_traps-1; w >= 0; --w){
-        if (cte->qlevq_data[w] <= pmax)
+        /*from the reference table*/
+        const FloatHdrData &rprof = cte->rprof;
+        const FloatHdrData &cprof = cte->cprof;
+
+        /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
+          PMAX SHOULD ALWAYS BE POSITIVE HERE*/
+        double pmax = 10.;
+        //Look into whether this really has to be computed each iteration?
+        for (unsigned j = 0; j < nRows; ++j)
         {
-            ftrap = 0.0e0;
-            ttrap = cte->cte_len; /*for referencing the image at 0*/
-            fcarry = 0.0e0;
+            pmax = max(pixo[j], pmax);
+            /*if (pixo[j] > pmax)
+                pmax=pixo[j];
+                */
+        }
 
-            /*GO UP THE COLUMN PIXEL BY PIXEL*/
-            for(int j = 0; j < columnLength; ++j){
-                pix_1 = pixo[j];
+        /*GO THROUGH THE TRAPS ONE AT A TIME, FROM HIGHEST TO LOWEST Q,
+          AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
+        for (int w = cte->cte_traps-1; w >= 0; --w){
+            if (cte->qlevq_data[w] <= pmax)
+            {
+                ftrap = 0.0e0;
+                ttrap = cte->cte_len; /*for referencing the image at 0*/
+                fcarry = 0.0e0;
 
+                /*GO UP THE COLUMN PIXEL BY PIXEL*/
+                for(unsigned j = 0; j < nRows; ++j){
+                    pix_1 = pixo[j];
 
-                if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) ){
-                    if (pixo[j] >= 0 ){
-                        pix_1 = pixo[j] + fcarry; /*shuffle charge in*/
-                        fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
-                        pix_1 = floor(pix_1); /*reset pixel*/
-                    }
+                    if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) ){
+                        if (pixo[j] >= 0 ){
+                            pix_1 = pixo[j] + fcarry; /*shuffle charge in*/
+                            fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
+                            pix_1 = floor(pix_1); /*reset pixel*/
+                        }
 
-                    /*HAPPENS AFTER FIRST PASS*/
-                    /*SHUFFLE CHARGE IN*/
-                    if ( j> 0  ) {
-                        if (pixf[j] < pixf[j-1])
-                            ftrap *= (pixf[j] /  pixf[j-1]);
-                    }
+                        /*HAPPENS AFTER FIRST PASS*/
+                        /*SHUFFLE CHARGE IN*/
+                        if ( j> 0  ) {
+                            if (pixf[j] < pixf[j-1])
+                                ftrap *= (pixf[j] /  pixf[j-1]);
+                        }
 
-                    /*RELEASE THE CHARGE*/
-                    padd_2=0.0;
-                    if (ttrap <cte->cte_len){
-                        ttrap += 1;
-                        padd_2 = Pix(rprof->data,w,ttrap-1) *ftrap;
-                    }
+                        /*RELEASE THE CHARGE*/
+                        padd_2=0.0;
+                        if (ttrap <cte->cte_len){
+                            ttrap += 1;
+                            padd_2 = Pix(rprof->data,w,ttrap-1) *ftrap;
+                        }
 
-                    padd_3 = 0.0;
-                    prem_3 = 0.0;
-                    if ( pix_1 >= cte->qlevq_data[w]){
-                        prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[j];  /*dpdew is 1 in file */
-                        if (ttrap < cte->cte_len)
-                            padd_3 = Pix(cprof->data,w,ttrap-1)*ftrap;
-                        ttrap=0;
-                        ftrap=prem_3;
-                    }
+                        padd_3 = 0.0;
+                        prem_3 = 0.0;
+                        if ( pix_1 >= cte->qlevq_data[w]){
+                            prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[j];  /*dpdew is 1 in file */
+                            if (ttrap < cte->cte_len)
+                                padd_3 = Pix(cprof->data,w,ttrap-1)*ftrap;
+                            ttrap=0;
+                            ftrap=prem_3;
+                        }
 
-                    pixo[j] += padd_2 + padd_3 - prem_3;
-                } /*replaces trap continue*/
-            }/*end if j>0*/
-        }/* end if qlevq > pmax, replaces continue*/
+                        pixo[j] += padd_2 + padd_3 - prem_3;
+                    } /*replaces trap continue*/
+                }/*end if j>0*/
+            }/* end if qlevq > pmax, replaces continue*/
 
-    }/*end for w*/
-
+        }/*end for w*/
+    }
     return(status);
 
 }
