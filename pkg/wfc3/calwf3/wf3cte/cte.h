@@ -85,7 +85,7 @@ int findPreScanBias(SingleGroup *, float *, float *);
 int find_dadj(int ,int , double [][RAZ_ROWS], double [][RAZ_ROWS], double , double *);
 int rsz2rsc(WF3Info *, SingleGroup *, SingleGroup *, CTEParams * );
 int inverse_cte_blur(SingleGroup *, SingleGroup *, SingleGroup *, CTEParams *, int, double);
-int sim_colreadout_l(double *, double *, double *, CTEParams *);
+//int sim_colreadout_l(double *, const double *, const CTEParams *, const unsigned nRows);
 int CompareCTEParams(SingleGroup *, CTEParams *);
 int cteHistory (WF3Info *, Hdr *);
 int free_array(float **ptr, int rows, int columns);

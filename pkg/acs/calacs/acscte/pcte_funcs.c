@@ -818,6 +818,8 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
  * 0 = no RN correction
  * 1 = typical correction
  * 2 = hyper-conservative ; attribute as much as possible to RN
+ *
+ * WARNING! This function assumes data is column major storage
  */
 int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
                 const double read_noise, const int noise_model,
@@ -832,11 +834,16 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
      double noise_arr[arrx*arry]   o: Noise to be added back after correction.
   */
 
+   /* no smoothing */
+    if (!noise_model)
+        return status;
+    /* check for valid noise_model */
+    //if (noise_model != 0 && noise_model != 1 && noise_model != 2) {
+    if (noise_model > 2)
+        return (status = ERROR_RETURN);
+
   /* status variable for return */
   extern int status;
-
-  /* iteration variables */
-  int i, j, it_count;
 
   /* local constants */
   const int max_it1 = 25;
@@ -844,115 +851,109 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
   const double rms_fac = 1.10;
   const double f_fac = 1.25;
 
-  /* accumulation variables */
-  double sum;
-  int num;
-
   double * local_noise;
-  double d1, f, rms;
 
-  /* check for valid noise_model */
-  if (noise_model != 0 && noise_model != 1 && noise_model != 2) {
-    return (status = ERROR_RETURN);
-  }
-
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      sig_arr[i*arry + j] = data[i*arry + j];
-      noise_arr[i*arry + j] = 0.0;
+  memcpy(sig_arr, data, sizeof(*data)*arrx*arry);
+  /*for (unsigned i = 0; i < arrx; ++i) {
+    for (unsigned j = 0; j < arry; ++j) {
+      //sig_arr[i*arry + j] = data[i*arry + j];
+      noise_arr[i*arry + j] = 0.0; //this is assumed zeroed when passed in.
     }
-  }
-
-  /* no smoothing */
-  if (noise_model == 0) {
-    return status;
-  }
+  }*/
 
   /* adjust each pixel to be more similar to the three pixels below it */
-  it_count = 0;
-
+  unsigned it_count = 0;
+  double rms;
+  const double rmsFacReadNoise = rms_fac*read_noise;
   do {
-    sum = 0.0;
-    num = 0;
+    double sum = 0.0;
+    //unsigned num = 0;
+    const unsigned nElements = arrx*arry;
+    const double ReadNoiseAt10Percent = 0.1*read_noise;
 
-    for (i = 1; i < arrx; i++) {
-      for (j = 0; j < arry; j++) {
-        d1 = sig_arr[i*arry + j] - sig_arr[(i-1)*arry + j];
+    for (unsigned j = 0; j < arry; ++j) {
+        for (unsigned i = 1; i < arrx; ++i) {
+        //d1 = sig_arr[i*arry + j] - sig_arr[(i-1)*arry + j];
+        double d1 = sig_arr[i + j*arrx] - sig_arr[i-1 + j*arrx];
 
-        if (d1 > 0.1*read_noise) {
-          d1 = 0.1*read_noise;
-        } else if (d1 < -0.1*read_noise) {
-          d1 = -0.1*read_noise;
-        }
+        //clip delta
+        if (d1 > ReadNoiseAt10Percent)
+          d1 = ReadNoiseAt10Percent;
+        else if (d1 < -ReadNoiseAt10Percent)
+          d1 = -ReadNoiseAt10Percent;
 
-        noise_arr[i*arry + j] += d1;
+        //noise_arr[i*arry + j] += d1;
+        //sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
+        noise_arr[i + j*arrx] += d1;
+        sig_arr[i + j*arrx] = data[i + j*arrx] - noise_arr[i + j*arrx];
 
-        sum += pow(noise_arr[i*arry + j], 2);
-        num++;
+        sum += pow(noise_arr[i + j*arrx], 2);
+        //num++;//why is this being counted rather than just being arrx*arry - there are no IFs? (c.f. nElements)
       }
     }
 
-    for (i = 0; i < arrx; i++) {
-      for (j = 0; j < arry; j++) {
+    //can this be moved into the above?
+    /*for (unsigned i = 0; i < arrx; ++i) {
+      for (unsigned j = 0; j < arry; ++j) {
         sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
       }
-    }
+    }*/
 
-    rms = sqrt(sum / (double) num);
-
+    rms = sqrt(sum / (double)nElements );
     it_count++;
-
-  } while (it_count < max_it1 || (it_count < max_it2 && rms < rms_fac*read_noise));
+  } while (it_count < max_it1 || (it_count < max_it2 && rms < rmsFacReadNoise));
 
   if (noise_model == 1) {
+
     /* allocate local copy of noise */
     local_noise = (double *) malloc(arrx * arry * sizeof(double));
+    memcpy(local_noise, noise_arr, sizeof(*noise_arr)*arrx*arry);
 
     /* remove any excessive local corrections
      */
-    for (i = 0; i < arrx; i++) {
-      for (j = 0; j < arry; j++) {
-        f = 1.0;
+    const double f_fac_read_noise = f_fac * read_noise;
+    for (unsigned j = 1; j< arry-1; ++j) {
+        for (unsigned i = 1; i < arrx-1; ++i) {
+            //f = 1.0;
+            //if (i > 1 && i < (arrx-1) && j > 0 && j < (arry-1)) {
+            double f = pow(noise_arr[(i-1) + (j-1) * arrx], 2) +
+                    pow(noise_arr[(i-1) +  j    * arrx], 2) +
+                    pow(noise_arr[(i-1) + (j+1) * arrx], 2) +
+                    pow(noise_arr[ i    + (j-1) * arrx], 2) +
+                    pow(noise_arr[ i    +  j    * arrx], 2) +
+                    pow(noise_arr[ i    + (j+1) * arrx], 2) +
+                    pow(noise_arr[(i+1) + (j-1) * arrx], 2) +
+                    pow(noise_arr[(i+1) +  j    * arrx], 2  ) +
+                    pow(noise_arr[(i+1) + (j+1) * arrx], 2);
 
-        if (i > 1 && i < (arrx-1) && j > 0 && j < (arry-1)) {
-          f = pow(noise_arr[(i-1) * arry + (j+1)], 2) +
-              pow(noise_arr[ i    * arry + (j+1)], 2) +
-	      pow(noise_arr[(i+1) * arry + (j+1)], 2) +
-              pow(noise_arr[(i-1) * arry +  j   ], 2) +
-              pow(noise_arr[ i    * arry +  j   ], 2) +
-	      pow(noise_arr[(i+1) * arry +  j   ], 2) +
-              pow(noise_arr[(i-1) * arry + (j-1)], 2) +
-              pow(noise_arr[ i    * arry + (j-1)], 2) +
-              pow(noise_arr[(i+1) * arry + (j-1)], 2);
+            f = sqrt(f/9.0) / f_fac_read_noise; /* scale-down factor */
+            //if (f < 1)//if only we could remove this conditional?
+                //f = 1.00;
+            //}
+            if (f > 1)
+                local_noise[i*arry + j] /= f;
 
-          f = sqrt(f/9.0) / (f_fac * read_noise); /* scale-down factor */
-
-          if (f < 1) {
-            f = 1.00;
-          }
-        }
-
-        local_noise[i*arry + j] = noise_arr[i*arry + j] / f;
-      } /* end for j */
+        } /* end for j */
     } /* end for i */
 
     /* Copy scaled down noise to output */
-    for (i = 0; i < arrx; i++) {
+    /*for (i = 0; i < arrx; i++) {
       for (j = 0; j < arry; j++) {
         noise_arr[i*arry + j] = local_noise[i*arry + j];
       }
     }
-
+*/
+    memcpy(noise_arr, local_noise, sizeof(local_noise)*arrx*arry);
     free(local_noise);
-
+    //should there be a return here? Do we still do noise_model = 2 as well then?
   } /* end if noise_model==1 */
 
   /* Calculate noiseless data using final modeled noise.
      If noise_model==2, there is no source preservation.
    */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
+  for (unsigned j = 0; j < arry; ++j) {
+      for (unsigned i = 0; i < arrx; ++i) {
+          sig_arr[i + j*arrx] = data[i + j*arrx] - noise_arr[i + j*arrx];
     }
   }
 
