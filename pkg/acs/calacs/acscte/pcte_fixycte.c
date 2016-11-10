@@ -20,7 +20,6 @@ int sim_readout_nit(const int arrx, double pix_cur[arrx], double pix_read[arrx],
                     const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
                     const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]);
 
-
 int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             double sig_cor[arrx*arry], const int sim_nit, const int shft_nit,
             const double too_low, double cte_frac[arrx*arry],
