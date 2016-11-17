@@ -1417,34 +1417,6 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
     return(status);
 }
 
-
-/*This is the workhorse subroutine; it simulates the readout
-  of one column pixi() and outputs this to pixo() using a single
-  iteration.  It can be called successively to do the transfer
-  in steps.
-
-
-  JDIM == RAZ_ROWS
-  WDIM == TRAPS  Ws is the input traps number < 999999
-  NITs == cte_pars->n_par
-
-  These are already in the parameter structure CTEParams
-  int     Ws              the number of traps < 999999
-  float     q_w[TRAPS];     the run of charge with level  == qlevq_data
-  float   dpde_w[TRAPS];  the run of charge loss with level == dpdew_data
-  float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel == rprof fits image
-  float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)  == cprof fits image
-
-
-  W = wcol_data = trap id
-
-  q_w[TRAP] = qlev_q from QPROF  traps as function of packet size = cte->qlevq_data[TRAP]
-
-  pixi (curr), pixo (read) , pixf(cteff) are passed and are 1d arrays which have values for a particular column
-
-  the ttrap reference to the image array has to be -1 for C
-  */
-
 int initCTETrl (char *input, char *output) {
 
     extern int status;

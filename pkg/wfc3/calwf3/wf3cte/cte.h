@@ -1,7 +1,16 @@
+#ifndef CTE_INCL
+#define CTE_INCL
+
 #define NUM_SCALE 4 /*number of scaling points, this is the 4 columns in the second table extension*/
 #define TRAPS 999 /*max number of traps per column = rows in pctetab[1], valid traps are < 999999 in qlev*/
 #define CTEFLAG 9999999 /*flag to ignore value in array during cte calculation*/
 
+
+#include "wf3.h"
+#include "hstio.h"
+#include "wf3info.h"
+//#include "../include/wf3.h"
+//#include "../../../../include/hstio.h"
 
 /* structure to hold CTE parameters from the reference files */
 typedef struct {
@@ -94,3 +103,5 @@ int initCTETrl (char *, char *);
 
 int makeRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
 int undoRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
+
+#endif

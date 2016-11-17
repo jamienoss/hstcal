@@ -933,8 +933,8 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
             if (f > 1)
                 local_noise[i*arry + j] /= f;
 
-        } /* end for j */
-    } /* end for i */
+        } /* end for i */
+    } /* end for j */
 
     /* Copy scaled down noise to output */
     /*for (i = 0; i < arrx; i++) {
