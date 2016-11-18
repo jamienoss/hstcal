@@ -27,7 +27,7 @@
 # include "wf3err.h"
 # include "wf3corr.h"
 # include "cte.h"
-# include "ctegen2.h"
+# include "../../../../ctegen2/ctegen2.h"
 
 
 int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
@@ -80,7 +80,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     Hdr scihdr; /*science header in case of subarray image to detect chip*/
     IODescPtr ip = NULL;
 
-    CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
+    WF3CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     SingleGroup cd; /*SCI 1, chip 2*/
     SingleGroup ab; /*SCI 2, chip 1*/
     SingleGroup subcd; /*subarray chip*/
@@ -462,7 +462,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        if (raz2rsz(&wf3, &raz, &rsz, cte_pars.rn_amp, max_threads))
+        if (raz2rsz(&wf3, &raz, &rsz, cte_pars.baseParams.rn_amp, max_threads))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
@@ -1066,7 +1066,7 @@ int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS]
   rac = raw + ((rsc-rsz) / gain )
 
  ***/
-int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, CTEParams *cte) {
+int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte) {
 
     extern int status;
 
@@ -1163,7 +1163,7 @@ int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, CTEParams *cte) {
   This is a big old time sink function
  ***/
 
-int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart){
+int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CTEParams *cte, int verbose, double expstart){
 
     extern int status;
 
@@ -1290,8 +1290,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                double rnAmp2 = cte->rn_amp*cte->rn_amp;
-                for (unsigned NITINV = 1; NITINV <= cte->n_forward; ++NITINV)
+                double rnAmp2 = cte->baseParams.rn_amp*cte->baseParams.rn_amp;
+                for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward; ++NITINV)
                 {
                     //memcpy(pix_read, pix_model, sizeof(pix_model)*RAZ_ROWS);
                     /*comment out - now do in place with single array as the 1st thing sim_colreadout does (did) is
@@ -1306,8 +1306,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
                     */
 
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                    for (unsigned NITCTE = 1; NITCTE <= cte->n_par; ++NITCTE){
-                        sim_colreadout_l(pix_model, pix_ctef, cte, RAZ_ROWS);
+                    for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE){
+                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, RAZ_ROWS);
 
                         /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
                         /*for (j=0; j< RAZ_ROWS; j++){
@@ -1319,7 +1319,7 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
                       AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE*/
                     for (unsigned j = 0; j < RAZ_ROWS; ++j){
                         dmod =  (pix_observed[j] - pix_model[j]);
-                        if (NITINV < cte->n_forward){
+                        if (NITINV < cte->baseParams.n_forward){
                             dmod *= (dmod*dmod) /((dmod*dmod) + rnAmp2);
                         }
                         //pix_model[j] += dmod; /*dampen each pixel as the best is determined*/

@@ -11,29 +11,38 @@
 #include "acserr.h"
 
 #include "pcte.h"
-
+#include "../../../../ctegen2/ctegen2.h"
+//#include "ctegen2.h"
 
 static int get_amp_array_size(const ACSInfo *acs, SingleGroup *x,
                               const int amp, char *amploc, char *ccdamp,
                               int *xsize, int *ysize, int *xbeg,
                               int *xend, int *ybeg, int *yend);
 
-static inline int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                           const int amp,
                           const int arr1, const int arr2,
                           const int xbeg, const int ybeg,
                           double amp_sci_array[arr1*arr2],
                           double amp_err_array[arr1*arr2],
-                          const Bool const targetColumnMajor);
+                          const Bool targetColumnMajor);
 
-static inline int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
                             const int amp,
                             const int arr1, const int arr2,
                             const int xbeg, const int ybeg,
                             double amp_sci_array[arr1*arr2],
                             double amp_err_array[arr1*arr2],
-                            const Bool const sourceColumnMajor);
+                            const Bool sourceColumnMajor);
 
+static int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup *im,
+                          const int amp,
+                          const int arr1, const int arr2,
+                          const int xbeg, const int ybeg,
+                          double amp_sci_array[arr1*arr2],
+                          double amp_err_array[arr1*arr2],
+                          const Bool targetColumnMajor,
+                          const Bool toSingleGroup);
 
 /* Perform a pixel based CTE correction on the SCI data extension of ACS CCD
    data. Parameters of the CTE characterization are read from the PCTE reference
@@ -66,7 +75,7 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
     double dpde_l[NUM_LEV];
 
     /* structure to hold CTE parameters from file */
-    CTEParams pars;
+    ACSCTEParams pars;
 
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */
     int numamps;               /* number of amps on chip */
@@ -243,12 +252,12 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
             /* perform CTE correction */
             //for (int i = 0; i < pars->n_par; ++i)
             //{
-            for (unsigned NITINV = 1; NITINV <= pars.n_forward; ++NITINV)
+            for (unsigned NITINV = 1; NITINV <= pars.baseParams.n_forward; ++NITINV)
             {
                 /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                for (unsigned NITCTE = 1; NITCTE <= pars.n_par; ++NITCTE)
+                for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
                 {
-                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars, amp_arr1))
+                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams, amp_arr1))
                         return status;
                 }
 
@@ -257,7 +266,7 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
             //WARNING! calwf3 CTE does some more work here - WIP
 
             //copy corrected column back into original array
-            memcpy(amp_sig_arr[j*amp_arr1], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
+            memcpy(&amp_sig_arr[j*amp_arr1], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
         }
 
         /* add readout noise back and convert corrected data back to DN.
@@ -359,13 +368,13 @@ static int get_amp_array_size(const ACSInfo *acs, SingleGroup *x,
 /* Make_amp_array returns an array view of the data readout through the
    specified amp in which the amp is at the lower left hand corner.
 */
-static inline int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                           const int amp,
                           const int arr1, const int arr2,
                           const int xbeg, const int ybeg,
                           double amp_sci_array[arr1*arr2],
                           double amp_err_array[arr1*arr2],
-                          const Bool const targetColumnMajor)
+                          const Bool targetColumnMajor)
 {
     return arrayToOrFromSingleGroup(acs, im, amp, arr1, arr2, xbeg, ybeg,
             amp_sci_array, amp_err_array, targetColumnMajor, False);
@@ -374,29 +383,26 @@ static inline int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
 /* unmake_amp_array does the opposite of make_amp_array, it takes amp array
    views and puts them back into the single group in the right order.
 */
-static inline int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
                           const int amp,
                           const int arr1, const int arr2,
                           const int xbeg, const int ybeg,
                           double amp_sci_array[arr1*arr2],
                           double amp_err_array[arr1*arr2],
-                          const Bool const targetColumnMajor)
+                          const Bool targetColumnMajor)
 {
     return arrayToOrFromSingleGroup(acs, im, amp, arr1, arr2, xbeg, ybeg,
             amp_sci_array, amp_err_array, targetColumnMajor, True);
 }
 
-/* Make inline to help compiler optimize out IF conditional within main loops
- * This is currently only called once - if expanding usage, possibly reconsider.
- */
-static inline int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup *im,
+static int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup *im,
                           const int amp,
                           const int arr1, const int arr2,
                           const int xbeg, const int ybeg,
                           double amp_sci_array[arr1*arr2],
                           double amp_err_array[arr1*arr2],
-                          const Bool const targetColumnMajor,
-                          const Bool const toSingleGroup) {
+                          const Bool targetColumnMajor,
+                          const Bool toSingleGroup) {
 
     extern int status;
 
@@ -415,7 +421,7 @@ static inline int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup
         case AMP_A :
         {
             rowOffset = ybeg + arr1 - 1;
-            columnOffset - xbeg;
+            columnOffset = xbeg;
             iSig = -1;
             jSig = 1;
             break;
@@ -430,7 +436,7 @@ static inline int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup
         }
         case AMP_C :
         {
-            rowOffset - ybeg;
+            rowOffset = ybeg;
             columnOffset = xbeg;
             iSig = 1;
             jSig = 1;
@@ -454,41 +460,68 @@ static inline int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup
 
         /* These loops could be moved into each of the above case stmnts to remove extra op of *Signatures
          * However, it maybe worth ignoring this for the sake of code neatness and maintainability.
-         * NOTE: optimized to column major storage for target.
+         * NOTE: loop order optimized to column major storage for target.
          */
-        //loop over columns
-        for (unsigned j = 0; j < arr2; ++j)
+        if (targetColumnMajor)
         {
-            //loops over rows
-            for (unsigned i = 0; i < arr1; ++i)
+            if (toSingleGroup)
             {
-                column = columnOffset + jSig*j;
-                row = rowOffset + iSig*i;
-
-                //The following conditionals are compile time constant and will be optimized out
-                if (targetColumnMajor)
+                //loop over columns
+                for (unsigned j = 0; j < arr2; ++j)
                 {
-                    if (toSingleGroup)
+                    column = columnOffset + jSig*j;
+                    //loop over rows
+                    for (unsigned i = 0; i < arr1; ++i)
                     {
+                        row = rowOffset + iSig*i;
                         Pix(im->sci.data, column, row) = (float) amp_sci_array[i + j*arr1];
                         Pix(im->err.data, column, row) = (float) amp_err_array[i + j*arr1];
                     }
-                    else
+                }
+            }
+            else
+            {
+                //loop over columns
+                for (unsigned j = 0; j < arr2; ++j)
+                {
+                    column = columnOffset + jSig*j;
+                    //loop over rows
+                    for (unsigned i = 0; i < arr1; ++i)
                     {
+                        row = rowOffset + iSig*i;
                         amp_sci_array[i + j*arr1] = Pix(im->sci.data, column, row);
                         amp_err_array[i + j*arr1] = Pix(im->err.data, column, row);
                     }
-
                 }
-                else
+            }
+        }
+        else
+        {
+            if (toSingleGroup)
+            {
+                //loop over columns
+                for (unsigned j = 0; j < arr2; ++j)
                 {
-                    if (toSingleGroup)
+                    column = columnOffset + jSig*j;
+                    //loop over rows
+                    for (unsigned i = 0; i < arr1; ++i)
                     {
+                        row = rowOffset + iSig*i;
                         Pix(im->sci.data, column, row) = (float) amp_sci_array[i*arr2 + j];
                         Pix(im->err.data, column, row) = (float) amp_err_array[i*arr2 + j];
                     }
-                    else
+                }
+            }
+            else
+            {
+                //loop over columns
+                for (unsigned j = 0; j < arr2; ++j)
+                {
+                    column = columnOffset + jSig*j;
+                    //loop over rows
+                    for (unsigned i = 0; i < arr1; ++i)
                     {
+                        row = rowOffset + iSig*i;
                         amp_sci_array[i*arr2 + j] = Pix(im->sci.data, column, row);
                         amp_err_array[i*arr2 + j] = Pix(im->err.data, column, row);
                     }

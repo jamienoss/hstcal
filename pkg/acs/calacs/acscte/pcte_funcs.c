@@ -17,7 +17,7 @@
  * develops and as new instruments are added.
  * - MRD 18 Feb. 2011
  */
-int PixCteParams (char *filename, const double expstart, CTEParams *pars) {
+int PixCteParams (char *filename, const double expstart, ACSCTEParams *pars) {
 
   extern int status; /* variable for return status */
 
@@ -423,7 +423,7 @@ int PixCteParams (char *filename, const double expstart, CTEParams *pars) {
  * will be user tunable in this manner, this is just the recipe.
  * MRD 17 Mar. 2011
  */
-int CompareCteParams(SingleGroup *x, CTEParams *pars) {
+int CompareCteParams(SingleGroup *x, ACSCTEParams *pars) {
 
   extern int status;
 
