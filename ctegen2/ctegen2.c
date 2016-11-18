@@ -10,10 +10,7 @@
 #include "acs.h"
 
 /*This is the workhorse subroutine; it simulates the readout
-  of one column pixi() and outputs this to pixo() using a single
-  iteration.  It can be called successively to do the transfer
-  in steps.
-
+  of one column currentColumn[].
 
   JDIM == RAZ_ROWS
   WDIM == TRAPS  Ws is the input traps number < 999999
@@ -26,17 +23,16 @@
   float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel == rprof fits image
   float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)  == cprof fits image
 
-
   W = wcol_data = trap id
 
   q_w[TRAP] = qlev_q from QPROF  traps as function of packet size = cte->qlevq_data[TRAP]
 
-  pixi (curr), pixo (read) , pixf(cteff) are passed and are 1d arrays which have values for a particular column
+  currentColumn (read), pixf(cteff) are passed and are 1d arrays which have values for a particular column
 
   the ttrap reference to the image array has to be -1 for C
   */
 
-int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, const unsigned nRows)
+int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams *cte, const unsigned nRows)
 {
     extern int status;
 
@@ -60,7 +56,7 @@ int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, con
         //Look into whether this really has to be computed each iteration?
         for (unsigned j = 0; j < nRows; ++j)
         {
-            pmax = (pixo[j] < pmax) ? pmax : pixo[j];
+            pmax = (currentColumn[j] < pmax) ? pmax : currentColumn[j];
             /*if (pixo[j] > pmax)
                 pmax=pixo[j];
                 */
@@ -77,11 +73,11 @@ int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, con
 
                 /*GO UP THE COLUMN PIXEL BY PIXEL*/
                 for(unsigned j = 0; j < nRows; ++j){
-                    pix_1 = pixo[j];
+                    pix_1 = currentColumn[j];
 
                     if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) ){
-                        if (pixo[j] >= 0 ){
-                            pix_1 = pixo[j] + fcarry; /*shuffle charge in*/
+                        if (currentColumn[j] >= 0 ){
+                            pix_1 = currentColumn[j] + fcarry; /*shuffle charge in*/
                             fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
                             pix_1 = floor(pix_1); /*reset pixel*/
                         }
@@ -110,7 +106,7 @@ int sim_colreadout_l(double *pixo, const double *pixf, const CTEParams *cte, con
                             ftrap=prem_3;
                         }
 
-                        pixo[j] += padd_2 + padd_3 - prem_3;
+                        currentColumn[j] += padd_2 + padd_3 - prem_3;
                     } /*replaces trap continue*/
                 }/*end if j>0*/
             }/* end if qlevq > pmax, replaces continue*/

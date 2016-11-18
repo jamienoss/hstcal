@@ -21,18 +21,18 @@ MLS 2015: read in the CTE parameters from the PCTETAB file
 /************ HELPER SUBROUTINES ****************************/    
 
 /*initialize the cte parameter structure*/
-void initCTEParams(CTEParams *pars){
+void initCTEParams(WF3CTEParams *pars){
     int i;
 
     pars->cte_name[0]='\0';
     pars->cte_ver[0]='\0';
     pars->cte_date0=0.0f;
     pars->cte_date1=0.0f;
-    pars->cte_traps=0.0f;
-    pars->cte_len=0;
-    pars->rn_amp=0.0f; 
-    pars->n_forward=0; 
-    pars->n_par=0;
+    pars->baseParams.cte_traps=0.0f;
+    pars->baseParams.cte_len=0;
+    pars->baseParams.rn_amp=0.0f;
+    pars->baseParams.n_forward=0;
+    pars->baseParams.n_par=0;
     pars->scale_frac=0.0f; /*will be updated during routine run*/
     pars->noise_mit=0; 
     pars->thresh=0.0f;
@@ -44,8 +44,8 @@ void initCTEParams(CTEParams *pars){
     */
     for (i=0; i<TRAPS;i++){
         pars->wcol_data[i]=0;  
-        pars->qlevq_data[i]=0.0f;
-        pars->dpdew_data[i]=0.0f;
+        pars->baseParams.qlevq_data[i]=0.0f;
+        pars->baseParams.dpdew_data[i]=0.0f;
     }
 
     for (i=0;i<RAZ_ROWS; i++){
@@ -55,12 +55,12 @@ void initCTEParams(CTEParams *pars){
         pars->scale1536[i]=0.0f;
         pars->scale2048[i]=0.0f;
     }
-    pars->rprof = NULL; /*differential trail profile as image*/
-    pars->cprof = NULL; /*cummulative trail profile as image*/
+    pars->baseParams.rprof = NULL; /*differential trail profile as image*/
+    pars->baseParams.cprof = NULL; /*cummulative trail profile as image*/
 
 }
 
-int GetCTEPars (char *filename, CTEParams *pars) {
+int GetCTEPars (char *filename, WF3CTEParams *pars) {
 	/* Read the cte parameters from the reference table PCTETAB
 
 	   These are taken from the PCTETAB global header:
@@ -170,42 +170,42 @@ No.    Name         Type      Cards   Dimensions   Format
 	trlmessage(MsgText);
 
 	/* READ MAX LENGTH OF CTE TRAIL */
-	if (GetKeyInt(&hdr_ptr, "PCTETLEN", NO_DEFAULT, -999, &pars->cte_len)) {
+	if (GetKeyInt(&hdr_ptr, "PCTETLEN", NO_DEFAULT, -999, &pars->baseParams.cte_len)) {
 		cteerror("(pctecorr) Error reading PCTETLEN keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
 
-	sprintf(MsgText,"PCTETLEN: %d",pars->cte_len);
+	sprintf(MsgText,"PCTETLEN: %d",pars->baseParams.cte_len);
 	trlmessage(MsgText);
 
 	/* GET READ NOISE CLIPPING LEVEL */
-	if (GetKeyDbl(&hdr_ptr, "PCTERNOI", NO_DEFAULT, -999, &pars->rn_amp)) {
+	if (GetKeyDbl(&hdr_ptr, "PCTERNOI", NO_DEFAULT, -999, &pars->baseParams.rn_amp)) {
 		cteerror("(pctecorr) Error reading PCTERNOI keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
 
-	sprintf(MsgText,"PCTERNOI: %f",pars->rn_amp);
+	sprintf(MsgText,"PCTERNOI: %f",pars->baseParams.rn_amp);
 	trlmessage(MsgText);
 
 	/* GET NUMBER OF ITERATIONS USED IN FORWARD MODEL */
-	if (GetKeyInt(&hdr_ptr, "PCTENFOR", NO_DEFAULT, -999, &pars->n_forward)) {
+	if (GetKeyInt(&hdr_ptr, "PCTENFOR", NO_DEFAULT, -999, &pars->baseParams.n_forward)) {
 		cteerror("(pctecorr) Error reading PCTENFOR keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
-	sprintf(MsgText,"PCTERNFOR: %d",pars->n_forward);
+	sprintf(MsgText,"PCTERNFOR: %d",pars->baseParams.n_forward);
 	trlmessage(MsgText);
 
 	/* GET NUMBER OF ITERATIONS USED IN PARALLEL TRANSFER*/
-	if (GetKeyInt(&hdr_ptr, "PCTENPAR", NO_DEFAULT, -999, &pars->n_par)) {
+	if (GetKeyInt(&hdr_ptr, "PCTENPAR", NO_DEFAULT, -999, &pars->baseParams.n_par)) {
 		cteerror("(pctecorr) Error reading PCTENPAR keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
 
-	sprintf(MsgText,"PCTERNPAR: %d",pars->n_par);
+	sprintf(MsgText,"PCTERNPAR: %d",pars->baseParams.n_par);
 	trlmessage(MsgText);
 
 	/* GET READ NOISE MITIGATION ALGORITHM*/
@@ -302,7 +302,7 @@ No.    Name         Type      Cards   Dimensions   Format
 		}
                 
 		/* GET QLEVQ FROM THIS ROW */
-		c_tbegtd(tbl_ptr, qlevq_ptr, j+1, &pars->qlevq_data[j]);
+		c_tbegtd(tbl_ptr, qlevq_ptr, j+1, &pars->baseParams.qlevq_data[j]);
 		if (c_iraferr()) {
 			sprintf(MsgText,"(pctecorr) Error reading row %d of column %s in PCTETAB",j+1, qlevq);
 			cteerror(MsgText);
@@ -310,11 +310,11 @@ No.    Name         Type      Cards   Dimensions   Format
 			return status;
 		}
         
-        if (pars->qlevq_data[j] < 999999.)
+        if (pars->baseParams.qlevq_data[j] < 999999.)
             ctraps+=1;
         
 		/* GET DPDEW FROM THIS ROW */
-		c_tbegtd(tbl_ptr, dpdew_ptr, j+1, &pars->dpdew_data[j]);
+		c_tbegtd(tbl_ptr, dpdew_ptr, j+1, &pars->baseParams.dpdew_data[j]);
 		if (c_iraferr()) {
 			sprintf(MsgText,"(pctecorr) Error reading row %d of column %s in PCTETAB",j+1, dpdew);
 			cteerror(MsgText);
@@ -328,7 +328,7 @@ No.    Name         Type      Cards   Dimensions   Format
 	}
     
     /*IF CTRAPS EVER OVERFLOWS INT THIS NEEDS TO BE CHANGED*/
-    pars->cte_traps=(int)ctraps;
+    pars->baseParams.cte_traps=(int)ctraps;
 
     /*
 	sprintf(MsgText,"(pctecorr) data check for PCTETAB QPROF, row %i, %i\t%g\t%g\ttraps=%i\n",20,
@@ -451,14 +451,14 @@ No.    Name         Type      Cards   Dimensions   Format
 	ctemessage("Reading in image from extension 3");
 
 	/* Get the coefficient images from the PCTETAB */
-	pars->rprof  = (FloatHdrData *)calloc(1,sizeof(FloatHdrData));
-	if (pars->rprof == NULL){
+	pars->baseParams.rprof  = (FloatHdrData *)calloc(1,sizeof(FloatHdrData));
+	if (pars->baseParams.rprof == NULL){
 		sprintf (MsgText, "Can't allocate memory for RPROF ref data");
 		trlerror (MsgText);
 		return (status = 1);
 	}
-	initFloatHdrData(pars->rprof);
-	if (getFloatHD (filename, "RPROF", 1, pars->rprof)){
+	initFloatHdrData(pars->baseParams.rprof);
+	if (getFloatHD (filename, "RPROF", 1, pars->baseParams.rprof)){
 		return (status=1);
 	}
 
@@ -467,16 +467,16 @@ No.    Name         Type      Cards   Dimensions   Format
 	/* ext number 4 : cummulative trail profile as image */
 	ctemessage("Reading in image from extension 4");
 
-	pars->cprof  = (FloatHdrData *)calloc(1,sizeof(FloatHdrData));
-	if (pars->cprof == NULL){
+	pars->baseParams.cprof  = (FloatHdrData *)calloc(1,sizeof(FloatHdrData));
+	if (pars->baseParams.cprof == NULL){
 		sprintf (MsgText, "Can't allocate memory for CPROF ref data");
 		trlerror (MsgText);
 		return (status = 1);
 	}
 
 	/* Get the coefficient images from the PCTETAB */
-	initFloatHdrData (pars->cprof);
-	if (getFloatHD (filename, "CPROF", 1, pars->cprof)){
+	initFloatHdrData (pars->baseParams.cprof);
+	if (getFloatHD (filename, "CPROF", 1, pars->baseParams.cprof)){
 		return (status=1);
 	}
 
@@ -503,7 +503,7 @@ No.    Name         Type      Cards   Dimensions   Format
         'FIXROCR' : 1, #set to 1 for true, fix the readout cr's
 
  */
-int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
+int CompareCTEParams(SingleGroup *group, WF3CTEParams *pars) {
 
 	extern int status;
 
@@ -563,10 +563,10 @@ int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
         return (status=HEADER_PROBLEM);
 	}
 
-    if ( (cte_len != pars->cte_len) && (cte_len > 1) ){
-        pars->cte_len=cte_len;
+    if ( (cte_len != pars->baseParams.cte_len) && (cte_len > 1) ){
+        pars->baseParams.cte_len=cte_len;
     } else {
-        if (PutKeyInt(group->globalhdr,"PCTETLEN",pars->cte_len,"max length of CTE trail")){
+        if (PutKeyInt(group->globalhdr,"PCTETLEN",pars->baseParams.cte_len,"max length of CTE trail")){
             trlmessage("(pctecorr) Error updating PCTETLEN in header");
         return (status=HEADER_PROBLEM);
         }
@@ -578,10 +578,10 @@ int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
         return (status=HEADER_PROBLEM);
 	}
         
-    if ( (rn_amp >1.) && (rn_amp != pars->rn_amp)){
-        pars->rn_amp=rn_amp;
+    if ( (rn_amp >1.) && (rn_amp != pars->baseParams.rn_amp)){
+        pars->baseParams.rn_amp=rn_amp;
     } else {
-        if(PutKeyDbl(group->globalhdr, "PCTERNOI", pars->rn_amp,"read noise amp clip limit")){
+        if(PutKeyDbl(group->globalhdr, "PCTERNOI", pars->baseParams.rn_amp,"read noise amp clip limit")){
             trlmessage("(pctecorr) Error updating PCTERNOI in header");
         return (status=HEADER_PROBLEM);
         }
@@ -594,10 +594,10 @@ int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
         return (status=HEADER_PROBLEM);
 	}
     
-    if (n_forward > 1 && n_forward != pars->n_forward){
-        pars->n_forward = n_forward;
+    if (n_forward > 1 && n_forward != pars->baseParams.n_forward){
+        pars->baseParams.n_forward = n_forward;
     } else {
-        if (PutKeyInt(group->globalhdr, "PCTENFOR",pars->n_forward,"Number of iter in forward model")){
+        if (PutKeyInt(group->globalhdr, "PCTENFOR",pars->baseParams.n_forward,"Number of iter in forward model")){
             trlmessage("(pctecorr) Error updating PCTENFOR in header");
             return (status=HEADER_PROBLEM);
         }
@@ -611,10 +611,10 @@ int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
 	}
     
     
-    if( n_par >1 && n_par != pars->n_par){
-        pars->n_par = n_par;
+    if( n_par >1 && n_par != pars->baseParams.n_par){
+        pars->baseParams.n_par = n_par;
     } else {
-        if (PutKeyInt(group->globalhdr, "PCTENPAR",pars->n_par,"Number of iter in parallel transfer")){
+        if (PutKeyInt(group->globalhdr, "PCTENPAR",pars->baseParams.n_par,"Number of iter in parallel transfer")){
             trlmessage("(pctecorr) Error updating PCTENPAR in header");
             return (status=HEADER_PROBLEM);
         }
