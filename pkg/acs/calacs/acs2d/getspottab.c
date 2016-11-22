@@ -72,7 +72,7 @@ ACS2dInfo *acs2d     io: calibration switches, etc
 	    if (ReadSpotTab (&tabinfo, row, &tabrow))
 		return (status);
         
-        delta = abs(date - tabrow.dtime);
+        delta = labs(date - tabrow.dtime);
         
 	    if (delta < delta_date) {
             min_row = row;

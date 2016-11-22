@@ -422,7 +422,7 @@ void cleanBiasFit(double *barray, int *bmask, int ny, float rn){
   double bsum, bmean, sdev, svar;
   double s;
   int nsum;
-  float clip = 3.0;
+  const float clip = 3.0;
   int nrej=0;
 
   bsum = bmean = sdev = svar = 0.0;
@@ -455,7 +455,7 @@ void cleanBiasFit(double *barray, int *bmask, int ny, float rn){
 
   /* With statistics in hand, ID and flag outliers*/
 	for (j = 0;  j < ny;  j++) {
-    if (barray[j] > abs((clip*sdev)+bmean)) {
+    if (barray[j] > fabs((clip*sdev)+bmean)) {
       bmask[j] = 0;
       nrej++;
     }
@@ -477,7 +477,7 @@ void cleanBiasFit(double *barray, int *bmask, int ny, float rn){
   /* With statistics in hand, ID and flag outliers based on
    readnoise as sigma to further refine the value... */
 	for (j = 0;  j < ny;  j++) {
-    if (barray[j] > abs((clip*rn)+bmean)) {
+    if (barray[j] > fabs((clip*rn)+bmean)) {
       bmask[j] = 0;
       nrej++;
     }
