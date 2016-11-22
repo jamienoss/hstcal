@@ -224,7 +224,7 @@ int main (int argc, char **argv) {
 	    if ((status = CalStis0 (rawfile, wavfile, outroot,
                                     printtime, save_tmp, verbose))) {
 		WhichError (status);
-		if ((status == NOTHING_TO_DO))
+		if (status == NOTHING_TO_DO)
 		    status = 0;			/* not an error for cs0 */
 		else
 		    printf ("calstis0 failed.\n");
