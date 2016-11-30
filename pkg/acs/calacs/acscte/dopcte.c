@@ -252,15 +252,21 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
             /* perform CTE correction */
             //for (int i = 0; i < pars->n_par; ++i)
             //{
-            for (unsigned NITINV = 1; NITINV <= pars.baseParams.n_forward; ++NITINV)
+            for (unsigned NITINV = 0; NITINV < pars.baseParams.n_forward - 1; ++NITINV)
             {
                 /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                 for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
                 {
-                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams, amp_arr1))
+                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams, amp_arr1, True))
                         return status;
                 }
-
+            }
+            //Do the last iteration separately so as not to dampen.
+            /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
+            for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
+            {
+                if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams, amp_arr1, False))
+                    return status;
             }
 
             //WARNING! calwf3 CTE does some more work here - WIP

@@ -18,6 +18,6 @@ typedef struct {
     FloatHdrData *cprof; // cumulative trail profile as image
 } CTEParams;
 
-int sim_colreadout_l(double * pixo, const double * pixf, const CTEParams * cte, const unsigned nRows);
+int sim_colreadout_l(double * pixo, const double * pixf, const CTEParams * cte, const unsigned nRows, const Bool dampen);
 
 #endif

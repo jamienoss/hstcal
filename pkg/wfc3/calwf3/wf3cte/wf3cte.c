@@ -1168,8 +1168,6 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     extern int status;
 
     /*looping vars*/ //Should never be declared externally to a loop!
-    int NITINV, NITCTE;
-    double dmod;
     int jmax;
     float hardset=0.0f;
 
@@ -1185,11 +1183,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     double *pix_ctef=&setdbl;
 
     /*STARTING DEFAULTS*/
-    NITINV=1;
-    NITCTE=1;
     cte_ff=0.0;
     jmax=0;
-    dmod=0.0;
 
     /*LOCAL IMAGES TO PLAY WITH, THEY WILL REPLACE THE INPUTS*/
     SingleGroup rz; /*pixz_raz*/
@@ -1290,8 +1285,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                double rnAmp2 = cte->baseParams.rn_amp*cte->baseParams.rn_amp;
-                for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward; ++NITINV)
+                //double rnAmp2 = cte->baseParams.rn_amp*cte->baseParams.rn_amp;
+                for (unsigned NITINV = 0; NITINV < cte->baseParams.n_forward - 1; ++NITINV)
                 {
                     //memcpy(pix_read, pix_model, sizeof(pix_model)*RAZ_ROWS);
                     /*comment out - now do in place with single array as the 1st thing sim_colreadout does (did) is
@@ -1307,7 +1302,7 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                     for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE){
-                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, RAZ_ROWS);
+                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, RAZ_ROWS, True);
 
                         /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
                         /*for (j=0; j< RAZ_ROWS; j++){
@@ -1317,15 +1312,22 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
                     /*DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
                       AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE*/
-                    for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                        dmod =  (pix_observed[j] - pix_model[j]);
-                        if (NITINV < cte->baseParams.n_forward){
-                            dmod *= (dmod*dmod) /((dmod*dmod) + rnAmp2);
-                        }
-                        //pix_model[j] += dmod; /*dampen each pixel as the best is determined*/
-                        pix_model[j] = pix_observed[j] + dmod; /*dampen each pixel as the best is determined*/
-                    }
+                    /*for (unsigned i = 0; i < RAZ_ROWS; ++i){
+                        double dmod =  (pix_observed[i] - pix_model[i]);
+                        double dmod2 = dmod * dmod;
+                        //if (NITINV < cte->baseParams.n_forward){
+                            dmod *= dmod2 / (dmod2 + rnAmp2);
+                        //}
+                        //pix_model[j] += dmod; //dampen each pixel as the best is determined
+                        pix_model[j] = pix_observed[j] + dmod; //dampen each pixel as the best is determined
+                    }*/
                 } /*NITINV end*/
+                //Do the last iteration separately so as not to dampen (removes conditional from above damp loop)
+                /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
+                for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE)
+                {
+                    sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, RAZ_ROWS, False);
+                }
 
                 /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
                   THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;

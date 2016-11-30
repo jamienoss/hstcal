@@ -32,7 +32,7 @@
   the ttrap reference to the image array has to be -1 for C
   */
 
-int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams *cte, const unsigned nRows)
+int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams *cte, const unsigned nRows, const Bool dampen)
 {
     extern int status;
 
@@ -49,14 +49,16 @@ int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams 
         /*from the reference table*/
         const FloatHdrData * rprof = cte->rprof;
         const FloatHdrData * cprof = cte->cprof;
+        const double rnAmp2 = cte->rn_amp*cte->rn_amp;
 
         /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
           PMAX SHOULD ALWAYS BE POSITIVE HERE*/
         double pmax = 10.;
         //Look into whether this really has to be computed each iteration?
-        for (unsigned j = 0; j < nRows; ++j)
+        for (unsigned i = 0; i < nRows; ++i)
         {
-            pmax = (currentColumn[j] < pmax) ? pmax : currentColumn[j];
+            //check assembly (before & after op) to see if actually implemented differently
+            pmax = (currentColumn[i] < pmax) ? pmax : currentColumn[i];
             /*if (pixo[j] > pmax)
                 pmax=pixo[j];
                 */
@@ -72,21 +74,26 @@ int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams 
                 fcarry = 0.0e0;
 
                 /*GO UP THE COLUMN PIXEL BY PIXEL*/
-                for(unsigned j = 0; j < nRows; ++j){
-                    pix_1 = currentColumn[j];
+                for(unsigned i = 0; i < nRows; ++i)
+                {
+                    pix_1 = currentColumn[i];
 
-                    if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) ){
-                        if (currentColumn[j] >= 0 ){
-                            pix_1 = currentColumn[j] + fcarry; /*shuffle charge in*/
+                    if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) )
+                    {
+                        if (currentColumn[i] >= 0 )
+                        {
+                            pix_1 = currentColumn[i] + fcarry; /*shuffle charge in*/
                             fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
                             pix_1 = floor(pix_1); /*reset pixel*/
                         }
 
                         /*HAPPENS AFTER FIRST PASS*/
                         /*SHUFFLE CHARGE IN*/
-                        if ( j> 0  ) {
-                            if (pixf[j] < pixf[j-1])
-                                ftrap *= (pixf[j] /  pixf[j-1]);
+                        //move out of loop to separate instance
+                        if (i > 0)
+                        {
+                            if (pixf[i] < pixf[i-1])
+                                ftrap *= (pixf[i] /  pixf[i-1]);
                         }
 
                         /*RELEASE THE CHARGE*/
@@ -99,16 +106,26 @@ int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams 
                         padd_3 = 0.0;
                         prem_3 = 0.0;
                         if ( pix_1 >= cte->qlevq_data[w]){
-                            prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[j];  /*dpdew is 1 in file */
+                            prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
                             if (ttrap < cte->cte_len)
                                 padd_3 = Pix(cprof->data,w,ttrap-1)*ftrap;
                             ttrap=0;
                             ftrap=prem_3;
                         }
 
-                        currentColumn[j] += padd_2 + padd_3 - prem_3;
+                        /* Is it more efficient to dampen here rather than external and have to recompute the delta?
+                         * the dampening loop is over all rows, unnecessarily, rather than just those computed here.
+                         * does it add conditional to this loop now? Don't think compiler will optimize out
+                         * conditional but since const, the proc should. (could make inline?)
+                         */
+                        double correction = padd_2 + padd_3 - prem_3;
+                        double correction2 = correction * correction;
+                        if (dampen)
+                            correction = correction2 / (correction2 + rnAmp2);
+
+                        currentColumn[i] += correction;
                     } /*replaces trap continue*/
-                }/*end if j>0*/
+                }/*end if i>0*/
             }/* end if qlevq > pmax, replaces continue*/
 
         }/*end for w*/
