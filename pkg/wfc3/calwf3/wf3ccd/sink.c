@@ -90,7 +90,7 @@ int SinkDetect(WF3Info *wf3, SingleGroup *x){
     /*NOW TURN THE SINK REFERENCE IMAGES INTO RAZ FORMAT*/
     FloatTwoDArray sinkraz;    
     initFloatData(&sinkraz); /*float 2d arrays*/
-    allocFloatData(&sinkraz,RAZ_COLS/2, RAZ_ROWS);     
+    allocFloatData(&sinkraz,RAZ_COLS/2, RAZ_ROWS, True);
 
     makeFloatRaz(&sinkref.data,&sinkraz,x->group_num);
 
