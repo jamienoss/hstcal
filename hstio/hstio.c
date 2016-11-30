@@ -292,16 +292,22 @@ void initFloatData(FloatTwoDArray *x) {
 # endif
 }
 
-int allocFloatData(FloatTwoDArray *x, int i, int j) {
+int allocFloatData(FloatTwoDArray *x, int i, int j, Bool zeroInitilize) {
 # if defined (DEBUG)
         printf("allocFloatData-1: %x %x %d\n",
                 (int)x,(int)(x->buffer),x->buffer_size);
 # endif
         if (x->buffer == NULL || x->buffer_size != (i * j)) {
             if (x->buffer != NULL)
+            {
                 free(x->buffer);
+                x->buffer = NULL;
+            }
             x->buffer_size = i * j;
-            x->buffer = (float *)calloc(x->buffer_size, sizeof(float));
+            if (zeroInitilize)
+                x->buffer = (float *)calloc(x->buffer_size, sizeof(float));
+            else
+                x->buffer = (float *)malloc(x->buffer_size * sizeof(float));
             if (x->buffer == NULL) {
                 initFloatData(x);
                 error(NOMEM,"Allocating SciData");
@@ -328,6 +334,23 @@ void freeFloatData(FloatTwoDArray *x) {
         if (x->buffer != NULL)
             free(x->buffer);
         initFloatData(x);
+}
+
+int copyAndTransposeFloatData(FloatTwoDArray * target, const FloatTwoDArray * source)
+{
+    if (!target || !source || target->nx != source->ny || target->ny != source->nx)
+        return -1;
+
+    //Transpose source into target
+    for (unsigned j = 0; j < target->ny; ++j)
+    {
+        for (unsigned i = 0; i < target->nx; ++i)
+        {
+
+            target->data[j*target->nx + i] = source->data[i*source->ny + j];
+        }
+    }
+    return 0;
 }
 
 void initShortData(ShortTwoDArray *x) {
@@ -551,7 +574,7 @@ void initFloatHdrData(FloatHdrData *x) {
 }
 
 int allocFloatHdrData(FloatHdrData *x, int i, int j) {
-        if (allocFloatData(&(x->data),i,j)) return -1;
+        if (allocFloatData(&(x->data),i,j, True)) return -1;
         if (allocHdr(&(x->hdr),HdrUnit)) return -1;
         x->section.x_beg = 0;
         x->section.y_beg = 0;
@@ -2223,7 +2246,7 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
                 iodesc->dims[1] = getIntKw(kw);
             }
 
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
             for (j = 0; j < iodesc->dims[1]; ++j) {
                 for (i = 0; i < iodesc->dims[0]; ++i) {
                     PPix(da, i, j) = val;
@@ -2235,7 +2258,7 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
             /* CFITSIO TODO: Should we verify the type is correct
                here?  Original code gets type, but then does nothing
                with it. */
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
             fpixel[0] = 1;
             fpixel[1] = 1;
             if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, iodesc->dims[0], 0,
@@ -2248,7 +2271,7 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
             /* CFITSIO TODO: Should we verify the type is correct
                here?  Original code gets type, but then does nothing
                with it. */
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1])) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
 
             fpixel[0] = 1;
             for (i = 0; i < iodesc->dims[1]; ++i) {

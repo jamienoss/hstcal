@@ -1163,33 +1163,9 @@ int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte)
   This is a big old time sink function
  ***/
 
-int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CTEParams *cte, int verbose, double expstart){
-
+int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CTEParams *cte, int verbose, double expstart)
+{
     extern int status;
-
-    /*looping vars*/ //Should never be declared externally to a loop!
-    int NITINV, NITCTE;
-    double dmod;
-    int jmax;
-    float hardset=0.0f;
-
-    double cte_ff; /*cte scaling based on observation date*/
-    double setdbl=0.0;
-
-    /*DEFINE TO MAKE PRIVATE IN PARALLEL RUN*/
-    double *pix_observed=&setdbl;
-    double *pix_model=&setdbl;
-    //double *pix_curr=&setdbl;
-    //double *pix_init=&setdbl;
-    //double *pix_read=&setdbl;
-    double *pix_ctef=&setdbl;
-
-    /*STARTING DEFAULTS*/
-    NITINV=1;
-    NITCTE=1;
-    cte_ff=0.0;
-    jmax=0;
-    dmod=0.0;
 
     /*LOCAL IMAGES TO PLAY WITH, THEY WILL REPLACE THE INPUTS*/
     SingleGroup rz; /*pixz_raz*/
@@ -1204,14 +1180,14 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     initSingleGroup(&pixz_fff);
     allocSingleGroup(&pixz_fff, RAZ_COLS, RAZ_ROWS);
 
-
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
       APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
       INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
       CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
       OVER 3 YEARS AFTER INSTALLATION*/
 
-    cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
+    /*cte scaling based on observation date*/
+    const double cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
     cte->scale_frac=cte_ff;   /*save to param structure for header update*/
 
     if(verbose){
@@ -1222,33 +1198,63 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     /*SET UP THE SCALING ARRAY WITH INPUT DATA, hardset arrays for safety*/
     for (unsigned i = 0; i < RAZ_COLS; ++i){
         for(unsigned j = 0; j < RAZ_ROWS; ++j){
-            Pix(rc.sci.data,i,j)=hardset;
-            Pix(rz.sci.data,i,j)=hardset;
-            Pix(pixz_fff.sci.data,i,j)=hardset;
+            Pix(rc.sci.data,i,j) = 0.0f;
+            Pix(rz.sci.data,i,j) = 0.0f;
+            Pix(pixz_fff.sci.data,i,j) = 0.0f;
             Pix(rz.sci.data,i,j) = Pix(rsz->sci.data,i,j);
             Pix(rz.dq.data,i,j) = Pix(rsz->dq.data,i,j);
             Pix(pixz_fff.sci.data,i,j) =  cte_ff * Pix(fff->sci.data,i,j);
         }
     }
 
-    //WARNING! update for removed variables
-    #pragma omp parallel for schedule (dynamic,1) \
+    //WARNING! update for removed variables and/or fix, i.e. add them back if needed to parallelize
+    /*#pragma omp parallel for schedule (dynamic,1) \
     private(dmod,i,j,jj,jmax,REDO,NREDO,totflux, \
             pix_observed,pix_modl,pix_curr,pix_init,\
             pix_read,pix_ctef,NITINV,NITCTE)\
-    shared(rc,rz,cte,pixz_fff)
+            */
+    FloatTwoDArray cteRprof;
+    FloatTwoDArray cteCprof;
+    initFloatData(&cteRprof);
+    initFloatData(&cteCprof);
+    allocFloatData(&cteRprof, cte->baseParams.rprof->data.ny, cte->baseParams.rprof->data.nx, False);
+    allocFloatData(&cteCprof, cte->baseParams.cprof->data.ny, cte->baseParams.cprof->data.nx, False);
+    //Transpose arrays to column major
+    copyAndTransposeFloatData(&cteRprof, &cte->baseParams.rprof->data);
+    copyAndTransposeFloatData(&cteCprof, &cte->baseParams.cprof->data);
 
+    /*DEFINE TO MAKE PRIVATE IN PARALLEL RUN*/
+    double *pix_observed = NULL;
+    double *pix_model = NULL;
+    //double *pix_curr = NULL;
+    //double *pix_init = NULL;
+    //double *pix_read = NULL;
+    double *pix_ctef = NULL;
+#ifndef _OPENMP
     assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
     assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
     assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
+#endif
 
-    for (unsigned i = 0; i < RAZ_COLS; ++i){
+    unsigned i;
+    int jmax = 0;
+    #pragma omp parallel for schedule (dynamic,1) \
+    private(i, jmax, pix_observed, pix_model, pix_ctef)\
+    shared(rc, rz, cte, pixz_fff, cteRprof, cteCprof)
+
+    for (i = 0; i < RAZ_COLS; ++i)
+    {
         //pix_observed = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_model = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_curr = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_init = (double *) calloc(RAZ_ROWS, sizeof(double)); //Geez, this wasn't even being used!
         //pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
+#ifdef _OPENMP
+        assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
+        assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
+        assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
+#endif
 
         /*HORIZONTAL PRE/POST SCAN POPULATION */
         //unsigned totalFlux = 0;
@@ -1290,8 +1296,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                double rnAmp2 = cte->baseParams.rn_amp*cte->baseParams.rn_amp;
-                for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward; ++NITINV)
+                //double rnAmp2 = cte->baseParams.rn_amp*cte->baseParams.rn_amp;
+                for (unsigned NITINV = 0; NITINV < cte->baseParams.n_forward - 1; ++NITINV)
                 {
                     //memcpy(pix_read, pix_model, sizeof(pix_model)*RAZ_ROWS);
                     /*comment out - now do in place with single array as the 1st thing sim_colreadout does (did) is
@@ -1307,7 +1313,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                     for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE){
-                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, RAZ_ROWS);
+                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams,
+                                &cteRprof, &cteCprof, RAZ_ROWS, True);
 
                         /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
                         /*for (j=0; j< RAZ_ROWS; j++){
@@ -1317,15 +1324,23 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
                     /*DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
                       AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE*/
-                    for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                        dmod =  (pix_observed[j] - pix_model[j]);
-                        if (NITINV < cte->baseParams.n_forward){
-                            dmod *= (dmod*dmod) /((dmod*dmod) + rnAmp2);
-                        }
-                        //pix_model[j] += dmod; /*dampen each pixel as the best is determined*/
-                        pix_model[j] = pix_observed[j] + dmod; /*dampen each pixel as the best is determined*/
-                    }
+                    /*for (unsigned i = 0; i < RAZ_ROWS; ++i){
+                        double dmod =  (pix_observed[i] - pix_model[i]);
+                        double dmod2 = dmod * dmod;
+                        //if (NITINV < cte->baseParams.n_forward){
+                            dmod *= dmod2 / (dmod2 + rnAmp2);
+                        //}
+                        //pix_model[j] += dmod; //dampen each pixel as the best is determined
+                        pix_model[j] = pix_observed[j] + dmod; //dampen each pixel as the best is determined
+                    }*/
                 } /*NITINV end*/
+                //Do the last iteration separately so as not to dampen (removes conditional from above damp loop)
+                /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
+                for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE)
+                {
+                    sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams,
+                            &cteRprof, &cteCprof, RAZ_ROWS, False);
+                }
 
                 /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
                   THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;
@@ -1399,6 +1414,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     free(pix_observed);
     free(pix_model);
     free(pix_ctef);
+    freeFloatData(&cteRprof);
+    freeFloatData(&cteCprof);
 
     for (unsigned i = 0; i < RAZ_COLS; ++i){
         for (unsigned j = 0; j < RAZ_ROWS; ++j){
