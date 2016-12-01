@@ -181,7 +181,9 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         amp_arr1 = amp_ysize;
         amp_arr2 = amp_xsize;
 
+        //NOTE TO SELF - remove asserts here
         /* allocate space to hold this amp's data in its various forms */
+        //Check whether amps can have different array sizes, if not move these out of amp iterator
         assert(amp_sci_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
         assert(amp_err_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
         assert(amp_sig_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
@@ -240,7 +242,17 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
 
         //correctedColumn isn't needed - can be done in place (when all mem transposed to column major)
         double * correctedColumn = NULL;
-        assert(correctedColumn = (double*)malloc(sizeof(*amp_sig_arr)*amp_arr1));
+        assert(correctedColumn = (double*)malloc(amp_arr1 * sizeof(*amp_sig_arr)));
+
+        FloatTwoDArray cteRprof;
+        FloatTwoDArray cteCprof;
+        initFloatData(&cteRprof);
+        initFloatData(&cteCprof);
+        allocFloatData(&cteRprof, pars.baseParams.rprof->data.ny, pars.baseParams.rprof->data.nx, False);
+        allocFloatData(&cteCprof, pars.baseParams.cprof->data.ny, pars.baseParams.cprof->data.nx, False);
+        //Transpose arrays to column major
+        copyAndTransposeFloatData(&cteRprof, &pars.baseParams.rprof->data);
+        copyAndTransposeFloatData(&cteCprof, &pars.baseParams.cprof->data);
 
         //Correct image one column at a time, amp_arr2 = nColumns
         //Before, with FixYCTE, the entire 2D array was passed in a split up internally by the function
@@ -257,7 +269,8 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
                 /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                 for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
                 {
-                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams, amp_arr1, True))
+                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
+                            &cteRprof, &cteCprof, amp_arr1, True))
                         return status;
                 }
             }
@@ -265,7 +278,8 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
             /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
             for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
             {
-                if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams, amp_arr1, False))
+                if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
+                        &cteRprof, &cteCprof, amp_arr1, False))
                     return status;
             }
 
@@ -274,6 +288,12 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
             //copy corrected column back into original array
             memcpy(&amp_sig_arr[j*amp_arr1], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
         }
+        free(correctedColumn);
+        correctedColumn = NULL;
+        free(cte_frac_arr);
+        correctedColumn = NULL;
+        freeFloatData(&cteRprof);
+        freeFloatData(&cteCprof);
 
         /* add readout noise back and convert corrected data back to DN.
            add 10% correction to error in quadrature. */
@@ -284,7 +304,17 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
                 unsigned currentPixel = i + j*amp_arr1;
                 amp_cor_arr[currentPixel] = amp_cor_arr[currentPixel] +
                         amp_nse_arr[currentPixel];
+            }
+        }
+        free(amp_nse_arr);
+        amp_nse_arr = NULL;
 
+        //Compute error
+        for (unsigned j = 0; j < amp_arr2; ++j)
+        {
+            for (unsigned i = 0; i < amp_arr1; ++i)
+            {
+                unsigned currentPixel = i + j*amp_arr1;
                 double temp_err = 0.1 * fabs(amp_cor_arr[currentPixel] -
                                               amp_sci_arr[currentPixel]);
 
@@ -292,6 +322,11 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
                             pow(amp_err_arr[currentPixel],2) + pow(temp_err,2));
             }
         }
+        free(amp_sci_arr);
+        amp_sci_arr = NULL;
+        free(amp_sig_arr);
+        amp_sig_arr = NULL;
+
         /* put the CTE corrected data back into the SingleGroup structure */
         if (unmake_amp_array(acs, x, amp, amp_arr1, amp_arr2, amp_xbeg, amp_ybeg,
                              amp_cor_arr, amp_err_arr, True /*unmake column major source*/)) {
@@ -299,12 +334,10 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         }
 
         /* free space used by our amp arrays */
-        free(amp_sci_arr);
         free(amp_err_arr);
-        free(amp_sig_arr);
-        free(amp_nse_arr);
+        amp_err_arr = NULL;
         free(amp_cor_arr);
-        free(cte_frac_arr);
+        amp_cor_arr = NULL;
     }
 
     if (acs->printtime) {
