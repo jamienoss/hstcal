@@ -1250,6 +1250,11 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
         //pix_init = (double *) calloc(RAZ_ROWS, sizeof(double)); //Geez, this wasn't even being used!
         //pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
+#ifdef _OPENMP
+        assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
+        assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
+        assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
+#endif
 
         /*HORIZONTAL PRE/POST SCAN POPULATION */
         //unsigned totalFlux = 0;
