@@ -138,3 +138,64 @@ int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams 
     } //end for w
     return(status);
 }
+
+void correctCROverSubtraction(double * pix_ctef, const double * pix_model, const double * pix_observed,
+        const unsigned nRows, unsigned * jmax, Bool * REDO, const CTEParams * cte)
+{
+    /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
+      THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;
+      IF WE FIND ANY THEN GO BACK UP AND RERUN THIS COLUMN
+
+      THE WFC3 UVIS MODEL SEARCHES FOR OVERSUBTRACTED TRAILS.
+      WHICH ARE  DEFINED AS EITHER:
+
+          - A SINGLE PIXEL VALUE BELOW -10E-
+          - TWO CONSECUTIVE PIXELS TOTALING -12 E-
+          - THREE TOTALLING -15 E-
+
+      WHEN WE DETECT SUCH AN OVER-SUBTRACTED TAIL, WE ITERATIVELY REDUCE
+      THE LOCAL CTE SCALING BY 25% UNTIL THE TRAIL IS
+      NO LONGER NEGATIVE  THIS DOES NOT IDENTIFY ALL READOUT-CRS, BUT IT DOES
+      DEAL WITH MANY OF THEM. FOR IMAGES THAT HAVE BACKGROUND GREATER THAN 10 OR SO,
+      THIS WILL STILL END UP OVERSUBTRACTING CRS A BIT, SINCE WE ALLOW
+      THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
+    */
+
+    if (!cte->fix_rocr || !pix_model || !pix_observed || !pix_ctef)
+        return;
+
+    for (unsigned j = 10; j < nRows-2; ++j)
+    {
+        if ( (( cte->thresh > pix_model[j] ) &&
+                    ( cte->thresh > (pix_model[j] - pix_observed[j]))) ||
+
+                (((pix_model[j] + pix_model[j+1]) < -12.) &&
+                 (pix_model[j] + pix_model[j+1] - pix_observed[j] - pix_observed[j+1] < -12.)) ||
+
+                (((pix_model[j] + pix_model[j+1] + pix_model[j+2]) < -15.) &&
+                 ((pix_model[j] + pix_model[j+1] + pix_model[j+2] -pix_observed[j] -
+                   pix_observed[j+1] - pix_observed[j+2]) <-15.))  )
+        {
+
+            *jmax=j;
+
+            /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
+            for (unsigned jj = j-10; jj <= j; ++jj)
+            {
+                if ( (pix_model[jj] - pix_observed[jj]) >
+                        (pix_model[*jmax] - pix_observed[*jmax]) )
+                {
+                    *jmax=jj;
+                }
+            }
+            /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
+               BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
+            for (unsigned jj = *jmax; jj <= j; ++jj)
+            {
+                pix_ctef[jj] *= 0.75;
+                //Pix(pixz_fff->sci.data, i, jj) *= 0.75; //non contig - can we use pix_ctef here?
+            }
+            *REDO = True; //Do we need to continue the loop?
+        } /*end if*/
+    } /*end for  j*/
+}
