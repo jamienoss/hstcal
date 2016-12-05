@@ -35,7 +35,7 @@ void initCTEParams(WF3CTEParams *pars){
     pars->baseParams.n_par=0;
     pars->scale_frac=0.0f; /*will be updated during routine run*/
     pars->noise_mit=0; 
-    pars->thresh=0.0f;
+    pars->baseParams.thresh=0.0f;
     pars->descrip2[0]='\0';
 
     /*static scheduling is faster when there are no dependent loop variables
@@ -218,24 +218,24 @@ No.    Name         Type      Cards   Dimensions   Format
 	trlmessage(MsgText);
 
 	/* GET OVER SUBTRACTION THRESHOLD */
-	if (GetKeyDbl(&hdr_ptr, "PCTETRSH", NO_DEFAULT, -999, &pars->thresh)) {
+	if (GetKeyDbl(&hdr_ptr, "PCTETRSH", NO_DEFAULT, -999, &pars->baseParams.thresh)) {
 		cteerror("(pctecorr) Error reading PCTETRSH keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
 
-	sprintf(MsgText,"PCTETRSH: %g",pars->thresh);
+	sprintf(MsgText,"PCTETRSH: %g",pars->baseParams.thresh);
 	trlmessage(MsgText);
  
     /*FIX THE READOUT CR'S? */
-    if (GetKeyInt(&hdr_ptr, "FIXROCR", NO_DEFAULT, -999, &pars->fix_rocr)){
+    if (GetKeyInt(&hdr_ptr, "FIXROCR", NO_DEFAULT, -999, &pars->baseParams.fix_rocr)){
         cteerror("(pctecorr) Error reading FIXROCR keyword from PCTETAB");
         status = KEYWORD_MISSING;
         return status;
     }
     
     /*
-	sprintf(MsgText,"FIXROCR: %d",pars->fix_rocr);
+	sprintf(MsgText,"FIXROCR: %d",pars->baseParams.fix_rocr);
 	trlmessage(MsgText);
     */
     
@@ -537,7 +537,7 @@ int CompareCTEParams(SingleGroup *group, WF3CTEParams *pars) {
         return (status=HEADER_PROBLEM);
 	}
 
-	if (PutKeyDbl(group->globalhdr, "PCTETRSH", pars->thresh,"cte oversubtraction threshold")) {
+	if (PutKeyDbl(group->globalhdr, "PCTETRSH", pars->baseParams.thresh,"cte oversubtraction threshold")) {
 		trlmessage("(pctecorr) Error putting PCTETRSH keyword in header");
         return (status=HEADER_PROBLEM);
 	}

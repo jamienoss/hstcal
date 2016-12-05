@@ -1163,22 +1163,23 @@ int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte)
   This is a big old time sink function
  ***/
 
-int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CTEParams *cte, int verbose, double expstart)
+int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CTEParams *cte, const int verbose, const double expstart)
 {
     extern int status;
 
     /*LOCAL IMAGES TO PLAY WITH, THEY WILL REPLACE THE INPUTS*/
-    SingleGroup rz; /*pixz_raz*/
+/*    SingleGroup rz; //pixz_raz
     initSingleGroup(&rz);
     allocSingleGroup(&rz, RAZ_COLS, RAZ_ROWS);
 
-    SingleGroup rc; /*pixz_rac*/
+    SingleGroup rc; //pixz_rac
     initSingleGroup(&rc);
     allocSingleGroup(&rc, RAZ_COLS, RAZ_ROWS);
 
-    SingleGroup pixz_fff; /*pixz_fff*/
+    SingleGroup pixz_fff; //pixz_fff
     initSingleGroup(&pixz_fff);
     allocSingleGroup(&pixz_fff, RAZ_COLS, RAZ_ROWS);
+*/
 
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
       APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
@@ -1196,17 +1197,17 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     }
 
     /*SET UP THE SCALING ARRAY WITH INPUT DATA, hardset arrays for safety*/
-    for (unsigned i = 0; i < RAZ_COLS; ++i){
+ /*   for (unsigned i = 0; i < RAZ_COLS; ++i){
         for(unsigned j = 0; j < RAZ_ROWS; ++j){
             Pix(rc.sci.data,i,j) = 0.0f;
-            Pix(rz.sci.data,i,j) = 0.0f;
-            Pix(pixz_fff.sci.data,i,j) = 0.0f;
-            Pix(rz.sci.data,i,j) = Pix(rsz->sci.data,i,j);
-            Pix(rz.dq.data,i,j) = Pix(rsz->dq.data,i,j);
-            Pix(pixz_fff.sci.data,i,j) =  cte_ff * Pix(fff->sci.data,i,j);
+            //Pix(rz.sci.data,i,j) = 0.0f;
+            //Pix(pixz_fff.sci.data,i,j) = 0.0f; //Why, when you assign below?
+            //Pix(rz.sci.data,i,j) = Pix(rsz->sci.data,i,j);
+            //Pix(rz.dq.data,i,j) = Pix(rsz->dq.data,i,j);
+            //Pix(pixz_fff.sci.data,i,j) =  cte_ff * Pix(fff->sci.data,i,j);
         }
     }
-
+*/
     //WARNING! update for removed variables and/or fix, i.e. add them back if needed to parallelize
     /*#pragma omp parallel for schedule (dynamic,1) \
     private(dmod,i,j,jj,jmax,REDO,NREDO,totflux, \
@@ -1223,6 +1224,8 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     copyAndTransposeFloatData(&cteRprof, &cte->baseParams.rprof->data);
     copyAndTransposeFloatData(&cteCprof, &cte->baseParams.cprof->data);
 
+#pragma omp parallel
+{
     /*DEFINE TO MAKE PRIVATE IN PARALLEL RUN*/
     double *pix_observed = NULL;
     double *pix_model = NULL;
@@ -1230,17 +1233,16 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     //double *pix_init = NULL;
     //double *pix_read = NULL;
     double *pix_ctef = NULL;
-#ifndef _OPENMP
+
     assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
     assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
     assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
-#endif
 
     unsigned i;
-    int jmax = 0;
+    unsigned jmax = 0;
     #pragma omp parallel for schedule (dynamic,1) \
     private(i, jmax, pix_observed, pix_model, pix_ctef)\
-    shared(rc, rz, cte, pixz_fff, cteRprof, cteCprof)
+    shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
 
     for (i = 0; i < RAZ_COLS; ++i)
     {
@@ -1250,16 +1252,11 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
         //pix_init = (double *) calloc(RAZ_ROWS, sizeof(double)); //Geez, this wasn't even being used!
         //pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
-#ifdef _OPENMP
-        assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
-        assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
-        assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
-#endif
 
         /*HORIZONTAL PRE/POST SCAN POPULATION */
         //unsigned totalFlux = 0;
         for (unsigned j = 0; j < RAZ_ROWS; ++j){
-            pix_observed[j] = Pix(rz.sci.data,i,j);//look into moving this out to memcpy
+            pix_observed[j] = Pix(rsz->sci.data,i,j);//look into moving this out to memcpy
             //if (pix_observed[j] > 0)
               //  totalFlux += 1;//We only care if this is > 0, loop should stop after that.
             /*
@@ -1270,10 +1267,10 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
             */
         }
         /* Separate this out from the above loop so that the above loop can be optimized.
-         * The loop below to determine if the column is empty most likely only needs a few
+         * The loop below is to determine if the column is empty most likely only needs a few
          * iterations to complete anyhow.
          */
-        Bool hasFlux = False;//Too much C++...
+        Bool hasFlux = False;
         for (unsigned j = 0; j < RAZ_ROWS; ++j)
         {
             if (pix_observed[j] > 0)
@@ -1284,15 +1281,17 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
         }
 
         if (hasFlux) {/*make sure the column has flux in it*/
-            unsigned NREDO=0; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-            unsigned REDO=0; /*FALSE*/
+            for (unsigned j = 0; j < RAZ_ROWS; ++j){
+                //pix_model[j] =  Pix(rz.sci.data,i,j); //Moved outside of DO loop as rz.sci.data isn't changed
+                pix_ctef[j] =  Pix(fff->sci.data,i , j);
+            }
+
+            unsigned NREDO = 0; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            Bool REDO = False; /*FALSE*/
             do { /*replacing goto 9999*/
                 /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
                 memcpy(pix_model, pix_observed, sizeof(pix_observed)*RAZ_ROWS);
-                for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                    //pix_model[j] =  Pix(rz.sci.data,i,j); //Moved outside of DO loop as rz.sci.data isn't changed
-                    pix_ctef[j] =  Pix(pixz_fff.sci.data,i,j);
-                }
+
 
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
@@ -1342,94 +1341,61 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
                             &cteRprof, &cteCprof, RAZ_ROWS, False);
                 }
 
-                /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
-                  THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;
-                  IF WE FIND ANY THEN GO BACK UP AND RERUN THIS COLUMN
+                correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS, &jmax, &REDO, &cte->baseParams);
 
-
-                  THE WFC3 UVIS MODEL SEARCHES FOR OVERSUBTRACTED TRAILS.
-                  WHICH ARE  DEFINED AS EITHER:
-
-                  - A SINGLE PIXEL VALUE BELOW -10E-
-                  - TWO CONSECUTIVE PIXELS TOTALING -12 E-
-                  - THREE TOTALLING -15 E-
-
-                  WHEN WE DETECT SUCH AN OVER-SUBTRACTED TAIL, WE ITERATIVELY REDUCE
-                  THE LOCAL CTE SCALING BY 25% UNTIL THE TRAIL IS
-                  NO LONGER NEGATIVE  THIS DOES NOT IDENTIFY ALL READOUT-CRS, BUT IT DOES
-                  DEAL WITH MANY OF THEM. FOR IMAGES THAT HAVE BACKGROUND GREATER THAN 10 OR SO,
-                  THIS WILL STILL END UP OVERSUBTRACTING CRS A BIT, SINCE WE ALLOW
-                  THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
-
-*/
-                if (cte->fix_rocr) {
-                    for (unsigned j = 10; j < RAZ_ROWS-2; ++j){
-                        if ( (( cte->thresh > pix_model[j] ) &&
-                                    ( cte->thresh > (pix_model[j] - pix_observed[j]))) ||
-
-                                (((pix_model[j] + pix_model[j+1]) < -12.) &&
-                                 (pix_model[j] + pix_model[j+1] - pix_observed[j] - pix_observed[j+1] < -12.)) ||
-
-                                (((pix_model[j] + pix_model[j+1] + pix_model[j+2]) < -15.) &&
-                                 ((pix_model[j] + pix_model[j+1] + pix_model[j+2] -pix_observed[j] -
-                                   pix_observed[j+1] - pix_observed[j+2]) <-15.))  ){
-
-                            jmax=j;
-
-                            /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
-                            for (unsigned jj = j-10; jj <= j; ++jj){
-                                if ( (pix_model[jj] - pix_observed[jj]) >
-                                        (pix_model[jmax] - pix_observed[jmax]) ) {
-                                    jmax=jj;
-                                }
-                            }
-                            /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
-                               BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
-                            for (unsigned jj = jmax; jj <= j; ++jj){
-                                Pix(pixz_fff.sci.data,i,jj) *= 0.75; //non contig - can we use pix_ctef here?
-                            }
-                            REDO=1; /*TRUE*/ //Do we need to continue the loop?
-                        } /*end if*/
-                    } /*end for  j*/
-                }/*end fix cr*/
-
-                if (REDO) NREDO +=1;
-                if (NREDO == 5)  REDO=0; /*stop*/
+                if (REDO)
+                    ++NREDO;
+                if (NREDO == 5)
+                    REDO = False; /*stop*/
             } while (REDO); /*replacing goto 9999*/
-        } /*totflux > 1, catch for subarrays*/
 
 #pragma omp critical (cte)
+            for (unsigned j = 0; j < RAZ_ROWS; ++j){
+                if (Pix(rsz->dq.data,i,j)){//(Pix(rz.dq.data,i,j)){
+                    Pix(rsc->sci.data,i,j)= pix_model[j]; //Look into whether pix_model is def updated (i.e. if (hasFlux == 0)) etc
+                }
+            }
+
+        } /*totflux > 1, catch for subarrays*/
+
+/*#pragma omp critical (cte)
         for (unsigned j = 0; j < RAZ_ROWS; ++j){
             if (Pix(rz.dq.data,i,j)){
                 Pix(rc.sci.data,i,j)= pix_model[j]; //Look into whether pix_model is def updated (i.e. if (hasFlux == 0)) etc
             }
         }
-
+*/
         //free(pix_model);
         //free(pix_curr);
         //free(pix_init);
 
     } /*end i*/
 
-    free(pix_observed);
-    free(pix_model);
-    free(pix_ctef);
+    if (pix_observed)
+        free(pix_observed);
+    if (pix_model)
+        free(pix_model);
+    if (pix_ctef)
+        free(pix_ctef);
+}// close scope for #pragma omp parallel
     freeFloatData(&cteRprof);
     freeFloatData(&cteCprof);
 
-    for (unsigned i = 0; i < RAZ_COLS; ++i){
-        for (unsigned j = 0; j < RAZ_ROWS; ++j){
-            if(Pix(rsz->dq.data,i,j)){
-                Pix(rsz->sci.data,i,j) = Pix(rz.sci.data,i,j);
-                Pix(rsc->sci.data,i,j) = Pix(rc.sci.data,i,j);
-                Pix(fff->sci.data,i,j) = Pix(pixz_fff.sci.data,i,j);
+
+    //WARNING double check boundaries and sizes
+ /*   for (unsigned i = 0; i < RAZ_ROWS; ++i){
+        for (unsigned j = 0; j < RAZ_COLS; ++j){
+            if(Pix(rsz->dq.data, j, i)){
+                Pix(rsz->sci.data, j, i) = Pix(rz.sci.data, j, i);
+                Pix(rsc->sci.data, j, i) = Pix(rc.sci.data, j, i);
+                Pix(fff->sci.data, j, i) = Pix(pixz_fff.sci.data, j, i);
             }
         }
     }
-
-    freeSingleGroup(&rz);
-    freeSingleGroup(&rc);
-    freeSingleGroup(&pixz_fff);
+*/
+    //freeSingleGroup(&rz);
+    //freeSingleGroup(&rc);
+    //freeSingleGroup(&pixz_fff);
 
     return(status);
 }

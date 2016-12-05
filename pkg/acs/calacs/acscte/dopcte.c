@@ -240,10 +240,6 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         */
         //double * pixDontKnowWhatThisIsYet = NULL; //For now, assuming cte_frac_arr???
 
-        //correctedColumn isn't needed - can be done in place (when all mem transposed to column major)
-        double * correctedColumn = NULL;
-        assert(correctedColumn = (double*)malloc(amp_arr1 * sizeof(*amp_sig_arr)));
-
         FloatTwoDArray cteRprof;
         FloatTwoDArray cteCprof;
         initFloatData(&cteRprof);
@@ -254,37 +250,63 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         copyAndTransposeFloatData(&cteRprof, &pars.baseParams.rprof->data);
         copyAndTransposeFloatData(&cteCprof, &pars.baseParams.cprof->data);
 
+        //correctedColumn isn't needed - can be done in place (when all mem transposed to column major)
+        double * correctedColumn = NULL;
+        assert(correctedColumn = (double*)malloc(amp_arr1 * sizeof(*amp_sig_arr)));
+
+        unsigned jmax = 0;
         //Correct image one column at a time, amp_arr2 = nColumns
         //Before, with FixYCTE, the entire 2D array was passed in a split up internally by the function
         //loop over columns
         for (unsigned j = 0; j < amp_arr2; ++j)
         {
-            memcpy(correctedColumn, &amp_sig_arr[j*amp_arr1], sizeof(*amp_sig_arr)*amp_arr1);
 
-            /* perform CTE correction */
-            //for (int i = 0; i < pars->n_par; ++i)
-            //{
-            for (unsigned NITINV = 0; NITINV < pars.baseParams.n_forward - 1; ++NITINV)
+            // HORIZONTAL PRE/POST SCAN POPULATION
+            //is this applicable in acs?
+            Bool hasFlux = False;
+            for (unsigned i = 0; i < amp_arr1; ++i)
             {
+                if (correctedColumn[i] > 0)
+                {
+                    hasFlux = True;
+                    break;
+                }
+            }
+            if (!hasFlux)
+                continue;
+
+            unsigned NREDO = 0;
+            Bool REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            do { //while (redo) - post loop eval
+                /* perform CTE correction */
+                //for (int i = 0; i < pars->n_par; ++i)
+                //{
+                for (unsigned NITINV = 0; NITINV < pars.baseParams.n_forward - 1; ++NITINV)
+                {
+                    /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
+                    for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
+                    {
+                        if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
+                                &cteRprof, &cteCprof, amp_arr1, True))
+                            return status;
+                    }
+                }
+                //Do the last iteration separately so as not to dampen.
                 /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                 for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
                 {
                     if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
-                            &cteRprof, &cteCprof, amp_arr1, True))
+                            &cteRprof, &cteCprof, amp_arr1, False))
                         return status;
                 }
-            }
-            //Do the last iteration separately so as not to dampen.
-            /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-            for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
-            {
-                if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
-                        &cteRprof, &cteCprof, amp_arr1, False))
-                    return status;
-            }
 
-            //WARNING! calwf3 CTE does some more work here - WIP
+                correctCROverSubtraction(cte_frac_arr, correctedColumn, amp_sig_arr, amp_arr1, &jmax, &REDO, &pars.baseParams);
 
+                if (REDO)
+                    ++NREDO;
+                if (NREDO == 5)
+                    REDO = False;
+            } while (REDO);
             //copy corrected column back into original array
             memcpy(&amp_sig_arr[j*amp_arr1], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
         }
@@ -295,21 +317,20 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         freeFloatData(&cteRprof);
         freeFloatData(&cteCprof);
 
-        /* add readout noise back and convert corrected data back to DN.
-           add 10% correction to error in quadrature. */
+        // add readout noise back
         for (unsigned j = 0; j < amp_arr2; ++j)
         {
             for (unsigned i = 0; i < amp_arr1; ++i)
             {
                 unsigned currentPixel = i + j*amp_arr1;
-                amp_cor_arr[currentPixel] = amp_cor_arr[currentPixel] +
-                        amp_nse_arr[currentPixel];
+                amp_cor_arr[currentPixel] = amp_sig_arr[currentPixel] + amp_nse_arr[currentPixel];
             }
         }
         free(amp_nse_arr);
         amp_nse_arr = NULL;
 
-        //Compute error
+        //Compute error and convert corrected data back to DN.
+        // add 10% correction to error in quadrature.
         for (unsigned j = 0; j < amp_arr2; ++j)
         {
             for (unsigned i = 0; i < amp_arr1; ++i)

@@ -338,16 +338,16 @@ void freeFloatData(FloatTwoDArray *x) {
 
 int copyAndTransposeFloatData(FloatTwoDArray * target, const FloatTwoDArray * source)
 {
+    //Look into whether this breaks use of Pix on target?
     if (!target || !source || target->nx != source->ny || target->ny != source->nx)
         return -1;
 
     //Transpose source into target
-    for (unsigned j = 0; j < target->ny; ++j)
+    for (unsigned j = 0; j < target->nx; ++j)
     {
-        for (unsigned i = 0; i < target->nx; ++i)
+        for (unsigned i = 0; i < target->ny; ++i)
         {
-
-            target->data[j*target->nx + i] = source->data[i*source->ny + j];
+            target->data[j*target->ny + i] = source->data[i*source->ny + j];
         }
     }
     return 0;
