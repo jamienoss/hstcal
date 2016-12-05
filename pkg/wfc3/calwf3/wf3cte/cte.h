@@ -18,7 +18,6 @@ typedef struct {
     double cte_date0; /*date of uvis install on hst in mjd*/
     double cte_date1; /*date of cte model pinning mjd*/
     double scale_frac; /*scaling of cte model relative to ctedate1*/
-    double thresh; /*over subtraction threshold*/
     int noise_mit; /*read noise mitigation algorithm*/
     int wcol_data[TRAPS]; /*trap number, insync with number of traps*/
     int iz_data[RAZ_COLS]; /*column number in raz format*/
