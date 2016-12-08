@@ -1224,9 +1224,9 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     copyAndTransposeFloatData(&cteRprof, &cte->baseParams.rprof->data);
     copyAndTransposeFloatData(&cteCprof, &cte->baseParams.cprof->data);
 
-#pragma omp parallel
+//#pragma omp parallel
 {
-    /*DEFINE TO MAKE PRIVATE IN PARALLEL RUN*/
+    //DEFINE TO MAKE PRIVATE IN PARALLEL RUN
     double *pix_observed = NULL;
     double *pix_model = NULL;
     //double *pix_curr = NULL;
@@ -1234,10 +1234,10 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     //double *pix_read = NULL;
     double *pix_ctef = NULL;
 
-    assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
+   /* assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
     assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
     assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
-
+*/
     unsigned i;
     unsigned jmax = 0;
     #pragma omp parallel for schedule (dynamic,1) \
@@ -1246,6 +1246,9 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 
     for (i = 0; i < RAZ_COLS; ++i)
     {
+            assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
+            assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
+            assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
         //pix_observed = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_model = (double *) calloc(RAZ_ROWS, sizeof(double));
         //pix_curr = (double *) calloc(RAZ_ROWS, sizeof(double));
