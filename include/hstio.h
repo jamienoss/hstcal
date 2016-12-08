@@ -670,7 +670,7 @@ void updateWCS (Hdr *hdr, int xbeg, int ybeg);
 void initFloatData(FloatTwoDArray *);
 int allocFloatData(FloatTwoDArray *, int, int, Bool zeroInitilize);
 void freeFloatData(FloatTwoDArray *);
-int copyAndTransposeFloatData(FloatTwoDArray * target, const FloatTwoDArray * source);
+void copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
 # define IShortData { NULL, 0, 0, 0, 0, 0, NULL }
 void initShortData(ShortTwoDArray *);
 int allocShortData(ShortTwoDArray *, int, int);

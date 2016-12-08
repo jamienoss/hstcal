@@ -216,8 +216,8 @@ def configure(conf):
             conf.env.append_value('CFLAGS','-O2')
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
-        if conf.check_cc(cflags='-fstack-protector-all'):
-            conf.env.append_value('CFLAGS','-fstack-protector-all')
+        #if conf.check_cc(cflags='-fstack-protector-all'):
+         #   conf.env.append_value('CFLAGS','-fstack-protector-all')
 
     conf.start_msg('C compiler flags (CFLAGS)')
     conf.end_msg(' '.join(conf.env['CFLAGS']) or None)
