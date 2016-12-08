@@ -1066,7 +1066,7 @@ int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS]
   rac = raw + ((rsc-rsz) / gain )
 
  ***/
-int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte) {
+int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte) {
 
     extern int status;
 
@@ -1163,23 +1163,9 @@ int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte)
   This is a big old time sink function
  ***/
 
-int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CTEParams *cte, const int verbose, const double expstart)
+int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, WF3CTEParams * cte, const int verbose, const double expstart)
 {
     extern int status;
-
-    /*LOCAL IMAGES TO PLAY WITH, THEY WILL REPLACE THE INPUTS*/
-/*    SingleGroup rz; //pixz_raz
-    initSingleGroup(&rz);
-    allocSingleGroup(&rz, RAZ_COLS, RAZ_ROWS);
-
-    SingleGroup rc; //pixz_rac
-    initSingleGroup(&rc);
-    allocSingleGroup(&rc, RAZ_COLS, RAZ_ROWS);
-
-    SingleGroup pixz_fff; //pixz_fff
-    initSingleGroup(&pixz_fff);
-    allocSingleGroup(&pixz_fff, RAZ_COLS, RAZ_ROWS);
-*/
 
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
       APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
@@ -1190,93 +1176,48 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
     /*cte scaling based on observation date*/
     const double cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
     cte->scale_frac=cte_ff;   /*save to param structure for header update*/
+    const double rnAmp2 = cte->baseParams.rn_amp * cte->baseParams.rn_amp;
 
     if(verbose){
         sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cte_ff);
         trlmessage(MsgText);
     }
 
-    /*SET UP THE SCALING ARRAY WITH INPUT DATA, hardset arrays for safety*/
- /*   for (unsigned i = 0; i < RAZ_COLS; ++i){
-        for(unsigned j = 0; j < RAZ_ROWS; ++j){
-            Pix(rc.sci.data,i,j) = 0.0f;
-            //Pix(rz.sci.data,i,j) = 0.0f;
-            //Pix(pixz_fff.sci.data,i,j) = 0.0f; //Why, when you assign below?
-            //Pix(rz.sci.data,i,j) = Pix(rsz->sci.data,i,j);
-            //Pix(rz.dq.data,i,j) = Pix(rsz->dq.data,i,j);
-            //Pix(pixz_fff.sci.data,i,j) =  cte_ff * Pix(fff->sci.data,i,j);
-        }
-    }
-*/
-    //WARNING! update for removed variables and/or fix, i.e. add them back if needed to parallelize
-    /*#pragma omp parallel for schedule (dynamic,1) \
-    private(dmod,i,j,jj,jmax,REDO,NREDO,totflux, \
-            pix_observed,pix_modl,pix_curr,pix_init,\
-            pix_read,pix_ctef,NITINV,NITCTE)\
-            */
     FloatTwoDArray cteRprof;
     FloatTwoDArray cteCprof;
     initFloatData(&cteRprof);
     initFloatData(&cteCprof);
-    allocFloatData(&cteRprof, cte->baseParams.rprof->data.ny, cte->baseParams.rprof->data.nx, False);
-    allocFloatData(&cteCprof, cte->baseParams.cprof->data.ny, cte->baseParams.cprof->data.nx, False);
-    //Transpose arrays to column major
-    copyAndTransposeFloatData(&cteRprof, &cte->baseParams.rprof->data);
-    copyAndTransposeFloatData(&cteCprof, &cte->baseParams.cprof->data);
+    allocFloatData(&cteRprof, cte->baseParams.rprof->data.nx, cte->baseParams.rprof->data.ny, False);
+    allocFloatData(&cteCprof, cte->baseParams.cprof->data.nx, cte->baseParams.cprof->data.ny, False);
+    copyFloatDataToColumnMajor(&cteRprof, &cte->baseParams.rprof->data);
+    copyFloatDataToColumnMajor(&cteCprof, &cte->baseParams.cprof->data);
 
 //#pragma omp parallel
 {
     //DEFINE TO MAKE PRIVATE IN PARALLEL RUN
-    double *pix_observed = NULL;
-    double *pix_model = NULL;
-    //double *pix_curr = NULL;
-    //double *pix_init = NULL;
-    //double *pix_read = NULL;
-    double *pix_ctef = NULL;
-
-   /* assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
-    assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
-    assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
-*/
+    double * pix_observed = NULL;
+    double * pix_model = NULL;
+    double * pix_ctef = NULL;
     unsigned i;
-    unsigned jmax = 0;
+
     #pragma omp parallel for schedule (dynamic,1) \
-    private(i, jmax, pix_observed, pix_model, pix_ctef)\
+    private(i, pix_observed, pix_model, pix_ctef)\
     shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
 
     for (i = 0; i < RAZ_COLS; ++i)
     {
-            assert(pix_observed = (double *) malloc(sizeof(double)*RAZ_ROWS));
-            assert(pix_model = (double *) malloc(sizeof(double)*RAZ_ROWS));
-            assert(pix_ctef = (double *) malloc(sizeof(double)*RAZ_ROWS));
-        //pix_observed = (double *) calloc(RAZ_ROWS, sizeof(double));
-        //pix_model = (double *) calloc(RAZ_ROWS, sizeof(double));
-        //pix_curr = (double *) calloc(RAZ_ROWS, sizeof(double));
-        //pix_init = (double *) calloc(RAZ_ROWS, sizeof(double)); //Geez, this wasn't even being used!
-        //pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
-        //pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
+        assert(pix_observed = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
+        assert(pix_model = (double *) malloc(sizeof(*pix_model)*RAZ_ROWS));
+        assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*RAZ_ROWS));
 
         /*HORIZONTAL PRE/POST SCAN POPULATION */
-        //unsigned totalFlux = 0;
-        for (unsigned j = 0; j < RAZ_ROWS; ++j){
-            pix_observed[j] = Pix(rsz->sci.data,i,j);//look into moving this out to memcpy
-            //if (pix_observed[j] > 0)
-              //  totalFlux += 1;//We only care if this is > 0, loop should stop after that.
-            /*
-            if(Pix(rz.dq.data,i,j)){
-                pix_observed[j] = Pix(rz.sci.data,i,j); //starts as input RAZ
-                totflux += 1;
-            }
-            */
-        }
-        /* Separate this out from the above loop so that the above loop can be optimized.
-         * The loop below is to determine if the column is empty most likely only needs a few
-         * iterations to complete anyhow.
-         */
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+            pix_observed[j] = Pix(rsz->dq.data,i,j) ? Pix(rsz->sci.data,i,j) : 0;//look into moving this out to memcpy
+
         Bool hasFlux = False;
         for (unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-            if (pix_observed[j] > 0)
+            if (pix_observed[j] != 0)
             {
                 hasFlux = True;
                 break;
@@ -1284,94 +1225,68 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
         }
 
         if (hasFlux) {/*make sure the column has flux in it*/
-            for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                //pix_model[j] =  Pix(rz.sci.data,i,j); //Moved outside of DO loop as rz.sci.data isn't changed
-                pix_ctef[j] =  Pix(fff->sci.data,i , j);
-            }
+            for (unsigned j = 0; j < RAZ_ROWS; ++j)
+                pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
 
-            unsigned NREDO = 0; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-            Bool REDO = False; /*FALSE*/
+            unsigned NREDO = 0;
+            Bool REDO;
             do { /*replacing goto 9999*/
+                REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
                 /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-                memcpy(pix_model, pix_observed, sizeof(pix_observed)*RAZ_ROWS);
-
+                for (unsigned j = 0; j < RAZ_ROWS; ++j)
+                    pix_model[j] = Pix(rsz->sci.data,i,j);
+                //memcpy(pix_model, pix_observed, sizeof(*pix_observed)*RAZ_ROWS);
 
                 /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                   IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                //double rnAmp2 = cte->baseParams.rn_amp*cte->baseParams.rn_amp;
-                for (unsigned NITINV = 0; NITINV < cte->baseParams.n_forward - 1; ++NITINV)
+                for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward - 1; ++NITINV)
                 {
-                    //memcpy(pix_read, pix_model, sizeof(pix_model)*RAZ_ROWS);
-                    /*comment out - now do in place with single array as the 1st thing sim_colreadout does (did) is
-                     * copy the data and then the loop that calls this func only swaps them back again at the end.
-                     */
-                    /*for (j=0; j<RAZ_ROWS; j++)
-                    {
-                        pix_curr[j]=pix_modl[j];
-                        pix_read[j]=pix_modl[j];
-                        pix_ctef[j]=Pix(pixz_fff.sci.data,i,j); //JN this is already assigned on line ~1266 (just above)
-                    }
-                    */
-
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                    for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE){
-                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams,
-                                &cteRprof, &cteCprof, RAZ_ROWS, True);
+                    for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE)
+                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, &cteRprof, &cteCprof, RAZ_ROWS);
 
-                        /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
-                        /*for (j=0; j< RAZ_ROWS; j++){
-                            pix_curr[j]=pix_read[j];
-                        }*/
-                    } /* end NITCTE */
-
-                    /*DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
-                      AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE*/
-                    /*for (unsigned i = 0; i < RAZ_ROWS; ++i){
-                        double dmod =  (pix_observed[i] - pix_model[i]);
+                    //Now that the trails have been simulated, subtract them from the model
+                    //to reproduce the actual image, without the CTE trails.
+                    //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
+                    //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
+                    for (unsigned j = 0; j < RAZ_ROWS; ++j)
+                    {
+                        double dmod =  pix_model[j] - pix_observed[j];
                         double dmod2 = dmod * dmod;
-                        //if (NITINV < cte->baseParams.n_forward){
-                            dmod *= dmod2 / (dmod2 + rnAmp2);
-                        //}
-                        //pix_model[j] += dmod; //dampen each pixel as the best is determined
-                        pix_model[j] = pix_observed[j] + dmod; //dampen each pixel as the best is determined
-                    }*/
-                } /*NITINV end*/
-                //Do the last iteration separately so as not to dampen (removes conditional from above damp loop)
+
+                        //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
+                        dmod *= dmod2 / (dmod2 + rnAmp2);
+
+                        //Now subtract the (now dampened) trails simulated by sim_colreadout_l
+                        pix_model[j] = pix_observed[j] - dmod;
+                    }
+                }
+
+                //The last forward iteration is not dampened
                 /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                 for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE)
-                {
-                    sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams,
-                            &cteRprof, &cteCprof, RAZ_ROWS, False);
-                }
+                    sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, &cteRprof, &cteCprof, RAZ_ROWS);
 
-                correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS, &jmax, &REDO, &cte->baseParams);
+                //Now subtract the trails simulated by sim_colreadout_l
+                for (unsigned j = 0; j < RAZ_ROWS; ++j)
+                    pix_model[j] = pix_observed[j] - (pix_model[j] - pix_observed[j]);
 
-                if (REDO)
-                    ++NREDO;
-                if (NREDO == 5)
-                    REDO = False; /*stop*/
-            } while (REDO); /*replacing goto 9999*/
+                REDO = correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS,
+                        cte->baseParams.thresh, cte->baseParams.fix_rocr);
 
-#pragma omp critical (cte)
-            for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                if (Pix(rsz->dq.data,i,j)){//(Pix(rz.dq.data,i,j)){
-                    Pix(rsc->sci.data,i,j)= pix_model[j]; //Look into whether pix_model is def updated (i.e. if (hasFlux == 0)) etc
-                }
+            } while (REDO && ++NREDO < 5); /*replacing goto 9999*/ //If really wanting 5 re-runs then need NREDO++
+
+            for (unsigned j = 0; j < RAZ_ROWS; ++j)
+            {
+                Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? pix_model[j] : 0;
             }
-
         } /*totflux > 1, catch for subarrays*/
-
-/*#pragma omp critical (cte)
-        for (unsigned j = 0; j < RAZ_ROWS; ++j){
-            if (Pix(rz.dq.data,i,j)){
-                Pix(rc.sci.data,i,j)= pix_model[j]; //Look into whether pix_model is def updated (i.e. if (hasFlux == 0)) etc
+        else
+        {
+            for (unsigned j = 0; j < RAZ_ROWS; ++j){
+                Pix(rsc->sci.data, i, j) = 0;
             }
         }
-*/
-        //free(pix_model);
-        //free(pix_curr);
-        //free(pix_init);
-
     } /*end i*/
 
     if (pix_observed)
@@ -1383,22 +1298,6 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, WF3CT
 }// close scope for #pragma omp parallel
     freeFloatData(&cteRprof);
     freeFloatData(&cteCprof);
-
-
-    //WARNING double check boundaries and sizes
- /*   for (unsigned i = 0; i < RAZ_ROWS; ++i){
-        for (unsigned j = 0; j < RAZ_COLS; ++j){
-            if(Pix(rsz->dq.data, j, i)){
-                Pix(rsz->sci.data, j, i) = Pix(rz.sci.data, j, i);
-                Pix(rsc->sci.data, j, i) = Pix(rc.sci.data, j, i);
-                Pix(fff->sci.data, j, i) = Pix(pixz_fff.sci.data, j, i);
-            }
-        }
-    }
-*/
-    //freeSingleGroup(&rz);
-    //freeSingleGroup(&rc);
-    //freeSingleGroup(&pixz_fff);
 
     return(status);
 }

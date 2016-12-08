@@ -292,7 +292,7 @@ void initFloatData(FloatTwoDArray *x) {
 # endif
 }
 
-int allocFloatData(FloatTwoDArray *x, int i, int j, Bool zeroInitilize) {
+int allocFloatData(FloatTwoDArray *x, int i, int j, Bool zeroInitialize) {
 # if defined (DEBUG)
         printf("allocFloatData-1: %x %x %d\n",
                 (int)x,(int)(x->buffer),x->buffer_size);
@@ -304,7 +304,7 @@ int allocFloatData(FloatTwoDArray *x, int i, int j, Bool zeroInitilize) {
                 x->buffer = NULL;
             }
             x->buffer_size = i * j;
-            if (zeroInitilize)
+            if (zeroInitialize)
                 x->buffer = (float *)calloc(x->buffer_size, sizeof(float));
             else
                 x->buffer = (float *)malloc(x->buffer_size * sizeof(float));
@@ -327,6 +327,8 @@ int allocFloatData(FloatTwoDArray *x, int i, int j, Bool zeroInitilize) {
 }
 
 void freeFloatData(FloatTwoDArray *x) {
+        if (!x)
+            return;
 # if defined (DEBUG)
         printf("freeFloatData: %x %x %d\n",
                 (int)x,(int)(x->buffer),x->buffer_size);
@@ -336,21 +338,21 @@ void freeFloatData(FloatTwoDArray *x) {
         initFloatData(x);
 }
 
-int copyAndTransposeFloatData(FloatTwoDArray * target, const FloatTwoDArray * source)
+void copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source)
 {
     //Look into whether this breaks use of Pix on target?
-    if (!target || !source || target->nx != source->ny || target->ny != source->nx)
-        return -1;
+    if (!target || !source)
+        return;
+    unsigned nCols = target->nx;
+    unsigned nRows = target->ny;
 
-    //Transpose source into target
-    for (unsigned j = 0; j < target->nx; ++j)
+    for (unsigned j = 0; j < nCols; ++j)
     {
-        for (unsigned i = 0; i < target->ny; ++i)
+        for (unsigned i = 0; i < nRows; ++i)
         {
-            target->data[j*target->ny + i] = source->data[i*source->ny + j];
+            target->data[j*nRows + i] = source->data[i*nCols + j];
         }
     }
-    return 0;
 }
 
 void initShortData(ShortTwoDArray *x) {

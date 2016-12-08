@@ -247,14 +247,13 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         allocFloatData(&cteRprof, pars.baseParams.rprof->data.ny, pars.baseParams.rprof->data.nx, False);
         allocFloatData(&cteCprof, pars.baseParams.cprof->data.ny, pars.baseParams.cprof->data.nx, False);
         //Transpose arrays to column major
-        copyAndTransposeFloatData(&cteRprof, &pars.baseParams.rprof->data);
-        copyAndTransposeFloatData(&cteCprof, &pars.baseParams.cprof->data);
+        //copyAndTransposeFloatData(&cteRprof, &pars.baseParams.rprof->data);
+        //copyAndTransposeFloatData(&cteCprof, &pars.baseParams.cprof->data);
 
         //correctedColumn isn't needed - can be done in place (when all mem transposed to column major)
         double * correctedColumn = NULL;
         assert(correctedColumn = (double*)malloc(amp_arr1 * sizeof(*amp_sig_arr)));
 
-        unsigned jmax = 0;
         //Correct image one column at a time, amp_arr2 = nColumns
         //Before, with FixYCTE, the entire 2D array was passed in a split up internally by the function
         //loop over columns
@@ -287,7 +286,7 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
                     for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
                     {
                         if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
-                                &cteRprof, &cteCprof, amp_arr1, True))
+                                &cteRprof, &cteCprof, amp_arr1))
                             return status;
                     }
                 }
@@ -296,24 +295,27 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
                 for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
                 {
                     if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
-                            &cteRprof, &cteCprof, amp_arr1, False))
+                            &cteRprof, &cteCprof, amp_arr1))
                         return status;
                 }
 
-                correctCROverSubtraction(cte_frac_arr, correctedColumn, amp_sig_arr, amp_arr1, &jmax, &REDO, &pars.baseParams);
+                REDO = correctCROverSubtraction(cte_frac_arr, correctedColumn, amp_sig_arr, amp_arr1,
+                        pars.baseParams.fix_rocr, pars.baseParams.thresh);
 
-                if (REDO)
-                    ++NREDO;
-                if (NREDO == 5)
-                    REDO = False;
-            } while (REDO);
+            } while (REDO && ++NREDO < 5);
             //copy corrected column back into original array
             memcpy(&amp_sig_arr[j*amp_arr1], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
         }
-        free(correctedColumn);
-        correctedColumn = NULL;
-        free(cte_frac_arr);
-        correctedColumn = NULL;
+        if (correctedColumn)
+        {
+            free(correctedColumn);
+            correctedColumn = NULL;
+        }
+        if (cte_frac_arr)
+        {
+            free(cte_frac_arr);
+            correctedColumn = NULL;
+        }
         freeFloatData(&cteRprof);
         freeFloatData(&cteCprof);
 

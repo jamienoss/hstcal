@@ -943,7 +943,7 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
       }
     }
 */
-    memcpy(noise_arr, local_noise, sizeof(local_noise)*arrx*arry);
+    memcpy(noise_arr, local_noise, sizeof(*local_noise)*arrx*arry);
     free(local_noise);
     //should there be a return here? Do we still do noise_model = 2 as well then?
   } /* end if noise_model==1 */

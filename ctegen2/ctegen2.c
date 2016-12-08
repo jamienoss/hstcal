@@ -32,42 +32,33 @@
   the ttrap reference to the image array has to be -1 for C
   */
 
-int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams *cte,
-        const FloatTwoDArray * rprof, const FloatTwoDArray * cprof, const unsigned nRows, const Bool dampen)
+int sim_colreadout_l(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+        const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows)
 {
     extern int status;
 
-    double padd_3=0.0;
-    double prem_3=0.0;
-    double padd_2=0.0;
-    double fcarry=0.0;
-    double pix_1=0.0;
-    double ftrap=0.0;
-    int ttrap=0;
-
-    /*from the reference table*/
-    const double rnAmp2 = cte->rn_amp*cte->rn_amp;
+    double pixAdd;
+    double pixAddMore;//rethink name?
+    double pixRemove;
+    double pix;
+    double releasedFlux;
+    double trappedFlux;
+    int nTransfersFromTrap;
 
     /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
       PMAX SHOULD ALWAYS BE POSITIVE HERE*/
-    double pmax = 10.;
     //Look into whether this really has to be computed each iteration?
     //Since this is simulating the readout and thus moving pixels down and out, pmax can only get smaller with
     //each pixel transfer, never greater.
+    double pmax = 10;
     for (unsigned i = 0; i < nRows; ++i)
-    {
-        //check assembly (before & after op) to see if actually implemented differently
-        pmax = (currentColumn[i] < pmax) ? pmax : currentColumn[i];
-        /*if (pixo[j] > pmax)
-            pmax=pixo[j];
-            */
-    }
+        pmax = (pixelColumn[i] < pmax) ? pmax : pixelColumn[i]; //check assembly (before & after op) to see if actually implemented differently
 
     //Find highest charge trap to not exceed i.e. map pmax to an index
     unsigned maxChargeTrapIndex = cte->cte_traps-1;
-    for (int w = cte->cte_traps-1; w >= 0; --w)//go up or down?
+    for (int w = cte->cte_traps-1; w >= 0; --w)//go up or down? (if swap, change below condition)
     {
-        if (cte->qlevq_data[w] <= pmax)//is any of this even needed or can we just directly map? Probably can.
+        if (cte->qlevq_data[w] <= pmax)//is any of this even needed or can we just directly map?
         {
             maxChargeTrapIndex = w;
             break;
@@ -78,69 +69,61 @@ int sim_colreadout_l(double *currentColumn, const double *pixf, const CTEParams 
       AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
     for (int w = maxChargeTrapIndex; w >= 0; --w)
     {
-        ftrap = 0.0e0;
-        ttrap = cte->cte_len; /*for referencing the image at 0*/
-        fcarry = 0.0e0;
+        trappedFlux = 0;
+        nTransfersFromTrap = cte->cte_len; /*for referencing the image at 0*/
+        releasedFlux = 0;
 
         /*GO UP THE COLUMN PIXEL BY PIXEL*/
         for(unsigned i = 0; i < nRows; ++i)
         {
-            pix_1 = currentColumn[i];
-            //What is this doing/for pix_1 >= cte->qlevq_data[w] - 1.???
-            if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) )
+            pix = pixelColumn[i];
+            //What is this doing - for pix_1 >= cte->qlevq_data[w] - 1.???
+            if ( (nTransfersFromTrap < cte->cte_len) || ( pix >= cte->qlevq_data[w] - 1. ) )
             {
-                if (currentColumn[i] >= 0 )//seems a shame to need check this every iteration
+                if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
                 {
-                    pix_1 = currentColumn[i] + fcarry; /*shuffle charge in*/
-                    fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
-                    pix_1 = floor(pix_1); /*reset pixel*/
+                    pix = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
+                    releasedFlux = pix - floor(pix); /*carry the charge remainder*/
+                    pix = floor(pix); /*reset pixel*/
                 }
 
                 /*HAPPENS AFTER FIRST PASS*/
                 /*SHUFFLE CHARGE IN*/
-                //move out of loop to separate instance
+                //move out of loop to separate instance?
                 if (i > 0)
                 {
                     if (pixf[i] < pixf[i-1])
-                        ftrap *= (pixf[i] /  pixf[i-1]);
+                        trappedFlux *= (pixf[i] / pixf[i-1]);
                 }
 
                 /*RELEASE THE CHARGE*/
-                padd_2=0.0;
-                if (ttrap <cte->cte_len){
-                    ++ttrap;
-                    padd_2 = rprof->data[w*rprof->nx + ttrap-1] * ftrap;//Pix(rprof, w, ttrap-1) *ftrap;
+                pixAdd=0.0;
+                if (nTransfersFromTrap < cte->cte_len)
+                {
+                    pixAdd = rprof->data[w*rprof->ny + nTransfersFromTrap] * trappedFlux;
+                    ++nTransfersFromTrap;
                 }
 
-                padd_3 = 0.0;
-                prem_3 = 0.0;
-                if ( pix_1 >= cte->qlevq_data[w]){
-                    prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
-                    if (ttrap < cte->cte_len)
-                        padd_3 = cprof->data[w*cprof->nx + ttrap-1] * ftrap;//Pix(cprof, w, ttrap-1)*ftrap;
-                    ttrap=0;
-                    ftrap=prem_3;
+                pixAddMore = 0;
+                pixRemove = 0;
+                if ( pix >= cte->qlevq_data[w])
+                {
+                    pixRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
+                    if (nTransfersFromTrap < cte->cte_len)
+                        pixAddMore = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
+                    nTransfersFromTrap=0;
+                    trappedFlux=pixRemove;
                 }
 
-                /* Is it more efficient to dampen here rather than external and have to recompute the delta?
-                 * the dampening loop is over all rows, unnecessarily, rather than just those computed here.
-                 * does it add conditional to this loop now? Don't think compiler will optimize out
-                 * conditional but since const, the proc should. (could make inline?)
-                 */
-                double correction = padd_2 + padd_3 - prem_3;
-                double correction2 = correction * correction;
-                if (dampen)
-                    correction = correction2 / (correction2 + rnAmp2);
-
-                currentColumn[i] += correction;
+                pixelColumn[i] += pixAdd + pixAddMore - pixRemove;
             } //replaces trap continue
         } //end for i
     } //end for w
     return(status);
 }
 
-void correctCROverSubtraction(double * pix_ctef, const double * pix_model, const double * pix_observed,
-        const unsigned nRows, unsigned * jmax, Bool * REDO, const CTEParams * cte)
+Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_model, const double * const pix_observed,
+        const unsigned nRows, const double threshHold, const int doCorrectionFlag)
 {
     /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
       THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;
@@ -161,13 +144,14 @@ void correctCROverSubtraction(double * pix_ctef, const double * pix_model, const
       THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
     */
 
-    if (!cte->fix_rocr || !pix_model || !pix_observed || !pix_ctef)
-        return;
+    if (!doCorrectionFlag || !pix_model || !pix_observed || !pix_ctef)
+        return False;
 
+    Bool redo = False;
     for (unsigned j = 10; j < nRows-2; ++j)
     {
-        if ( (( cte->thresh > pix_model[j] ) &&
-                    ( cte->thresh > (pix_model[j] - pix_observed[j]))) ||
+        if ( (( threshHold > pix_model[j] ) &&
+                    ( threshHold > (pix_model[j] - pix_observed[j]))) ||
 
                 (((pix_model[j] + pix_model[j+1]) < -12.) &&
                  (pix_model[j] + pix_model[j+1] - pix_observed[j] - pix_observed[j+1] < -12.)) ||
@@ -176,26 +160,21 @@ void correctCROverSubtraction(double * pix_ctef, const double * pix_model, const
                  ((pix_model[j] + pix_model[j+1] + pix_model[j+2] -pix_observed[j] -
                    pix_observed[j+1] - pix_observed[j+2]) <-15.))  )
         {
-
-            *jmax=j;
+            redo = True;
+            unsigned jmax = j;
 
             /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
             for (unsigned jj = j-10; jj <= j; ++jj)
             {
-                if ( (pix_model[jj] - pix_observed[jj]) >
-                        (pix_model[*jmax] - pix_observed[*jmax]) )
-                {
-                    *jmax=jj;
-                }
+                if ( (pix_model[jj] - pix_observed[jj]) > (pix_model[jmax] - pix_observed[jmax]) )
+                    jmax = jj;
+                    //should there be a break here?
             }
             /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
                BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
-            for (unsigned jj = *jmax; jj <= j; ++jj)
-            {
+            for (unsigned jj = jmax; jj <= j; ++jj)
                 pix_ctef[jj] *= 0.75;
-                //Pix(pixz_fff->sci.data, i, jj) *= 0.75; //non contig - can we use pix_ctef here?
-            }
-            *REDO = True; //Do we need to continue the loop?
-        } /*end if*/
+        }
     } /*end for  j*/
+    return redo;
 }
