@@ -1466,8 +1466,9 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
             for(j=0; j<RAZ_ROWS;j++){
                 pix_1 = pixo[j];
 
-
-                if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) ){
+                Bool ttrapTrigger = ttrap < cte->cte_len;
+                Bool qlevqTrigger = pix_1 >= cte->qlevq_data[w] - 1.;
+                if ( ttrapTrigger || qlevqTrigger ){
                     if (pixo[j] >= 0 ){
                         pix_1 = pixo[j] + fcarry; /*shuffle charge in*/
                         fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
@@ -1483,16 +1484,16 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
 
                     /*RELEASE THE CHARGE*/
                     padd_2=0.0;
-                    if (ttrap <cte->cte_len){
+                    if (ttrapTrigger){
                         ttrap += 1;
                         padd_2 = Pix(rprof->data,w,ttrap-1) *ftrap;
                     }
 
                     padd_3 = 0.0;
                     prem_3 = 0.0;
-                    if ( pix_1 >= cte->qlevq_data[w]){
+                    if (qlevqTrigger){ //assuming -1. was actually missing
                         prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[j];  /*dpdew is 1 in file */
-                        if (ttrap < cte->cte_len)
+                        if (ttrapTrigger)
                             padd_3 = Pix(cprof->data,w,ttrap-1)*ftrap;
                         ttrap=0;
                         ftrap=prem_3;
