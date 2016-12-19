@@ -52,7 +52,7 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
     //each pixel transfer, never greater.
     double maxPixel = 10;
     for (unsigned i = 0; i < nRows; ++i)
-        maxPixel = (pixelColumn[i] < maxPixel) ? maxPixel : pixelColumn[i]; //check assembly (before & after op) to see if actually implemented differently
+        maxPixel = pixelColumn[i] > maxPixel ? pixelColumn[i] : maxPixel; //check assembly (before & after op) to see if actually implemented differently
 
     //Find highest charge trap to not exceed i.e. map pmax to an index
     unsigned maxChargeTrapIndex = cte->cte_traps-1;
@@ -76,6 +76,9 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
         /*GO UP THE COLUMN PIXEL BY PIXEL*/
         for(unsigned i = 0; i < nRows; ++i)
         {
+            //if (!pixelColumn[i])
+              //  continue;
+
             pixel = pixelColumn[i];
             //What is this doing - for pix_1 >= cte->qlevq_data[w] - 1.???
             if ( (nTransfersFromTrap < cte->cte_len) || ( pixel >= cte->qlevq_data[w] - 1. ) )
