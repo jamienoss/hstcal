@@ -1192,109 +1192,109 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
     copyFloatDataToColumnMajor(&cteRprof, &cte->baseParams.rprof->data);
     copyFloatDataToColumnMajor(&cteCprof, &cte->baseParams.cprof->data);
 
-//#pragma omp parallel
+#pragma omp parallel shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
 {
-    //DEFINE TO MAKE PRIVATE IN PARALLEL RUN
     double * pix_observed = NULL;
     double * pix_model = NULL;
     double * pix_ctef = NULL;
-    unsigned i;
 
-    #pragma omp parallel for schedule (dynamic,1) \
-    private(i, pix_observed, pix_model, pix_ctef)\
-    shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
+    //get rid of asserts
+    assert(pix_observed = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
+    assert(pix_model = (double *) malloc(sizeof(*pix_model)*RAZ_ROWS));
+    assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*RAZ_ROWS));
 
-    for (i = 0; i < RAZ_COLS; ++i)
+    #pragma omp for schedule (dynamic, 1)
+    for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
-        assert(pix_observed = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
-        assert(pix_model = (double *) malloc(sizeof(*pix_model)*RAZ_ROWS));
-        assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*RAZ_ROWS));
-
-        /*HORIZONTAL PRE/POST SCAN POPULATION */
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
-            pix_observed[j] = Pix(rsz->dq.data,i,j) ? Pix(rsz->sci.data,i,j) : 0;//look into moving this out to memcpy
-
         Bool hasFlux = False;
         for (unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-            if (pix_observed[j] != 0)
+            if (Pix(rsz->dq.data,i,j))
             {
                 hasFlux = True;
                 break;
             }
         }
 
-        if (hasFlux) {/*make sure the column has flux in it*/
-            for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
-
-            unsigned NREDO = 0;
-            Bool REDO;
-            do { /*replacing goto 9999*/
-                REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-                /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-                for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                    pix_model[j] = Pix(rsz->sci.data,i,j);
-                //memcpy(pix_model, pix_observed, sizeof(*pix_observed)*RAZ_ROWS);
-
-                /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
-                  IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward - 1; ++NITINV)
-                {
-                    /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                    for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE)
-                        sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, &cteRprof, &cteCprof, RAZ_ROWS);
-
-                    //Now that the trails have been simulated, subtract them from the model
-                    //to reproduce the actual image, without the CTE trails.
-                    //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
-                    //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
-                    for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                    {
-                        double dmod =  pix_model[j] - pix_observed[j];
-                        double dmod2 = dmod * dmod;
-
-                        //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
-                        dmod *= dmod2 / (dmod2 + rnAmp2);
-
-                        //Now subtract the (now dampened) trails simulated by sim_colreadout_l
-                        pix_model[j] = pix_observed[j] - dmod;
-                    }
-                }
-
-                //The last forward iteration is not dampened
-                /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                for (unsigned NITCTE = 1; NITCTE <= cte->baseParams.n_par; ++NITCTE)
-                    sim_colreadout_l(pix_model, pix_ctef, &cte->baseParams, &cteRprof, &cteCprof, RAZ_ROWS);
-
-                //Now subtract the trails simulated by sim_colreadout_l
-                for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                    pix_model[j] = pix_observed[j] - (pix_model[j] - pix_observed[j]);
-
-                REDO = correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS,
-                        cte->baseParams.thresh, cte->baseParams.fix_rocr);
-
-            } while (REDO && ++NREDO < 5); /*replacing goto 9999*/ //If really wanting 5 re-runs then need NREDO++
-
-            for (unsigned j = 0; j < RAZ_ROWS; ++j)
-            {
-                Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? pix_model[j] : 0;
-            }
-        } /*totflux > 1, catch for subarrays*/
-        else
+        if (!hasFlux)
         {
             for (unsigned j = 0; j < RAZ_ROWS; ++j){
                 Pix(rsc->sci.data, i, j) = 0;
             }
+            continue;
         }
-    } /*end i*/
+
+        /*HORIZONTAL PRE/POST SCAN POPULATION */ //see if comment still relative?
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+            pix_observed[j] = Pix(rsz->dq.data,i,j) ? Pix(rsz->sci.data,i,j) : 0;//look into moving this out to memcpy
+
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+            pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
+
+        unsigned NREDO = 0;
+        Bool REDO;
+        do { /*replacing goto 9999*/
+            REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
+            memcpy(pix_model, pix_observed, sizeof(*pix_observed)*RAZ_ROWS);
+
+            /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
+              IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
+            for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward - 1; ++NITINV)
+            {
+                simulateColumnReadout(pix_model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
+
+                //Now that the trails have been simulated, subtract them from the model
+                //to reproduce the actual image, without the CTE trails.
+                //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
+                //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
+                for (unsigned j = 0; j < RAZ_ROWS; ++j)
+                {
+                    double delta =  pix_model[j] - pix_observed[j];
+                    double delta2 = delta * delta;
+
+                    //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
+                    delta *= delta2 / (delta2 + rnAmp2);
+
+                    //Now subtract the (now dampened) trails simulated by sim_colreadout_l
+                    pix_model[j] = pix_observed[j] - delta;
+                }
+            }
+
+            //Do not dampen the last forward iteration... no idea why???
+            simulateColumnReadout(pix_model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
+
+            //Now subtract the trails simulated by sim_colreadout_l
+            for (unsigned j = 0; j < RAZ_ROWS; ++j)
+                pix_model[j] = pix_observed[j] - (pix_model[j] - pix_observed[j]);
+
+            REDO = cte->baseParams.fix_rocr ? correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS,
+                    cte->baseParams.thresh) : False;
+
+        } while (REDO && ++NREDO < 5); /*replacing goto 9999*/ //If really wanting 5 re-runs then need NREDO++
+
+        //Update source array
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+        {
+            Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? pix_model[j] : 0;
+        }
+    } //end loop over columns
 
     if (pix_observed)
+    {
         free(pix_observed);
+        pix_observed = NULL;
+    }
     if (pix_model)
+    {
         free(pix_model);
+        pix_model = NULL;
+    }
     if (pix_ctef)
+    {
         free(pix_ctef);
+        pix_ctef = NULL;
+    }
 }// close scope for #pragma omp parallel
     freeFloatData(&cteRprof);
     freeFloatData(&cteCprof);
