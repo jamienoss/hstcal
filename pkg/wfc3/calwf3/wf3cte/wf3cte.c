@@ -354,7 +354,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status = OPEN_FAILED);
             }
 
-            /*make an empty fullsize chip for pasting*/
+            /*make an empty fullsize chip for pasting*/ //Redo only allocate enough for subarray and not full frame!
             initSingleGroup(&ab);
             allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS);
             ab.group_num=2;
@@ -1115,8 +1115,8 @@ int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams
           not the current size. Moved above
           */
 
-        for(j=0; j<RAZ_ROWS; j++){
-            Pix(pixz_fff.sci.data,i,j)=hardset;
+        for(j=0; j<RAZ_ROWS; j++){//non contig swap with iter over i
+            Pix(pixz_fff.sci.data,i,j)=hardset; //remove
             ro = j/512.0; /*ro can be zero, it's an index*/
             if (ro <0 ) ro=0.;
             if (ro > 2.999) ro=2.999; /*only 4 quads, 0 to 3*/
@@ -1198,12 +1198,20 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
     double * pix_model = NULL;
     double * pix_ctef = NULL;
 
+    double * pix_observedall = NULL;
+    assert(pix_observedall = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
+
+
     //get rid of asserts
     assert(pix_observed = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
     assert(pix_model = (double *) malloc(sizeof(*pix_model)*RAZ_ROWS));
     assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*RAZ_ROWS));
 
-    #pragma omp for schedule (dynamic, 1)
+    //Due to rsc->sci.data being used as a mask for subarrays keep this as 'dynamic'. If we can ensure no empty columns then
+    //remove if(!hasFlux) and change schedule to 'static'
+    unsigned chunkSize = (RAZ_COLS / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
+    //Experiment with chuckSize (ideally static would be best)
+    #pragma omp for schedule (dynamic, chunkSize)
     for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
         Bool hasFlux = False;
@@ -1219,24 +1227,28 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
         if (!hasFlux)
         {
             for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                Pix(rsc->sci.data, i, j) = 0;
+                Pix(rsc->sci.data, i, j) = 0; //check to see if even needed
             }
             continue;
         }
 
-        /*HORIZONTAL PRE/POST SCAN POPULATION */ //see if comment still relative?
+        //rsz->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
+        //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
         for (unsigned j = 0; j < RAZ_ROWS; ++j)
-            pix_observed[j] = Pix(rsz->dq.data,i,j) ? Pix(rsz->sci.data,i,j) : 0;//look into moving this out to memcpy
-
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+        {
+            pix_observed[j] = Pix(rsz->dq.data,i,j) ? Pix(rsz->sci.data,i,j) : 0;
+            pix_observedall[j] = Pix(rsz->sci.data,i,j);
             pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
+        }
 
         unsigned NREDO = 0;
         Bool REDO;
+        REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+
         do { /*replacing goto 9999*/
-            REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            //REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
             /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-            memcpy(pix_model, pix_observed, sizeof(*pix_observed)*RAZ_ROWS);
+            memcpy(pix_model, pix_observedall, sizeof(*pix_observed)*RAZ_ROWS);
 
             /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
               IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
@@ -1256,19 +1268,18 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
                     //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
                     delta *= delta2 / (delta2 + rnAmp2);
 
-                    //Now subtract the (now dampened) trails simulated by sim_colreadout_l
-                    pix_model[j] = pix_observed[j] - delta;
+                    //Now subtract the (now dampened) simulated trails
+                    pix_model[j] = pix_observedall[j] - delta;
                 }
             }
 
-            //Do not dampen the last forward iteration... no idea why???
+            //Do the last forward iteration but don't dampen... no idea why???
             simulateColumnReadout(pix_model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
-
-            //Now subtract the trails simulated by sim_colreadout_l
+            //Now subtract the simulated trails
             for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                pix_model[j] = pix_observed[j] - (pix_model[j] - pix_observed[j]);
+                pix_model[j] = pix_observedall[j] - (pix_model[j] - pix_observed[j]);
 
-            REDO = cte->baseParams.fix_rocr ? correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS,
+            REDO =  cte->baseParams.fix_rocr ? correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS,
                     cte->baseParams.thresh) : False;
 
         } while (REDO && ++NREDO < 5); /*replacing goto 9999*/ //If really wanting 5 re-runs then need NREDO++
@@ -1279,6 +1290,13 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
             Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? pix_model[j] : 0;
         }
     } //end loop over columns
+
+
+    if (pix_observedall)
+        {
+            free(pix_observedall);
+            pix_observedall = NULL;
+        }
 
     if (pix_observed)
     {
