@@ -20,10 +20,13 @@ typedef struct {
     FloatHdrData *cprof; // cumulative trail profile as image
 } CTEParams;
 
-int sim_colreadout_l(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows);
 
+int simulateColumnReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+        const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts);
+
 Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_model, const double * const pix_observed,
-        const unsigned nRows, const double threshHold, const int doCorrectionFlag);
+        const unsigned nRows, const double threshHold);
 
 #endif

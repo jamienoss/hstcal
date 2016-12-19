@@ -32,15 +32,15 @@
   the ttrap reference to the image array has to be -1 for C
   */
 
-int sim_colreadout_l(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows)
 {
     extern int status;
 
-    double pixAdd;
-    double pixAddMore;//rethink name?
-    double pixRemove;
-    double pix;
+    double chargeToAdd;
+    double extraChargeToAdd;//rethink name?
+    double chargeToRemove;
+    double pixel;
     double releasedFlux;
     double trappedFlux;
     int nTransfersFromTrap;
@@ -50,15 +50,15 @@ int sim_colreadout_l(double * const pixelColumn, const double * const pixf, cons
     //Look into whether this really has to be computed each iteration?
     //Since this is simulating the readout and thus moving pixels down and out, pmax can only get smaller with
     //each pixel transfer, never greater.
-    double pmax = 10;
+    double maxPixel = 10;
     for (unsigned i = 0; i < nRows; ++i)
-        pmax = (pixelColumn[i] < pmax) ? pmax : pixelColumn[i]; //check assembly (before & after op) to see if actually implemented differently
+        maxPixel = (pixelColumn[i] < maxPixel) ? maxPixel : pixelColumn[i]; //check assembly (before & after op) to see if actually implemented differently
 
     //Find highest charge trap to not exceed i.e. map pmax to an index
     unsigned maxChargeTrapIndex = cte->cte_traps-1;
-    for (int w = cte->cte_traps-1; w >= 0; --w)//go up or down? (if swap, change below condition)
+    for (int w = maxChargeTrapIndex; w >= 0; --w)//go up or down? (if swap, change below condition)
     {
-        if (cte->qlevq_data[w] <= pmax)//is any of this even needed or can we just directly map?
+        if (cte->qlevq_data[w] <= maxPixel)//is any of this even needed or can we just directly map?
         {
             maxChargeTrapIndex = w;
             break;
@@ -69,22 +69,22 @@ int sim_colreadout_l(double * const pixelColumn, const double * const pixf, cons
       AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
     for (int w = maxChargeTrapIndex; w >= 0; --w)
     {
+        nTransfersFromTrap = cte->cte_len; //for referencing the image at 0
         trappedFlux = 0;
-        nTransfersFromTrap = cte->cte_len; /*for referencing the image at 0*/
         releasedFlux = 0;
 
         /*GO UP THE COLUMN PIXEL BY PIXEL*/
         for(unsigned i = 0; i < nRows; ++i)
         {
-            pix = pixelColumn[i];
+            pixel = pixelColumn[i];
             //What is this doing - for pix_1 >= cte->qlevq_data[w] - 1.???
-            if ( (nTransfersFromTrap < cte->cte_len) || ( pix >= cte->qlevq_data[w] - 1. ) )
+            if ( (nTransfersFromTrap < cte->cte_len) || ( pixel >= cte->qlevq_data[w] - 1. ) )
             {
                 if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
                 {
-                    pix = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
-                    releasedFlux = pix - floor(pix); /*carry the charge remainder*/
-                    pix = floor(pix); /*reset pixel*/
+                    pixel = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
+                    releasedFlux = pixel - floor(pixel); /*carry the charge remainder*/
+                    pixel = floor(pixel); /*reset pixel*/
                 }
 
                 /*HAPPENS AFTER FIRST PASS*/
@@ -97,33 +97,45 @@ int sim_colreadout_l(double * const pixelColumn, const double * const pixf, cons
                 }
 
                 /*RELEASE THE CHARGE*/
-                pixAdd=0.0;
+                chargeToAdd=0;
                 if (nTransfersFromTrap < cte->cte_len)
                 {
-                    pixAdd = rprof->data[w*rprof->ny + nTransfersFromTrap] * trappedFlux;
+                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap] * trappedFlux;
                     ++nTransfersFromTrap;
                 }
 
-                pixAddMore = 0;
-                pixRemove = 0;
-                if ( pix >= cte->qlevq_data[w])
+                extraChargeToAdd = 0;
+                chargeToRemove = 0;
+                if ( pixel >= cte->qlevq_data[w])
                 {
-                    pixRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
+                    chargeToRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
                     if (nTransfersFromTrap < cte->cte_len)
-                        pixAddMore = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
-                    nTransfersFromTrap=0;
-                    trappedFlux=pixRemove;
+                        extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
+                    nTransfersFromTrap = 0;
+                    trappedFlux = chargeToRemove;
                 }
 
-                pixelColumn[i] += pixAdd + pixAddMore - pixRemove;
+                pixelColumn[i] += chargeToAdd + extraChargeToAdd - chargeToRemove;
             } //replaces trap continue
         } //end for i
     } //end for w
     return(status);
 }
 
+int simulateColumnReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+        const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts)
+{
+    extern int status;
+
+    //Take each pixel down the detector
+    for (unsigned shift = 1; shift <= nPixelShifts; ++shift)
+        simulatePixelReadout(pixelColumn, pixf, cte, rprof, cprof, nRows);
+
+    return status;
+}
+
 Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_model, const double * const pix_observed,
-        const unsigned nRows, const double threshHold, const int doCorrectionFlag)
+        const unsigned nRows, const double threshHold)
 {
     /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
       THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;
@@ -144,7 +156,7 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
       THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
     */
 
-    if (!doCorrectionFlag || !pix_model || !pix_observed || !pix_ctef)
+    if (!pix_model || !pix_observed || !pix_ctef)
         return False;
 
     Bool redo = False;

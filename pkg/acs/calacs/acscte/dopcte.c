@@ -280,27 +280,16 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
                 /* perform CTE correction */
                 //for (int i = 0; i < pars->n_par; ++i)
                 //{
-                for (unsigned NITINV = 0; NITINV < pars.baseParams.n_forward - 1; ++NITINV)
-                {
-                    /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                    for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
-                    {
-                        if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
-                                &cteRprof, &cteCprof, amp_arr1))
-                            return status;
-                    }
-                }
-                //Do the last iteration separately so as not to dampen.
-                /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
-                for (unsigned NITCTE = 1; NITCTE <= pars.baseParams.n_par; ++NITCTE)
-                {
-                    if (sim_colreadout_l(correctedColumn, cte_frac_arr, &pars.baseParams,
-                            &cteRprof, &cteCprof, amp_arr1))
-                        return status;
-                }
+                if (simulateColumnReadout(correctedColumn, cte_frac_arr, &pars.baseParams, &cteRprof, &cteCprof, amp_arr1, pars.baseParams.n_par))
+                    return status;
+                //add damping
 
-                REDO = correctCROverSubtraction(cte_frac_arr, correctedColumn, amp_sig_arr, amp_arr1,
-                        pars.baseParams.fix_rocr, pars.baseParams.thresh);
+                //Do the last iteration separately so as not to dampen.
+                if (simulateColumnReadout(correctedColumn, cte_frac_arr, &pars.baseParams, &cteRprof, &cteCprof, amp_arr1, pars.baseParams.n_par))
+                    return status;
+
+                REDO = pars.baseParams.thresh ? correctCROverSubtraction(cte_frac_arr, correctedColumn, amp_sig_arr, amp_arr1,
+                        pars.baseParams.fix_rocr) : False;
 
             } while (REDO && ++NREDO < 5);
             //copy corrected column back into original array
