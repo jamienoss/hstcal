@@ -80,8 +80,9 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
               //  continue;
 
             pixel = pixelColumn[i];
-            //What is this doing - for pix_1 >= cte->qlevq_data[w] - 1.???
-            if ( (nTransfersFromTrap < cte->cte_len) || ( pixel >= cte->qlevq_data[w] - 1. ) )
+            Bool isInsideTrailLength = nTransfersFromTrap < cte->cte_len;
+            Bool isAboveChargeThreshold = pixel >= cte->qlevq_data[w] - 1.;
+            if (isInsideTrailLength || isAboveChargeThreshold)
             {
                 if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
                 {
@@ -101,15 +102,15 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
 
                 /*RELEASE THE CHARGE*/
                 chargeToAdd=0;
-                if (nTransfersFromTrap < cte->cte_len)
+                if (isInsideTrailLength)
                 {
-                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap] * trappedFlux;
                     ++nTransfersFromTrap;
+                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
                 }
 
                 extraChargeToAdd = 0;
                 chargeToRemove = 0;
-                if ( pixel >= cte->qlevq_data[w])
+                if (pixel >= cte->qlevq_data[w])
                 {
                     chargeToRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
                     if (nTransfersFromTrap < cte->cte_len)
@@ -179,11 +180,14 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
             unsigned jmax = j;
 
             /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
+            double deltaFromOffendingCR = pix_model[jmax] - pix_observed[jmax];
             for (unsigned jj = j-10; jj <= j; ++jj)
             {
-                if ( (pix_model[jj] - pix_observed[jj]) > (pix_model[jmax] - pix_observed[jmax]) )
+                if (pix_model[jj] - pix_observed[jj] > deltaFromOffendingCR)
+                {
                     jmax = jj;
-                    //should there be a break here?
+                    deltaFromOffendingCR = pix_model[jmax] - pix_observed[jmax];
+                }
             }
             /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
                BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
