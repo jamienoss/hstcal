@@ -1194,20 +1194,20 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
 
 #pragma omp parallel shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
 {
-    double * pix_observed = NULL;
-    double * pix_model = NULL;
-    double * pix_ctef = NULL;
-
-    double * pix_observedall = NULL;
-    assert(pix_observedall = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
-
+    double * observed    = NULL;
+    double * model       = NULL;
+    double * tempModel   = NULL;
+    double * pix_ctef    = NULL;
+    double * observedAll = NULL;
 
     //get rid of asserts
-    assert(pix_observed = (double *) malloc(sizeof(*pix_observed)*RAZ_ROWS));
-    assert(pix_model = (double *) malloc(sizeof(*pix_model)*RAZ_ROWS));
+    assert(observedAll = (double *) malloc(sizeof(*observed)*RAZ_ROWS));
+    assert(observed = (double *) malloc(sizeof(*observed)*RAZ_ROWS));
+    assert(model = (double *) malloc(sizeof(*model)*RAZ_ROWS));
+    assert(tempModel = (double *) malloc(sizeof(*tempModel)*RAZ_ROWS));
     assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*RAZ_ROWS));
 
-    //Due to rsc->sci.data being used as a mask for subarrays keep this as 'dynamic'. If we can ensure no empty columns then
+    //Due to rsc->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
     //remove if(!hasFlux) and change schedule to 'static'
     unsigned chunkSize = (RAZ_COLS / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
     //Experiment with chuckSize (ideally static would be best)
@@ -1236,77 +1236,83 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
         for (unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-            pix_observed[j] = Pix(rsz->dq.data,i,j) ? Pix(rsz->sci.data,i,j) : 0;
-            pix_observedall[j] = Pix(rsz->sci.data,i,j);
+            observedAll[j] = Pix(rsz->sci.data,i,j); //Only left in to match master implementation
+            observed[j] = Pix(rsz->dq.data,i,j) ? observedAll[j] : 0;
             pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
         }
 
         unsigned NREDO = 0;
         Bool REDO;
-        REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-
-        do { /*replacing goto 9999*/
-            //REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+        do
+        {
+            REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
             /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-            memcpy(pix_model, pix_observedall, sizeof(*pix_observed)*RAZ_ROWS);
+            memcpy(model, observedAll, sizeof(*observedAll)*RAZ_ROWS);
 
             /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
               IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
             for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward - 1; ++NITINV)
             {
-                simulateColumnReadout(pix_model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
+                memcpy(tempModel, model, sizeof(*model)*RAZ_ROWS);
+                simulateColumnReadout(model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
+                //memcpy(model, tempModel, sizeof(*model)*RAZ_ROWS);
 
-                //Now that the trails have been simulated, subtract them from the model
+                //Now that the updated readout has been simulated, subtract this from the model
                 //to reproduce the actual image, without the CTE trails.
                 //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
                 //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
                 for (unsigned j = 0; j < RAZ_ROWS; ++j)
                 {
-                    double delta =  pix_model[j] - pix_observed[j];
+                    double delta = model[j] - observed[j];
                     double delta2 = delta * delta;
 
                     //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
                     delta *= delta2 / (delta2 + rnAmp2);
 
-                    //Now subtract the (now dampened) simulated trails
-                    pix_model[j] = pix_observedall[j] - delta;
+                    //Now subtract the simulated readout
+                    model[j] = tempModel[j] - delta;
                 }
             }
 
             //Do the last forward iteration but don't dampen... no idea why???
-            simulateColumnReadout(pix_model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
-            //Now subtract the simulated trails
+            memcpy(tempModel, model, sizeof(*model)*RAZ_ROWS);
+            simulateColumnReadout(model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
+            //Now subtract the simulated readout
             for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                pix_model[j] = pix_observedall[j] - (pix_model[j] - pix_observed[j]);
+                model[j] = tempModel[j] - (model[j] - observed[j]);
 
-            REDO =  cte->baseParams.fix_rocr ? correctCROverSubtraction(pix_ctef, pix_model, pix_observed, RAZ_ROWS,
+            REDO =  cte->baseParams.fix_rocr ? correctCROverSubtraction(pix_ctef, model, observed, RAZ_ROWS,
                     cte->baseParams.thresh) : False;
 
-        } while (REDO && ++NREDO < 5); /*replacing goto 9999*/ //If really wanting 5 re-runs then need NREDO++
+        } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then need NREDO++
 
         //Update source array
         for (unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-            Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? pix_model[j] : 0;
+            Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? model[j] : 0;
         }
     } //end loop over columns
 
 
-    if (pix_observedall)
-        {
-            free(pix_observedall);
-            pix_observedall = NULL;
-        }
-
-    if (pix_observed)
+    if (observedAll)
     {
-        free(pix_observed);
-        pix_observed = NULL;
+        free(observedAll);
+        observedAll = NULL;
     }
-    if (pix_model)
+    if (tempModel)
     {
-        free(pix_model);
-        pix_model = NULL;
+        free(tempModel);
+        tempModel = NULL;
+    }
+    if (observed)
+    {
+        free(observed);
+        observed = NULL;
+    }
+    if (model)
+    {
+        free(model);
+        model = NULL;
     }
     if (pix_ctef)
     {
