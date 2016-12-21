@@ -497,7 +497,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", cte_pars.baseParams.scale_frac,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
 
             Full2Sub(&wf3, &subcd, &cd, 0, 1, 1);
@@ -510,7 +510,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subab.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subab.globalhdr, "PCTEFRAC", cte_pars.baseParams.scale_frac,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
 
             Full2Sub(&wf3, &subab, &ab, 0, 1, 1);
@@ -524,7 +524,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return (status);
 
         /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-        PutKeyDbl(cd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+        PutKeyDbl(cd.globalhdr, "PCTEFRAC", cte_pars.baseParams.scale_frac,"CTE scaling fraction based on expstart");
         trlmessage("PCTEFRAC saved to header");
 
         putSingleGroup(output,cd.group_num, &cd,0);
@@ -1137,192 +1137,8 @@ int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams
       */
 
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    inverse_cte_blur(rsz, rsc, &pixz_fff, cte, wf3->verbose,wf3->expstart);
+    inverse_cte_blur(rsz, rsc, &pixz_fff, cte, wf3->verbose,wf3->expstart, RAZ_ROWS);
     freeSingleGroup(&pixz_fff);
-    return(status);
-}
-
-
-
-/*** this routine does the inverse CTE blurring... it takes an observed
-  image and generates the image that would be pushed through the readout
-  algorithm to generate the observation
-
-  CTE_FF is found using the observation date of the data
-  FIX_ROCRs is cte->fix_rocr
-  Ws is the number of TRAPS that are < 999999
-
-  this is sub_wfc3uv_raz2rac_par in jays code
-
-  floor rounds to negative infinity
-  ceiling rounds to positive infinity
-  truncate rounds up or down to zero
-  round goes to the nearest integer
-
-  fff is the input cte scaling array calculated over all pixels
-  This is a big old time sink function
- ***/
-
-int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, WF3CTEParams * cte, const int verbose, const double expstart)
-{
-    extern int status;
-
-    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
-      APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
-      INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
-      CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
-      OVER 3 YEARS AFTER INSTALLATION*/
-
-    /*cte scaling based on observation date*/
-    const double cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
-    cte->scale_frac=cte_ff;   /*save to param structure for header update*/
-    const double rnAmp2 = cte->baseParams.rn_amp * cte->baseParams.rn_amp;
-
-    if(verbose){
-        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cte_ff);
-        trlmessage(MsgText);
-    }
-
-    FloatTwoDArray cteRprof;
-    FloatTwoDArray cteCprof;
-    initFloatData(&cteRprof);
-    initFloatData(&cteCprof);
-    allocFloatData(&cteRprof, cte->baseParams.rprof->data.nx, cte->baseParams.rprof->data.ny, False);
-    allocFloatData(&cteCprof, cte->baseParams.cprof->data.nx, cte->baseParams.cprof->data.ny, False);
-    copyFloatDataToColumnMajor(&cteRprof, &cte->baseParams.rprof->data);
-    copyFloatDataToColumnMajor(&cteCprof, &cte->baseParams.cprof->data);
-
-#pragma omp parallel shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
-{
-    double * observed    = NULL;
-    double * model       = NULL;
-    double * tempModel   = NULL;
-    double * pix_ctef    = NULL;
-    double * observedAll = NULL;
-
-    //get rid of asserts
-    assert(observedAll = (double *) malloc(sizeof(*observed)*RAZ_ROWS));
-    assert(observed = (double *) malloc(sizeof(*observed)*RAZ_ROWS));
-    assert(model = (double *) malloc(sizeof(*model)*RAZ_ROWS));
-    assert(tempModel = (double *) malloc(sizeof(*tempModel)*RAZ_ROWS));
-    assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*RAZ_ROWS));
-
-    //Due to rsc->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
-    //remove if(!hasFlux) and change schedule to 'static'
-    unsigned chunkSize = (RAZ_COLS / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
-    //Experiment with chuckSize (ideally static would be best)
-    #pragma omp for schedule (dynamic, chunkSize)
-    for (unsigned i = 0; i < RAZ_COLS; ++i)
-    {
-        Bool hasFlux = False;
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
-            if (Pix(rsz->dq.data,i,j))
-            {
-                hasFlux = True;
-                break;
-            }
-        }
-
-        if (!hasFlux)
-        {
-            for (unsigned j = 0; j < RAZ_ROWS; ++j){
-                Pix(rsc->sci.data, i, j) = 0; //check to see if even needed
-            }
-            continue;
-        }
-
-        //rsz->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
-        //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
-            observedAll[j] = Pix(rsz->sci.data,i,j); //Only left in to match master implementation
-            observed[j] = Pix(rsz->dq.data,i,j) ? observedAll[j] : 0;
-            pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
-        }
-
-        unsigned NREDO = 0;
-        Bool REDO;
-        do
-        {
-            REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-            /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-            memcpy(model, observedAll, sizeof(*observedAll)*RAZ_ROWS);
-
-            /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
-              IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-            for (unsigned NITINV = 1; NITINV <= cte->baseParams.n_forward - 1; ++NITINV)
-            {
-                memcpy(tempModel, model, sizeof(*model)*RAZ_ROWS);
-                simulateColumnReadout(model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
-                //memcpy(model, tempModel, sizeof(*model)*RAZ_ROWS);
-
-                //Now that the updated readout has been simulated, subtract this from the model
-                //to reproduce the actual image, without the CTE trails.
-                //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
-                //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
-                for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                {
-                    double delta = model[j] - observed[j];
-                    double delta2 = delta * delta;
-
-                    //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
-                    delta *= delta2 / (delta2 + rnAmp2);
-
-                    //Now subtract the simulated readout
-                    model[j] = tempModel[j] - delta;
-                }
-            }
-
-            //Do the last forward iteration but don't dampen... no idea why???
-            memcpy(tempModel, model, sizeof(*model)*RAZ_ROWS);
-            simulateColumnReadout(model, pix_ctef, &cte->baseParams,&cteRprof, &cteCprof, RAZ_ROWS, cte->baseParams.n_par);
-            //Now subtract the simulated readout
-            for (unsigned j = 0; j < RAZ_ROWS; ++j)
-                model[j] = tempModel[j] - (model[j] - observed[j]);
-
-            REDO =  cte->baseParams.fix_rocr ? correctCROverSubtraction(pix_ctef, model, observed, RAZ_ROWS,
-                    cte->baseParams.thresh) : False;
-
-        } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then need NREDO++
-
-        //Update source array
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
-            Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? model[j] : 0;
-        }
-    } //end loop over columns
-
-
-    if (observedAll)
-    {
-        free(observedAll);
-        observedAll = NULL;
-    }
-    if (tempModel)
-    {
-        free(tempModel);
-        tempModel = NULL;
-    }
-    if (observed)
-    {
-        free(observed);
-        observed = NULL;
-    }
-    if (model)
-    {
-        free(model);
-        model = NULL;
-    }
-    if (pix_ctef)
-    {
-        free(pix_ctef);
-        pix_ctef = NULL;
-    }
-}// close scope for #pragma omp parallel
-    freeFloatData(&cteRprof);
-    freeFloatData(&cteCprof);
-
     return(status);
 }
 

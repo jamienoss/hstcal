@@ -11,14 +11,19 @@ typedef struct {
     unsigned n_par; // number of iterations in parallel transfer
     unsigned cte_traps; // number of valid TRAPS in file for reallocation
     int cte_len; // max length of cte trail
-    double thresh; /*over subtraction threshold*/
     int fix_rocr; /*make allowance for readout cosmic rays*/
+    double thresh; /*over subtraction threshold*/
     double rn_amp; // read noise amplitude for clipping
     double qlevq_data[TRAPS]; // charge packet size in electrons
     double dpdew_data[TRAPS]; // trap size in electrons
+    double cte_date0; /*date of uvis install on hst in mjd*/
+    double cte_date1; /*date of cte model pinning mjd*/
+    double scale_frac; /*scaling of cte model relative to ctedate1*/
     FloatHdrData *rprof; // differential trail profile as image
     FloatHdrData *cprof; // cumulative trail profile as image
 } CTEParams;
+
+int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte, const int verbose, const double expstart, const unsigned nRows);
 
 int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows);
