@@ -102,6 +102,7 @@
 # include <sys/stat.h>
 # include <time.h>
 # include <unistd.h>
+# include <assert.h>
 
 /*
 ** String defined to allow determination of the HSTIO library version
@@ -503,7 +504,7 @@ int allocHdr(Hdr *h, int n) {
             if (h->array != NULL)
                 free(h->array);
             h->nalloc = n;
-            h->array = (HdrArray *)calloc(n,sizeof(HdrArray));
+            h->array = calloc(n,sizeof(HdrArray));
             if (h->array == NULL) {
                 h->nalloc = 0;
                 error(NOMEM,"Allocating Hdr");
@@ -547,10 +548,11 @@ void freeHdr(Hdr *h) {
         printf("freeHdr: %x %d %d %x\n",
                 (int)h,h->nlines,h->nalloc,(int)(h->array));
 # endif
-        if (h != NULL && h->array != NULL)
+        if (!h)
+        	return;
+        if (h->array)
             free(h->array);
-        if (h != NULL)
-            initHdr(h);
+        initHdr(h);
 }
 
 int copyHdr(Hdr *to, Hdr *from) {
@@ -663,6 +665,7 @@ void initSingleGroup(SingleGroup *x) {
         x->filename = NULL;
         x->group_num = 0;
         x->globalhdr = NULL;
+
         initFloatHdrData(&(x->sci));
         initShortHdrData(&(x->dq));
         initFloatHdrData(&(x->err));
@@ -670,7 +673,7 @@ void initSingleGroup(SingleGroup *x) {
 
 int allocSingleGroup(SingleGroup *x, int i, int j) {
         if (x->globalhdr == NULL) {
-            x->globalhdr = (Hdr *)calloc(1,sizeof(Hdr));
+            x->globalhdr = calloc(1,sizeof(*x->globalhdr));
             if (x->globalhdr == NULL) return -1;
             initHdr(x->globalhdr);
         }
@@ -984,6 +987,7 @@ void closeSingleGroupLine (SingleGroupLine *x) {
 
 int getFloatHD(char *fname, char *ename, int ever, FloatHdrData *x) {
         IODesc *xio;
+        assert(x);
         x->iodesc = openInputImage(fname,ename,ever);
         xio = (IODesc *)(x->iodesc);
         if (hstio_err()) return -1;

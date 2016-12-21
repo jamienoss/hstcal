@@ -3,28 +3,12 @@
 
 #define NUM_SCALE 4 /*number of scaling points, this is the 4 columns in the second table extension*/
 #define CTEFLAG 9999999 /*flag to ignore value in array during cte calculation*/
+#define TRAPS 999 /*max number of traps per column = rows in pctetab[1], valid traps are < 999999 in qlev*/
 
 #include "wf3.h"
 #include "hstio.h"
 #include "wf3info.h"
 #include "../../../../ctegen2/ctegen2.h"
-
-/* structure to hold CTE parameters from the reference files */
-typedef struct {
-    double scale512[RAZ_COLS]; /*scaling appropriate at row 512 */
-    double scale1024[RAZ_COLS];/*scaling appropriate at row 1024 */
-    double scale1536[RAZ_COLS];/*scaling appropriate at row 1536 */
-    double scale2048[RAZ_COLS];/*scaling appropriate at row 2048 */
-
-    int noise_mit; /*read noise mitigation algorithm*/
-    int wcol_data[TRAPS]; /*trap number, insync with number of traps*/
-    int iz_data[RAZ_COLS]; /*column number in raz format*/
-    char descrip2[SZ_LINE+1]; /*descrip from table row, not read in for cte purposes*/
-    char cte_name[SZ_LINE+1]; /*name of cte algorithm */
-    char cte_ver[SZ_LINE+1]; /*version of algorithm */
-    CTEParams baseParams;
-} WF3CTEParams;
-
 
 /*USEFUL LIB FUNCTIONS*/
 int GetGrp (WF3Info *, Hdr *);
@@ -67,8 +51,6 @@ int GetCorner (Hdr *, int, int *, int *);
 
 /*FUNCTION SIGNATURES FOR CTE SPECIFIC CODE*/
 
-int GetCTEPars (char *, WF3CTEParams *);
-void initCTEParams(WF3CTEParams *);
 int doCteBias (WF3Info *, SingleGroup *);
 int GetCTEFlags (WF3Info *, Hdr *);
 int a2d_raz(WF3Info *);
@@ -77,8 +59,6 @@ int raz2rsz(WF3Info *, SingleGroup *, SingleGroup *, double , int );
 int findPostScanBias(SingleGroup *, float *, float * );
 int findPreScanBias(SingleGroup *, float *, float *);
 int find_dadj(int ,int , double [][RAZ_ROWS], double [][RAZ_ROWS], double , double *);
-int populateTrapPixelMap(SingleGroup * input, WF3Info * info, WF3CTEParams * params, const unsigned nRows, const unsigned nColumns );
-int CompareCTEParams(SingleGroup *, WF3CTEParams *);
 int cteHistory (WF3Info *, Hdr *);
 int free_array(float **ptr, int rows, int columns);
 int GetCTESwitch (WF3Info *, Hdr *);

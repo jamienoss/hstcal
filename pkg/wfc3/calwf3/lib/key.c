@@ -58,9 +58,7 @@ double *value     o: value gotten
 */
 
     extern int status;
-    FitsKw key;		/* location of keyword in header */
-
-    key = findKw (hd, keyword);
+    FitsKw key = findKw (hd, keyword); /* location of keyword in header */
     if (key == NotFound) {
         if (use_def) {
             *value = def;

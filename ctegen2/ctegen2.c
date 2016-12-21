@@ -31,9 +31,12 @@
  ***/
 
 int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte,
-        const int verbose, const double expstart, const unsigned nRows, const unsigned nColumns)
+        const int verbose, const double expstart)
 {
     extern int status;
+
+    const unsigned nRows = rsc->sci.data.ny;
+    const unsigned nColumns = rsc->sci.data.nx;
 
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
       APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
@@ -60,29 +63,33 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
     copyFloatDataToColumnMajor(&cteRprof, &cte->rprof->data);
     copyFloatDataToColumnMajor(&cteCprof, &cte->cprof->data);
 
-#pragma omp parallel shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+#pragma omp parallel num_threads(nThreads) shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
+#endif
 {
-    double * observed    = NULL;
-    double * model       = NULL;
-    double * tempModel   = NULL;
-    double * pix_ctef    = NULL;
-    double * observedAll = NULL;
-
     //get rid of asserts
-    assert(observedAll = (double *) malloc(sizeof(*observed)*nRows));
-    assert(observed = (double *) malloc(sizeof(*observed)*nRows));
-    assert(model = (double *) malloc(sizeof(*model)*nRows));
-    assert(tempModel = (double *) malloc(sizeof(*tempModel)*nRows));
-    assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*nRows));
+    double * observed    = malloc(sizeof(*observed)*nRows);
+    assert(observed);
+    double * model       = malloc(sizeof(*model)*nRows);
+    assert(model);
+    double * tempModel   = malloc(sizeof(*tempModel)*nRows);
+    assert(tempModel);
+    double * pix_ctef    = malloc(sizeof(*pix_ctef)*nRows);
+    assert(pix_ctef);
+    double * observedAll = malloc(sizeof(*observedAll)*nRows);
+    assert(observedAll);
 
     //Due to rsc->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
     //remove if(!hasFlux) and change schedule to 'static'
 #ifdef _OPENMP
-    unsigned chunkSize = (nColumns / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
+    unsigned chunkSize = (nColumns / nThreads)*0.1; //Have each thread take 10% of its share of the queue at a time
 #endif
 
     //Experiment with chuckSize (ideally static would be best)
+#ifdef _OPENMP
     #pragma omp for schedule (dynamic, chunkSize)
+#endif
     for (unsigned j = 0; j < nColumns; ++j)
     {
         Bool hasFlux = False;
@@ -165,31 +172,11 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
     } //end loop over columns
 
 
-    if (observedAll)
-    {
-        free(observedAll);
-        observedAll = NULL;
-    }
-    if (tempModel)
-    {
-        free(tempModel);
-        tempModel = NULL;
-    }
-    if (observed)
-    {
-        free(observed);
-        observed = NULL;
-    }
-    if (model)
-    {
-        free(model);
-        model = NULL;
-    }
-    if (pix_ctef)
-    {
-        free(pix_ctef);
-        pix_ctef = NULL;
-    }
+    delete((void*)&observedAll);
+    delete((void*)&tempModel);
+    delete((void*)&observed);
+    delete((void*)&model);
+    delete((void*)&pix_ctef);
 }// close scope for #pragma omp parallel
     freeFloatData(&cteRprof);
     freeFloatData(&cteCprof);
@@ -311,7 +298,7 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
             } //replaces trap continue
         } //end for i
     } //end for w
-    return(status);
+    return status;
 }
 
 int simulateColumnReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
@@ -385,3 +372,83 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
     } /*end for  j*/
     return redo;
 }
+
+
+/*** THIS ROUTINE PERFORMS THE CTE CORRECTIONS
+  rsz is the readnoise smoothed image
+  rsc is the coorection output image
+  rac = raw + ((rsc-rsz) / gain )
+
+ ***/
+int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
+{
+    extern int status;
+
+    const unsigned nRows = trapPixelMap->sci.data.ny;
+    const unsigned nColumns = trapPixelMap->sci.data.nx;
+
+    int j;
+    double cte_i=0.0;
+    double cte_j=0.0;
+    double ro=0;
+    int io=0;
+    double ff_by_col[nColumns][4];
+    //float hardset=0.0;
+
+    /*These are already in the parameter structure
+      int     Ws              the number of traps < 999999, taken from pctetab read
+      int     q_w[TRAPS];     the run of charge with level  cte->qlevq_data[]
+      float   dpde_w[TRAPS];  the run of charge loss with level cte->dpdew_data[]
+
+      float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel, TRAPS=999
+      float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)
+
+      The rprof array gives the fraction of charge that comes out of every parallel serial-shift
+      the cummulative distribution in cprof then tells you what's left
+
+*/
+    /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
+      THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
+      IN THE REFERENCE FILE*/
+
+    for (unsigned i = 0; i < nColumns; ++i){
+        ff_by_col[i][0]=1.;
+        ff_by_col[i][1]=1.;
+        ff_by_col[i][2]=1.;
+        ff_by_col[i][3]=1.;
+        j= cte->iz_data[i]; /*which column to scale*/
+        ff_by_col[j][0]=cte->scale512[i];
+        ff_by_col[j][1]=cte->scale1024[i];
+        ff_by_col[j][2]=cte->scale1536[i];
+        ff_by_col[j][3]=cte->scale2048[i];
+
+        /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
+          Index is figured on the final size of the image
+          not the current size. Moved above
+          */
+
+        for(j=0; j<nRows; j++){//non contig swap with iter over i
+            //Pix(trapPixelMap->sci.data,i,j)=hardset; //remove
+            ro = j/512.0; /*ro can be zero, it's an index*/
+            if (ro <0 ) ro=0.;
+            if (ro > 2.999) ro=2.999; /*only 4 quads, 0 to 3*/
+            io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
+            cte_j= (j+1) / 2048.0;
+            cte_i= ff_by_col[i][io] + (ff_by_col[i][io+1] -ff_by_col[i][io]) * (ro-io);
+            Pix(trapPixelMap->sci.data,i,j) =  (cte_i*cte_j);
+        }
+    }
+
+    /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
+
+      int   iz_data[RAZ_ROWS];  column number in raz format
+      double scale512[RAZ_ROWS];      scaling appropriate at row 512
+      double scale1024[RAZ_ROWS];     scaling appropriate at row 1024
+      double scale1536[RAZ_ROWS];     scaling appropriate at row 1536
+      double scale2048[RAZ_ROWS];     scaling appropriate at row 2048
+      */
+
+    return(status);
+}
+
+
