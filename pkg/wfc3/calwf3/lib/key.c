@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <ctype.h>                 /* for isspace */
 # include <string.h>                /* for strcpy, strlen */
+#include <assert.h>
 # include "hstio.h"
 # include "wf3.h"                /* for message output */
 # include "wf3err.h"
@@ -49,6 +50,7 @@ static void KeyMissing (char *);    /* prints error message */
 int GetKeyDbl (Hdr *hd, char *keyword,
     int use_def, double def, double *value) {
 
+    assert(value);
 /* arguments:
 Hdr *hd           i: pointer to header to be updated
 char *keyword     i: name of keyword

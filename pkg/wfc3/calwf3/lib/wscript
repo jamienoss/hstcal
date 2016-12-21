@@ -57,7 +57,7 @@ def build(bld):
             ../calwf3/wf3dth.c   ../calwf3/wf3init.c   ../calwf3/wf3member.c
             ../calwf3/wf3table.c 
             
-            ../wf3cte/wf3cte.c ../wf3cte/getctepars.c ../wf3cte/cte_dobias.c
+            ../wf3cte/wf3cte.c  ../wf3cte/cte_dobias.c
             ../wf3cte/getcteflags.c  ../wf3cte/getctesw.c 
             
             """,
