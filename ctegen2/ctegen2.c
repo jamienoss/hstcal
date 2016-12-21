@@ -30,7 +30,8 @@
   This is a big old time sink function
  ***/
 
-int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte, const int verbose, const double expstart, const unsigned nRows)
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte,
+        const int verbose, const double expstart, const unsigned nRows, const unsigned nColumns)
 {
     extern int status;
 
@@ -77,17 +78,17 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
     //Due to rsc->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
     //remove if(!hasFlux) and change schedule to 'static'
 #ifdef _OPENMP
-    unsigned chunkSize = (nRows / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
+    unsigned chunkSize = (nColumns / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
 #endif
 
     //Experiment with chuckSize (ideally static would be best)
     #pragma omp for schedule (dynamic, chunkSize)
-    for (unsigned i = 0; i < nRows; ++i)
+    for (unsigned j = 0; j < nColumns; ++j)
     {
         Bool hasFlux = False;
-        for (unsigned j = 0; j < nRows; ++j)
+        for (unsigned i = 0; i < nRows; ++i)
         {
-            if (Pix(rsz->dq.data,i,j))
+            if (Pix(rsz->dq.data,j,i))
             {
                 hasFlux = True;
                 break;
@@ -96,19 +97,19 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
 
         if (!hasFlux)
         {
-            for (unsigned j = 0; j < nRows; ++j){
-                Pix(rsc->sci.data, i, j) = 0; //check to see if even needed
+            for (unsigned i = 0; i < nRows; ++i){
+                Pix(rsc->sci.data, j, i) = 0; //check to see if even needed
             }
             continue;
         }
 
         //rsz->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
-        for (unsigned j = 0; j < nRows; ++j)
+        for (unsigned i = 0; i < nRows; ++i)
         {
-            observedAll[j] = Pix(rsz->sci.data,i,j); //Only left in to match master implementation
-            observed[j] = Pix(rsz->dq.data,i,j) ? observedAll[j] : 0;
-            pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
+            observedAll[i] = Pix(rsz->sci.data,j,i); //Only left in to match master implementation
+            observed[i] = Pix(rsz->dq.data,j,i) ? observedAll[i] : 0;
+            pix_ctef[i] =  cte_ff * Pix(fff->sci.data, j, i);
         }
 
         unsigned NREDO = 0;
@@ -131,16 +132,16 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
                 //to reproduce the actual image, without the CTE trails.
                 //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
                 //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
-                for (unsigned j = 0; j < nRows; ++j)
+                for (unsigned i = 0; i < nRows; ++i)
                 {
-                    double delta = model[j] - observed[j];
+                    double delta = model[i] - observed[i];
                     double delta2 = delta * delta;
 
                     //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
                     delta *= delta2 / (delta2 + rnAmp2);
 
                     //Now subtract the simulated readout
-                    model[j] = tempModel[j] - delta;
+                    model[i] = tempModel[i] - delta;
                 }
             }
 
@@ -148,8 +149,8 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
             memcpy(tempModel, model, sizeof(*model)*nRows);
             simulateColumnReadout(model, pix_ctef, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
             //Now subtract the simulated readout
-            for (unsigned j = 0; j < nRows; ++j)
-                model[j] = tempModel[j] - (model[j] - observed[j]);
+            for (unsigned i = 0; i < nRows; ++i)
+                model[i] = tempModel[i] - (model[i] - observed[i]);
 
             REDO =  cte->fix_rocr ? correctCROverSubtraction(pix_ctef, model, observed, nRows,
                     cte->thresh) : False;
@@ -157,9 +158,9 @@ int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGro
         } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then need NREDO++
 
         //Update source array
-        for (unsigned j = 0; j < nRows; ++j)
+        for (unsigned i = 0; i < nRows; ++i)
         {
-            Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? model[j] : 0;
+            Pix(rsc->sci.data, j, i) = Pix(rsz->dq.data, j, i) ? model[i] : 0;
         }
     } //end loop over columns
 
@@ -351,35 +352,35 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
         return False;
 
     Bool redo = False;
-    for (unsigned j = 10; j < nRows-2; ++j)
+    for (unsigned i = 10; i < nRows-2; ++i)
     {
-        if ( (( threshHold > pix_model[j] ) &&
-                    ( threshHold > (pix_model[j] - pix_observed[j]))) ||
+        if ( (( threshHold > pix_model[i] ) &&
+                    ( threshHold > (pix_model[i] - pix_observed[i]))) ||
 
-                (((pix_model[j] + pix_model[j+1]) < -12.) &&
-                 (pix_model[j] + pix_model[j+1] - pix_observed[j] - pix_observed[j+1] < -12.)) ||
+                (((pix_model[i] + pix_model[i+1]) < -12.) &&
+                 (pix_model[i] + pix_model[i+1] - pix_observed[i] - pix_observed[i+1] < -12.)) ||
 
-                (((pix_model[j] + pix_model[j+1] + pix_model[j+2]) < -15.) &&
-                 ((pix_model[j] + pix_model[j+1] + pix_model[j+2] -pix_observed[j] -
-                   pix_observed[j+1] - pix_observed[j+2]) <-15.))  )
+                (((pix_model[i] + pix_model[i+1] + pix_model[i+2]) < -15.) &&
+                 ((pix_model[i] + pix_model[i+1] + pix_model[i+2] -pix_observed[i] -
+                   pix_observed[i+1] - pix_observed[i+2]) <-15.))  )
         {
             redo = True;
-            unsigned jmax = j;
+            unsigned iMax = i;
 
             /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
-            double deltaFromOffendingCR = pix_model[jmax] - pix_observed[jmax];
-            for (unsigned jj = j-10; jj <= j; ++jj)
+            double deltaFromOffendingCR = pix_model[iMax] - pix_observed[iMax];
+            for (unsigned ii = i-10; ii <= i; ++ii)
             {
-                if (pix_model[jj] - pix_observed[jj] > deltaFromOffendingCR)
+                if (pix_model[ii] - pix_observed[ii] > deltaFromOffendingCR)
                 {
-                    jmax = jj;
-                    deltaFromOffendingCR = pix_model[jmax] - pix_observed[jmax];
+                    iMax = ii;
+                    deltaFromOffendingCR = pix_model[iMax] - pix_observed[iMax];
                 }
             }
             /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
                BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
-            for (unsigned jj = jmax; jj <= j; ++jj)
-                pix_ctef[jj] *= 0.75;
+            for (unsigned ii = iMax; ii <= i; ++ii)
+                pix_ctef[ii] *= 0.75;
         }
     } /*end for  j*/
     return redo;

@@ -469,10 +469,19 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status=ERROR_RETURN);
     }
 
-    /***CONVERT THE READNOISE SMOOTHED IMAGE TO RSC IMAGE
-      THIS IS WHERE THE CTE GETS CALCULATED         ***/
-    if (rsz2rsc(&wf3, &rsz, &rsc, &cte_pars))
-        return (status);
+    //CONVERT THE READNOISE SMOOTHED IMAGE TO RSC IMAGE
+    SingleGroup trapPixelMap;
+    initSingleGroup(&trapPixelMap);
+    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS);
+
+    if (populateTrapPixelMap(&trapPixelMap, &wf3, &cte_pars, RAZ_ROWS, RAZ_COLS))
+        return status;
+
+    /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
+    if (inverseCTEBlur(&rsz, &rsc, &trapPixelMap, &cte_pars.baseParams, wf3.verbose, wf3.expstart, RAZ_ROWS, RAZ_COLS))
+        return status;
+
+    freeSingleGroup(&trapPixelMap);
 
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
     for (i=0;i<RAZ_COLS;i++){
@@ -1059,24 +1068,23 @@ int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS]
     return(status);
 }
 
-
 /*** THIS ROUTINE PERFORMS THE CTE CORRECTIONS
   rsz is the readnoise smoothed image
   rsc is the coorection output image
   rac = raw + ((rsc-rsz) / gain )
 
  ***/
-int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams *cte) {
-
+int populateTrapPixelMap(SingleGroup * trapPixelMap, WF3Info * wf3, WF3CTEParams * cte, const unsigned nRows, const unsigned nColumns)
+{
     extern int status;
 
-    int i,j;
+    int j;
     double cte_i=0.0;
     double cte_j=0.0;
     double ro=0;
     int io=0;
-    double ff_by_col[RAZ_COLS][4];
-    float hardset=0.0;
+    double ff_by_col[nColumns][4];
+    //float hardset=0.0;
 
     /*These are already in the parameter structure
       int     Ws              the number of traps < 999999, taken from pctetab read
@@ -1090,16 +1098,11 @@ int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams
       the cummulative distribution in cprof then tells you what's left
 
 */
-
-    SingleGroup pixz_fff;
-    initSingleGroup(&pixz_fff);
-    allocSingleGroup(&pixz_fff, RAZ_COLS, RAZ_ROWS);
-
     /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
       THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
       IN THE REFERENCE FILE*/
 
-    for(i=0; i<RAZ_COLS;i++){
+    for (unsigned i = 0; i < nColumns; ++i){
         ff_by_col[i][0]=1.;
         ff_by_col[i][1]=1.;
         ff_by_col[i][2]=1.;
@@ -1115,19 +1118,19 @@ int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams
           not the current size. Moved above
           */
 
-        for(j=0; j<RAZ_ROWS; j++){//non contig swap with iter over i
-            Pix(pixz_fff.sci.data,i,j)=hardset; //remove
+        for(j=0; j<nRows; j++){//non contig swap with iter over i
+            //Pix(trapPixelMap->sci.data,i,j)=hardset; //remove
             ro = j/512.0; /*ro can be zero, it's an index*/
             if (ro <0 ) ro=0.;
             if (ro > 2.999) ro=2.999; /*only 4 quads, 0 to 3*/
             io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
             cte_j= (j+1) / 2048.0;
             cte_i= ff_by_col[i][io] + (ff_by_col[i][io+1] -ff_by_col[i][io]) * (ro-io);
-            Pix(pixz_fff.sci.data,i,j) =  (cte_i*cte_j);
+            Pix(trapPixelMap->sci.data,i,j) =  (cte_i*cte_j);
         }
     }
 
-    /*FOR REFERENCE TO JAYS CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
+    /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
 
       int   iz_data[RAZ_ROWS];  column number in raz format
       double scale512[RAZ_ROWS];      scaling appropriate at row 512
@@ -1136,9 +1139,6 @@ int rsz2rsc(WF3Info *wf3, const SingleGroup *rsz, SingleGroup *rsc, WF3CTEParams
       double scale2048[RAZ_ROWS];     scaling appropriate at row 2048
       */
 
-    /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    inverse_cte_blur(rsz, rsc, &pixz_fff, cte, wf3->verbose,wf3->expstart, RAZ_ROWS);
-    freeSingleGroup(&pixz_fff);
     return(status);
 }
 
