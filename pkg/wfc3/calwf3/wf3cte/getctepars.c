@@ -26,14 +26,14 @@ void initCTEParams(WF3CTEParams *pars){
 
     pars->cte_name[0]='\0';
     pars->cte_ver[0]='\0';
-    pars->cte_date0=0.0f;
-    pars->cte_date1=0.0f;
+    pars->baseParams.cte_date0=0.0f;
+    pars->baseParams.cte_date1=0.0f;
     pars->baseParams.cte_traps=0.0f;
     pars->baseParams.cte_len=0;
     pars->baseParams.rn_amp=0.0f;
     pars->baseParams.n_forward=0;
     pars->baseParams.n_par=0;
-    pars->scale_frac=0.0f; /*will be updated during routine run*/
+    pars->baseParams.scale_frac=0.0f; /*will be updated during routine run*/
     pars->noise_mit=0; 
     pars->baseParams.thresh=0.0f;
     pars->descrip2[0]='\0';
@@ -150,23 +150,23 @@ No.    Name         Type      Cards   Dimensions   Format
 	trlmessage(MsgText);
 
 	/* GET DATE OF UVIS INSTALLATION IN HST */
-	if (GetKeyDbl(&hdr_ptr, "CTEDATE0", NO_DEFAULT, -999, &pars->cte_date0)) {
+	if (GetKeyDbl(&hdr_ptr, "CTEDATE0", NO_DEFAULT, -999, &pars->baseParams.cte_date0)) {
 		cteerror("(pctecorr) Error reading CTEDATE0 keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
 
-	sprintf(MsgText,"CTEDATE0: %g",pars->cte_date0);
+	sprintf(MsgText,"CTEDATE0: %g",pars->baseParams.cte_date0);
 	trlmessage(MsgText);
 
 	/* GET REFRENCE DATE OF CTE MODEL PINNING */
-	if (GetKeyDbl(&hdr_ptr, "CTEDATE1", NO_DEFAULT, -999, &pars->cte_date1)) {
+	if (GetKeyDbl(&hdr_ptr, "CTEDATE1", NO_DEFAULT, -999, &pars->baseParams.cte_date1)) {
 		cteerror("(pctecorr) Error reading CTEDATE1 keyword from PCTETAB");
 		status = KEYWORD_MISSING;
 		return status;
 	}
 
-	sprintf(MsgText,"CTEDATE1: %g",pars->cte_date1);
+	sprintf(MsgText,"CTEDATE1: %g",pars->baseParams.cte_date1);
 	trlmessage(MsgText);
 
 	/* READ MAX LENGTH OF CTE TRAIL */
@@ -532,7 +532,7 @@ int CompareCTEParams(SingleGroup *group, WF3CTEParams *pars) {
         return (status=HEADER_PROBLEM);
     }
    
-	if (PutKeyDbl(group->globalhdr, "CTEDATE0", pars->cte_date0,"Date of UVIS installation")) {
+	if (PutKeyDbl(group->globalhdr, "CTEDATE0", pars->baseParams.cte_date0,"Date of UVIS installation")) {
 		trlmessage("(pctecorr) Error putting CTEDATE0 keyword in header");
         return (status=HEADER_PROBLEM);
 	}
@@ -543,7 +543,7 @@ int CompareCTEParams(SingleGroup *group, WF3CTEParams *pars) {
 	}
 
 
-	if (PutKeyDbl(group->globalhdr, "CTEDATE1", pars->cte_date1, "Date of CTE model pinning")) {
+	if (PutKeyDbl(group->globalhdr, "CTEDATE1", pars->baseParams.cte_date1, "Date of CTE model pinning")) {
 		trlmessage("(pctecorr) Error putting CTEDATE1 keyword in header");
         return (status=HEADER_PROBLEM);
 	}
@@ -626,10 +626,10 @@ int CompareCTEParams(SingleGroup *group, WF3CTEParams *pars) {
         trlmessage("(pctecorr) Error reading FIXROCR keyword from header");
         return(status = KEYWORD_MISSING);
     }
-    if (0> fix_rocr && fix_rocr <=  1 && fix_rocr != pars->fix_rocr){
-        pars->fix_rocr = fix_rocr;
+    if (0> fix_rocr && fix_rocr <=  1 && fix_rocr != pars->baseParams.fix_rocr){
+        pars->baseParams.fix_rocr = fix_rocr;
     } else {
-        if (PutKeyInt(group->globalhdr,"FIXROCR",pars->fix_rocr,"fix readout cosmic rays")){
+        if (PutKeyInt(group->globalhdr,"FIXROCR",pars->baseParams.fix_rocr,"fix readout cosmic rays")){
             trlmessage("(pctecorr) Error updating FIXROCR keyword in header");
             return (status = KEYWORD_MISSING);
         }

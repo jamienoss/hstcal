@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <assert.h>
+#include <stdlib.h>
 
 # ifdef _OPENMP
 #include <omp.h>
@@ -9,10 +11,195 @@
 #include "pcte.h"
 #include "acs.h"
 
+/*** this routine does the inverse CTE blurring... it takes an observed
+  image and generates the image that would be pushed through the readout
+  algorithm to generate the observation
+
+  CTE_FF is found using the observation date of the data
+  FIX_ROCRs is cte->fix_rocr
+  Ws is the number of TRAPS that are < 999999
+
+  this is sub_wfc3uv_raz2rac_par in jays code
+
+  floor rounds to negative infinity
+  ceiling rounds to positive infinity
+  truncate rounds up or down to zero
+  round goes to the nearest integer
+
+  fff is the input cte scaling array calculated over all pixels
+  This is a big old time sink function
+ ***/
+
+int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte, const int verbose, const double expstart, const unsigned nRows)
+{
+    extern int status;
+
+    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
+      APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
+      INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
+      CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
+      OVER 3 YEARS AFTER INSTALLATION*/
+
+    /*cte scaling based on observation date*/
+    const double cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
+    cte->scale_frac=cte_ff;   /*save to param structure for header update*/
+    const double rnAmp2 = cte->rn_amp * cte->rn_amp;
+
+    if(verbose){
+        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cte_ff);
+        trlmessage(MsgText);
+    }
+
+    FloatTwoDArray cteRprof;
+    FloatTwoDArray cteCprof;
+    initFloatData(&cteRprof);
+    initFloatData(&cteCprof);
+    allocFloatData(&cteRprof, cte->rprof->data.nx, cte->rprof->data.ny, False);
+    allocFloatData(&cteCprof, cte->cprof->data.nx, cte->cprof->data.ny, False);
+    copyFloatDataToColumnMajor(&cteRprof, &cte->rprof->data);
+    copyFloatDataToColumnMajor(&cteCprof, &cte->cprof->data);
+
+#pragma omp parallel shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
+{
+    double * observed    = NULL;
+    double * model       = NULL;
+    double * tempModel   = NULL;
+    double * pix_ctef    = NULL;
+    double * observedAll = NULL;
+
+    //get rid of asserts
+    assert(observedAll = (double *) malloc(sizeof(*observed)*nRows));
+    assert(observed = (double *) malloc(sizeof(*observed)*nRows));
+    assert(model = (double *) malloc(sizeof(*model)*nRows));
+    assert(tempModel = (double *) malloc(sizeof(*tempModel)*nRows));
+    assert(pix_ctef = (double *) malloc(sizeof(*pix_ctef)*nRows));
+
+    //Due to rsc->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
+    //remove if(!hasFlux) and change schedule to 'static'
+#ifdef _OPENMP
+    unsigned chunkSize = (nRows / omp_get_num_procs())*0.1; //Have each thread take 10% of its share of the queue at a time
+#endif
+
+    //Experiment with chuckSize (ideally static would be best)
+    #pragma omp for schedule (dynamic, chunkSize)
+    for (unsigned i = 0; i < nRows; ++i)
+    {
+        Bool hasFlux = False;
+        for (unsigned j = 0; j < nRows; ++j)
+        {
+            if (Pix(rsz->dq.data,i,j))
+            {
+                hasFlux = True;
+                break;
+            }
+        }
+
+        if (!hasFlux)
+        {
+            for (unsigned j = 0; j < nRows; ++j){
+                Pix(rsc->sci.data, i, j) = 0; //check to see if even needed
+            }
+            continue;
+        }
+
+        //rsz->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
+        //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
+        for (unsigned j = 0; j < nRows; ++j)
+        {
+            observedAll[j] = Pix(rsz->sci.data,i,j); //Only left in to match master implementation
+            observed[j] = Pix(rsz->dq.data,i,j) ? observedAll[j] : 0;
+            pix_ctef[j] =  cte_ff * Pix(fff->sci.data, i, j);
+        }
+
+        unsigned NREDO = 0;
+        Bool REDO;
+        do
+        {
+            REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
+            memcpy(model, observedAll, sizeof(*observedAll)*nRows);
+
+            /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
+              IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
+            for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
+            {
+                memcpy(tempModel, model, sizeof(*model)*nRows);
+                simulateColumnReadout(model, pix_ctef, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
+                //memcpy(model, tempModel, sizeof(*model)*nRows);
+
+                //Now that the updated readout has been simulated, subtract this from the model
+                //to reproduce the actual image, without the CTE trails.
+                //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
+                //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
+                for (unsigned j = 0; j < nRows; ++j)
+                {
+                    double delta = model[j] - observed[j];
+                    double delta2 = delta * delta;
+
+                    //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
+                    delta *= delta2 / (delta2 + rnAmp2);
+
+                    //Now subtract the simulated readout
+                    model[j] = tempModel[j] - delta;
+                }
+            }
+
+            //Do the last forward iteration but don't dampen... no idea why???
+            memcpy(tempModel, model, sizeof(*model)*nRows);
+            simulateColumnReadout(model, pix_ctef, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
+            //Now subtract the simulated readout
+            for (unsigned j = 0; j < nRows; ++j)
+                model[j] = tempModel[j] - (model[j] - observed[j]);
+
+            REDO =  cte->fix_rocr ? correctCROverSubtraction(pix_ctef, model, observed, nRows,
+                    cte->thresh) : False;
+
+        } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then need NREDO++
+
+        //Update source array
+        for (unsigned j = 0; j < nRows; ++j)
+        {
+            Pix(rsc->sci.data, i, j) = Pix(rsz->dq.data,i,j) ? model[j] : 0;
+        }
+    } //end loop over columns
+
+
+    if (observedAll)
+    {
+        free(observedAll);
+        observedAll = NULL;
+    }
+    if (tempModel)
+    {
+        free(tempModel);
+        tempModel = NULL;
+    }
+    if (observed)
+    {
+        free(observed);
+        observed = NULL;
+    }
+    if (model)
+    {
+        free(model);
+        model = NULL;
+    }
+    if (pix_ctef)
+    {
+        free(pix_ctef);
+        pix_ctef = NULL;
+    }
+}// close scope for #pragma omp parallel
+    freeFloatData(&cteRprof);
+    freeFloatData(&cteCprof);
+
+    return(status);
+}
+
 /*This is the workhorse subroutine; it simulates the readout
   of one column currentColumn[].
 
-  JDIM == RAZ_ROWS
+  JDIM == nRows
   WDIM == TRAPS  Ws is the input traps number < 999999
   NITs == cte_pars->n_par
 
