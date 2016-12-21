@@ -50,12 +50,16 @@ def options(opt):
     opt.load('compiler_fc')
 
     opt.add_option(
-        '--disable-openmp', action='store_true',
+        '--disable-openmp', action='store_true', default=False,
         help="Disable OpenMP")
 
     opt.add_option(
-        '--debug', action='store_true',
+        '--debug', action='store_true', default=False,
         help="Create a debug build")
+	
+    opt.add_option(
+        '--release-with-symbols', dest='releaseWithSymbols', action='store_true', default=False,
+        help='Create a Release build with debug symbols, i.e. with "-g"')
 
     opt.recurse('cfitsio')
 
@@ -217,7 +221,11 @@ def configure(conf):
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
         #if conf.check_cc(cflags='-fstack-protector-all'):
-         #   conf.env.append_value('CFLAGS','-fstack-protector-all')
+        #    conf.env.append_value('CFLAGS','-fstack-protector-all')
+
+    if conf.options.releaseWithSymbols and not conf.options.debug:
+        if conf.check_cc(cflags='-g'):
+            conf.env.append_value('CFLAGS', '-g')
 
     conf.start_msg('C compiler flags (CFLAGS)')
     conf.end_msg(' '.join(conf.env['CFLAGS']) or None)

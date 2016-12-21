@@ -76,11 +76,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     extern int status;
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
-    Hdr phdr; /*primary header for input image, all output information saved here*/
-    Hdr scihdr; /*science header in case of subarray image to detect chip*/
     IODescPtr ip = NULL;
 
-    WF3CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     SingleGroup cd; /*SCI 1, chip 2*/
     SingleGroup ab; /*SCI 2, chip 1*/
     SingleGroup subcd; /*subarray chip*/
@@ -196,8 +193,11 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status);
 
     /* OPEN INPUT IMAGE IN ORDER TO READ ITS PRIMARY HEADER. */
+    Hdr phdr; /*primary header for input image, all output information saved here*/
+    initHdr(&phdr);
     if (LoadHdr (wf3.input, &phdr) ){
         WhichError(status);
+        freeHdr (&phdr);
         return (ERROR_RETURN);
     }
 
@@ -245,7 +245,9 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     }
 
     /*READ IN THE CTE PARAMETER TABLE*/
-    initCTEParams(&cte_pars);
+    CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
+    initCTEParams(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
+    allocateCTEParams(&cte_pars);
     if (GetCTEPars (wf3.pctetab.name, &cte_pars))
         return (status);
 
@@ -253,7 +255,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         PrRefInfo ("pctetab", wf3.pctetab.name, wf3.pctetab.pedigree,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
     }
-
     /* Full frame and subarrays always have group 1
        If it's a subarray, the group can be from either chip
        and will still be labled group 1 because it's the FIRST
@@ -263,6 +264,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
        amps cd are in chip2, sci,1
 
     */
+    Hdr scihdr; /*science header in case of subarray image to detect chip*/
+    initHdr(&scihdr);
     if (wf3.subarray) {
         /* OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER. */
         ip = openInputImage (wf3.input, "SCI", 1);
@@ -462,7 +465,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        if (raz2rsz(&wf3, &raz, &rsz, cte_pars.baseParams.rn_amp, max_threads))
+        if (raz2rsz(&wf3, &raz, &rsz, cte_pars.rn_amp, max_threads))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
@@ -474,11 +477,11 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&trapPixelMap);
     allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS);
 
-    if (populateTrapPixelMap(&trapPixelMap, &wf3, &cte_pars, RAZ_ROWS, RAZ_COLS))
+    if (populateTrapPixelMap(&trapPixelMap, &cte_pars))
         return status;
 
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(&rsz, &rsc, &trapPixelMap, &cte_pars.baseParams, wf3.verbose, wf3.expstart, RAZ_ROWS, RAZ_COLS))
+    if (inverseCTEBlur(&rsz, &rsc, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
 
     freeSingleGroup(&trapPixelMap);
@@ -506,7 +509,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", cte_pars.baseParams.scale_frac,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
 
             Full2Sub(&wf3, &subcd, &cd, 0, 1, 1);
@@ -519,7 +522,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subab.globalhdr, "PCTEFRAC", cte_pars.baseParams.scale_frac,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subab.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
 
             Full2Sub(&wf3, &subab, &ab, 0, 1, 1);
@@ -533,7 +536,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return (status);
 
         /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-        PutKeyDbl(cd.globalhdr, "PCTEFRAC", cte_pars.baseParams.scale_frac,"CTE scaling fraction based on expstart");
+        PutKeyDbl(cd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
         trlmessage("PCTEFRAC saved to header");
 
         putSingleGroup(output,cd.group_num, &cd,0);
@@ -549,6 +552,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     freeSingleGroup(&raw);
     freeSingleGroup(&cd);
     freeSingleGroup(&ab);
+
+    freeCTEParams(&cte_pars);
 
     time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
     if (verbose){
@@ -815,7 +820,6 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
 
     extern int status;
 
-    int i, j, NIT; /*loop variables*/
     int imid;
     double dptr=0.0;
     double  rms=0.0;
@@ -830,11 +834,11 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
     double obs_loc[3][RAZ_ROWS] ;
     double rsz_loc[3][RAZ_ROWS] ;
 
-    NIT=1;
+    clock_t begin = clock();
 
     /*ALL ELEMENTS TO FLAG*/
-    for(i=0;i<3;i++){
-        for (j=0; j<RAZ_ROWS; j++){
+    for(unsigned i = 0; i < 3; ++i){
+        for (unsigned j = 0; j < RAZ_ROWS; ++j){
             obs_loc[i][j]=setdbl;
             rsz_loc[i][j]=setdbl;
         }
@@ -852,8 +856,8 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
 
     /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
       AND INITIALIZE THE OTHER IMAGES*/
-    for(i=0;i<RAZ_COLS;i++){
-        for (j=0;j<RAZ_ROWS;j++){
+    for(unsigned i = 0; i < RAZ_COLS; ++i){
+        for (unsigned j = 0; j < RAZ_ROWS; ++j){
             Pix(rsz->sci.data,i,j) = Pix(raz->sci.data,i,j);
             Pix(rsz->dq.data,i,j) = Pix(raz->dq.data,i,j);
             Pix(rnz.sci.data,i,j) = hardset;
@@ -877,11 +881,11 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
 
     rms=setdbl;
 
-    for(NIT=1; NIT<=100; NIT++){
+    for(unsigned NIT=1; NIT<=100; ++NIT){
         #pragma omp parallel for schedule(dynamic) \
-        private(i,j,imid,obs_loc,rsz_loc,dptr)\
+        private(imid,obs_loc,rsz_loc,dptr)\
         shared(raz, rsz, rnsig,rms,nrms, zadj)
-        for(i=0; i<RAZ_COLS; i++){
+        for(unsigned i = 0; i < RAZ_COLS; ++i){
             imid=i;
             /*RESET TO MIDDLE RAZ_COLS AT ENDPOINTS*/
             if (imid < 1)
@@ -890,7 +894,7 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
                 imid = RAZ_COLS-2;
 
             /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
-            for(j=0; j<RAZ_ROWS; j++){
+            for(unsigned j = 0; j < RAZ_ROWS; ++j){
                 obs_loc[0][j] = Pix(raz->sci.data,imid-1,j);
                 obs_loc[1][j] = Pix(raz->sci.data,imid,j);
                 obs_loc[2][j] = Pix(raz->sci.data,imid+1,j);
@@ -899,7 +903,7 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
                 rsz_loc[1][j] = Pix(rsz->sci.data,imid,j);
                 rsz_loc[2][j] = Pix(rsz->sci.data,imid+1,j);
             }
-            for (j=0; j<RAZ_ROWS; j++){
+            for (unsigned j = 0; j < RAZ_ROWS; ++j){
              if(Pix(raz->dq.data,imid,j)) {
                 find_dadj(1+i-imid,j, obs_loc, rsz_loc, rnsig, &dptr);
                 Pix(zadj.sci.data,i,j) = dptr;
@@ -909,8 +913,8 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
 
         /*NOW GO OVER ALL THE RAZ_COLS AND RAZ_ROWS AGAIN TO SCALE THE PIXELS
         */
-        for(i=0; i<RAZ_COLS;i++){
-            for(j=0; j<RAZ_ROWS; j++){
+        for(unsigned i = 0; i < RAZ_COLS; ++i){
+            for(unsigned j = 0; j < RAZ_ROWS; ++j){
                 if (Pix(raz->dq.data,i,j)){
                     Pix(rsz->sci.data,i,j) +=  (Pix(zadj.sci.data,i,j)*0.75);
                     Pix(rnz.sci.data,i,j) = (Pix(raz->sci.data,i,j) - Pix(rsz->sci.data,i,j));
@@ -924,12 +928,12 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
         /*This is probably a time sink because the arrays are being
           accessed out of storage order, careful of page faults */
         #pragma omp parallel for schedule(dynamic,1)\
-        private(i,j,rmsu,nrmsu) \
+        private(rmsu,nrmsu) \
         shared(raz,rsz,rms,rnsig,nrms)
-        for(j=0; j<RAZ_ROWS; j++){
+        for(unsigned j = 0; j < RAZ_ROWS; ++j){
             nrmsu=setdbl;
             rmsu=setdbl;
-            for(i = 0;i<RAZ_COLS; i++){
+            for(unsigned i = 0; i < RAZ_COLS; ++i){
                 if ( (fabs(Pix(raz->sci.data,i,j)) > 0.1) ||
                         (fabs(Pix(rsz->sci.data,i,j)) > 0.1) ){
                     rmsu  +=  ( Pix(rnz.sci.data,i,j) * Pix(rnz.sci.data,i,j) );
@@ -949,6 +953,13 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
 
     freeSingleGroup(&zadj);
     freeSingleGroup(&rnz);
+
+    if (wf3->verbose)
+    {
+    	double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
+    	sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i procs/threads\n",timeSpent/max_threads,max_threads);
+    	trlmessage(MsgText);
+    }
 
     return (status);
 }
@@ -1064,80 +1075,6 @@ int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS]
             (dval9u*w9*0.25f) + /* desire to keep the original sum over 3x3*/
             (dmod1u*w1*0.25f) + /*desire to get closer to the pixel below*/
             (dmod2u*w2*0.25f)) ; /*desire to get closer to the pixel above*/
-
-    return(status);
-}
-
-/*** THIS ROUTINE PERFORMS THE CTE CORRECTIONS
-  rsz is the readnoise smoothed image
-  rsc is the coorection output image
-  rac = raw + ((rsc-rsz) / gain )
-
- ***/
-int populateTrapPixelMap(SingleGroup * trapPixelMap, WF3Info * wf3, WF3CTEParams * cte, const unsigned nRows, const unsigned nColumns)
-{
-    extern int status;
-
-    int j;
-    double cte_i=0.0;
-    double cte_j=0.0;
-    double ro=0;
-    int io=0;
-    double ff_by_col[nColumns][4];
-    //float hardset=0.0;
-
-    /*These are already in the parameter structure
-      int     Ws              the number of traps < 999999, taken from pctetab read
-      int     q_w[TRAPS];     the run of charge with level  cte->qlevq_data[]
-      float   dpde_w[TRAPS];  the run of charge loss with level cte->dpdew_data[]
-
-      float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel, TRAPS=999
-      float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)
-
-      The rprof array gives the fraction of charge that comes out of every parallel serial-shift
-      the cummulative distribution in cprof then tells you what's left
-
-*/
-    /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
-      THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
-      IN THE REFERENCE FILE*/
-
-    for (unsigned i = 0; i < nColumns; ++i){
-        ff_by_col[i][0]=1.;
-        ff_by_col[i][1]=1.;
-        ff_by_col[i][2]=1.;
-        ff_by_col[i][3]=1.;
-        j= cte->iz_data[i]; /*which column to scale*/
-        ff_by_col[j][0]=cte->scale512[i];
-        ff_by_col[j][1]=cte->scale1024[i];
-        ff_by_col[j][2]=cte->scale1536[i];
-        ff_by_col[j][3]=cte->scale2048[i];
-
-        /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
-          Index is figured on the final size of the image
-          not the current size. Moved above
-          */
-
-        for(j=0; j<nRows; j++){//non contig swap with iter over i
-            //Pix(trapPixelMap->sci.data,i,j)=hardset; //remove
-            ro = j/512.0; /*ro can be zero, it's an index*/
-            if (ro <0 ) ro=0.;
-            if (ro > 2.999) ro=2.999; /*only 4 quads, 0 to 3*/
-            io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
-            cte_j= (j+1) / 2048.0;
-            cte_i= ff_by_col[i][io] + (ff_by_col[i][io+1] -ff_by_col[i][io]) * (ro-io);
-            Pix(trapPixelMap->sci.data,i,j) =  (cte_i*cte_j);
-        }
-    }
-
-    /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
-
-      int   iz_data[RAZ_ROWS];  column number in raz format
-      double scale512[RAZ_ROWS];      scaling appropriate at row 512
-      double scale1024[RAZ_ROWS];     scaling appropriate at row 1024
-      double scale1536[RAZ_ROWS];     scaling appropriate at row 1536
-      double scale2048[RAZ_ROWS];     scaling appropriate at row 2048
-      */
 
     return(status);
 }
