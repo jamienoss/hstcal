@@ -23,7 +23,8 @@ typedef struct {
     FloatHdrData *cprof; // cumulative trail profile as image
 } CTEParams;
 
-int inverse_cte_blur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte, const int verbose, const double expstart, const unsigned nRows);
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte,
+        const int verbose, const double expstart, const unsigned nRows, const unsigned nColumns);
 
 int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows);

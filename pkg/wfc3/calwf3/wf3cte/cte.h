@@ -77,7 +77,7 @@ int raz2rsz(WF3Info *, SingleGroup *, SingleGroup *, double , int );
 int findPostScanBias(SingleGroup *, float *, float * );
 int findPreScanBias(SingleGroup *, float *, float *);
 int find_dadj(int ,int , double [][RAZ_ROWS], double [][RAZ_ROWS], double , double *);
-int rsz2rsc(WF3Info *, const SingleGroup *, SingleGroup *, WF3CTEParams * );
+int populateTrapPixelMap(SingleGroup * input, WF3Info * info, WF3CTEParams * params, const unsigned nRows, const unsigned nColumns );
 int CompareCTEParams(SingleGroup *, WF3CTEParams *);
 int cteHistory (WF3Info *, Hdr *);
 int free_array(float **ptr, int rows, int columns);
