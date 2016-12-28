@@ -74,8 +74,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     extern int status;
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
-    Hdr phdr; /*primary header for input image, all output information saved here*/
-    Hdr scihdr; /*science header in case of subarray image to detect chip*/
     IODescPtr ip = NULL;
 
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
@@ -194,6 +192,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status);
 
     /* OPEN INPUT IMAGE IN ORDER TO READ ITS PRIMARY HEADER. */
+    Hdr phdr; /*primary header for input image, all output information saved here*/
+    initHdr(&phdr);
     if (LoadHdr (wf3.input, &phdr) ){
         WhichError(status);
         return (ERROR_RETURN);
@@ -261,6 +261,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
        amps cd are in chip2, sci,1
 
     */
+    Hdr scihdr; /*science header in case of subarray image to detect chip*/
+    initHdr(&scihdr);
     if (wf3.subarray) {
         /* OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER. */
         ip = openInputImage (wf3.input, "SCI", 1);
