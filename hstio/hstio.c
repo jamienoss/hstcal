@@ -103,6 +103,7 @@
 # include <time.h>
 # include <unistd.h>
 # include <assert.h>
+# include <stdlib.h>
 
 /*
 ** String defined to allow determination of the HSTIO library version
@@ -339,6 +340,15 @@ void freeFloatData(FloatTwoDArray *x) {
         initFloatData(x);
 }
 
+void copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source)
+{
+    if (!target || !source)
+        return;
+    unsigned nCols = target->nx;
+    unsigned nRows = target->ny;
+    memcpy(target->data, source->data, nCols*nRows*sizeof(*src->data));
+}
+
 void copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source)
 {
     //Look into whether this breaks use of Pix on target?
@@ -556,9 +566,10 @@ void freeHdr(Hdr *h) {
 }
 
 int copyHdr(Hdr *to, Hdr *from) {
-        int i;
-        if (allocHdr(to,from->nalloc)) return -1;
-        for (i = 0; i < from->nlines; ++i)
+        if (!from)
+            return -1;
+        if (!to && allocHdr(to,from->nalloc)) return -1;
+        for (unsigned i = 0; i < from->nlines; ++i)
             strcpy(to->array[i],from->array[i]);
         to->nlines = from->nlines;
         return 0;
@@ -585,6 +596,24 @@ int allocFloatHdrData(FloatHdrData *x, int i, int j) {
         x->section.sx = i;
         x->section.sy = j;
         return 0;
+}
+
+void copyFloatHdrData(FloatHdrData * dest, const FloatHdrData * src)
+{
+    if (!dest || !src)
+        return;
+    dest->iodesc = src->iodesc;
+    copyDataSection(&dest->section, &src->section);
+    copyHdr(dest->hdr, src->hdr);
+    copyFloatData(dest->data, src->data);
+}
+
+void copyDataSection(DataSection * dest, const DataSection * src)
+{
+    dest->x_beg = src->x_beg;
+    dest->y_beg = src->y_beg;
+    dest->sx = src->sx;
+    dest->sy = src->sy;
 }
 
 void freeFloatHdrData(FloatHdrData *x) {
@@ -681,6 +710,25 @@ int allocSingleGroup(SingleGroup *x, int i, int j) {
         if (allocShortHdrData(&(x->dq),i,j)) return -1;
         if (allocFloatHdrData(&(x->err),i,j)) return -1;
         return 0;
+}
+
+void copySingleGroup(SingleGroup * dest, const SIngleGroup * src, Bool includeData)
+{
+    initSingleGroup(dest);
+
+    filenameLength = strlen(src->filename)+1;
+    dest->filename = malloc(filenameLength, sizeof(*source->filename));
+    memcpy(dest->filename, src->filename, filenameLength);
+
+    dest->group_num = src->group_num;
+
+    copyHdr(dest, src);
+
+    if (!includeData)
+        return;
+
+
+
 }
 
 void freeSingleGroup(SingleGroup *x) {
