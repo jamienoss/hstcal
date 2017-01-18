@@ -30,7 +30,22 @@
   This is a big old time sink function
  ***/
 
-int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte,
+
+
+int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
+        const int verbose, const double expstart)
+{
+    //Convert all arrays to column major for efficiency.
+    SingleGroup rszColumnMajor;
+    SingleGroup rcsColumnMajor;
+    SingleGroup trapPixelMapColumnMajor;
+
+
+
+    return inverseCTEBlurWithColumnMajorInput(rszColumnMajor, rscColumnMajor, trapPixelMapColumnMajor, cte, verbose, expstart);
+}
+
+int inverseCTEBlurWithColumnMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
     extern int status;
@@ -116,7 +131,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         {
             observedAll[i] = Pix(rsz->sci.data,j,i); //Only left in to match master implementation
             observed[i] = Pix(rsz->dq.data,j,i) ? observedAll[i] : 0;
-            pix_ctef[i] =  cte_ff * Pix(fff->sci.data, j, i);
+            pix_ctef[i] =  cte_ff * Pix(trapPixelMap->sci.data, j, i);
         }
 
         unsigned NREDO = 0;
@@ -262,8 +277,9 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
                 if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
                 {
                     pixel = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
-                    releasedFlux = pixel - floor(pixel); /*carry the charge remainder*/
-                    pixel = floor(pixel); /*reset pixel*/
+                    double floored = floor(pixel);
+                    releasedFlux = pixel - floored; /*carry the charge remainder*/
+                    pixel = floored; /*reset pixel*/
                 }
 
                 /*HAPPENS AFTER FIRST PASS*/
@@ -374,12 +390,7 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
 }
 
 
-/*** THIS ROUTINE PERFORMS THE CTE CORRECTIONS
-  rsz is the readnoise smoothed image
-  rsc is the coorection output image
-  rac = raw + ((rsc-rsz) / gain )
 
- ***/
 int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
 {
     extern int status;
