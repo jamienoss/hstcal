@@ -37,15 +37,23 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
 {
     //Convert all arrays to column major for efficiency.
     SingleGroup rszColumnMajor;
-    SingleGroup rcsColumnMajor;
+    SingleGroup rscColumnMajor;
     SingleGroup trapPixelMapColumnMajor;
 
-
+    copySingleGroup(&rszColumnMajor, rsz, ROWMAJOR);
+    copySingleGroup(&rscColumnMajor, rsc, ROWMAJOR);
+    copySingleGroup(&trapPixelMapColumnMajor, trapPixelMap, ROWMAJOR);
 
     return inverseCTEBlurWithColumnMajorInput(rszColumnMajor, rscColumnMajor, trapPixelMapColumnMajor, cte, verbose, expstart);
 }
 
 int inverseCTEBlurWithColumnMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
+        const int verbose, const double expstart)
+{
+    return inverseCTEBlur(rsz, rsc, trapPixelMap, cte, verbose, expstart);
+}
+
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
     extern int status;
@@ -80,7 +88,7 @@ int inverseCTEBlurWithColumnMajorInput(const SingleGroup * rsz, SingleGroup * rs
 
 #ifdef _OPENMP
     const unsigned nThreads = omp_get_num_procs();
-#pragma omp parallel num_threads(nThreads) shared(rsc, rsz, cte, cteRprof, cteCprof, fff)
+#pragma omp parallel num_threads(nThreads) shared(rsc, rsz, cte, cteRprof, cteCprof, trapPixelMap)
 #endif
 {
     //get rid of asserts

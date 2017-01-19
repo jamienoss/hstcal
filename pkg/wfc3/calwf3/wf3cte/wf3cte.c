@@ -882,9 +882,11 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
     rms=setdbl;
 
     for(unsigned NIT=1; NIT<=100; ++NIT){
+#ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic) \
         private(imid,obs_loc,rsz_loc,dptr)\
         shared(raz, rsz, rnsig,rms,nrms, zadj)
+#endif
         for(unsigned i = 0; i < RAZ_COLS; ++i){
             imid=i;
             /*RESET TO MIDDLE RAZ_COLS AT ENDPOINTS*/
