@@ -215,22 +215,22 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /*SET UP THE ARRAYS WHICH WILL BE PASSED AROUND*/
     initSingleGroup(&raz);
-    allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS, True);
 
     initSingleGroup(&rsz);
-    allocSingleGroup(&rsz, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&rsz, RAZ_COLS, RAZ_ROWS, True);
 
     initSingleGroup(&rsc);
-    allocSingleGroup(&rsc, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&rsc, RAZ_COLS, RAZ_ROWS, True);
 
     initSingleGroup(&rzc);
-    allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, True);
 
     initSingleGroup(&raw);
-    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
 
     initSingleGroup(&chg);
-    allocSingleGroup(&chg, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&chg, RAZ_COLS, RAZ_ROWS, True);
 
     /*hardset the science arrays*/
     for (i=0;i<RAZ_COLS;i++){
@@ -298,7 +298,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /*create an empty full size chip for pasting*/
             initSingleGroup(&cd);
-            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS);
+            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, True);
             cd.group_num=1;
             CreateEmptyChip(&wf3, &cd);
 
@@ -327,7 +327,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /* now create an empty chip 1*/
             initSingleGroup(&ab);
-            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS);
+            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, True);
             ab.group_num=2;
             CreateEmptyChip(&wf3, &ab);
 
@@ -359,7 +359,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /*make an empty fullsize chip for pasting*/ //Redo only allocate enough for subarray and not full frame!
             initSingleGroup(&ab);
-            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS);
+            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, True);
             ab.group_num=2;
             CreateEmptyChip(&wf3, &ab);
 
@@ -389,7 +389,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /* now create an empty chip 2*/
             initSingleGroup(&cd);
-            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS);
+            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, True);
             cd.group_num=1;
             CreateEmptyChip(&wf3, &cd);
 
@@ -475,13 +475,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     //CONVERT THE READNOISE SMOOTHED IMAGE TO RSC IMAGE
     SingleGroup trapPixelMap;
     initSingleGroup(&trapPixelMap);
-    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, True);
 
     if (populateTrapPixelMap(&trapPixelMap, &cte_pars))
         return status;
 
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(&rsz, &rsc, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlurWithRowMajorInput(&rsz, &rsc, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
 
     freeSingleGroup(&trapPixelMap);
@@ -847,11 +847,11 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
     /***INITIALIZE THE LOCAL IMAGE GROUPS***/
     SingleGroup rnz;
     initSingleGroup(&rnz);
-    allocSingleGroup(&rnz, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&rnz, RAZ_COLS, RAZ_ROWS, True);
 
     SingleGroup zadj;
     initSingleGroup(&zadj);
-    allocSingleGroup(&zadj, RAZ_COLS, RAZ_ROWS);
+    allocSingleGroup(&zadj, RAZ_COLS, RAZ_ROWS, True);
 
 
     /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
