@@ -38,9 +38,11 @@ typedef struct {
     char cte_ver[256]; /*version of algorithm */
 } CTEParams;
 
-int inverseCTEBlurWithColumnMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte,
+int inverseCTEBlurWithColumnMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart);
-int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * fff, CTEParams * cte,
+int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
+        const int verbose, const double expstart);
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart);
 
 int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,

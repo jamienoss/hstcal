@@ -127,6 +127,12 @@ enum Bool_ { False = 0, True = 1 };
 typedef enum Bool_ Bool;
 # endif
 
+enum StorageOrder
+{
+    ROWMAJOR,
+    COLUMNMAJOR
+};
+
 typedef struct {
         short *buffer;          /* the pointer to the beg. of the buffer */
         int buffer_size;        /* the size of the full 2-d array in the */
@@ -134,6 +140,7 @@ typedef struct {
         int tot_ny;             /*     buffer_size = tot_nx*tot_ny       */
         int nx;                 /* The size of the current "view" of the */
         int ny;                 /* full 2-d array.                       */
+        enum StorageOrder storageOrder;
         short *data;            /* The pointer to the beginning of the   */
                                 /* subsection of the full 2-d array.     */
 } ShortTwoDArray;
@@ -145,6 +152,7 @@ typedef struct {
         int tot_ny;
         int nx;
         int ny;
+        enum StorageOrder storageOrder;
         float *data;
 } FloatTwoDArray;
 
@@ -212,6 +220,8 @@ typedef struct {
         int sx;                 /* The sizes of the X and Y dimensions  */
         int sy;                 /* of the section.                      */
 } DataSection;
+void copyDataSection(DataSection * dest, const DataSection * src);
+
 
 # define HDRSize 81
 typedef char HdrArray[HDRSize]; /* Headers are simply an array of fixed */
@@ -668,12 +678,12 @@ void updateWCS (Hdr *hdr, int xbeg, int ybeg);
 */
 # define IFloatData { NULL, 0, 0, 0, 0, 0, NULL }
 void initFloatData(FloatTwoDArray *);
-int allocFloatData(FloatTwoDArray *, int, int, Bool zeroInitilize);
+int allocFloatData(FloatTwoDArray *, int, int, Bool zeroInitialize);
 void freeFloatData(FloatTwoDArray *);
-void copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
+int copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
 # define IShortData { NULL, 0, 0, 0, 0, 0, NULL }
 void initShortData(ShortTwoDArray *);
-int allocShortData(ShortTwoDArray *, int, int);
+int allocShortData(ShortTwoDArray *, int, int, Bool zeroInitialize);
 void freeShortData(ShortTwoDArray *);
 
 # define IFloatLine { NULL, 0 }
@@ -694,15 +704,17 @@ void initHdr(Hdr *);
 int allocHdr(Hdr *, int);
 int reallocHdr(Hdr *, int);
 void freeHdr(Hdr *);
-int copyHdr(Hdr *to, Hdr *from);
+int copyHdr(Hdr *to, const Hdr *from);
 
 # define IFloatHdrData { NULL, { 0, 0, 0, 0 }, IHdr, IFloatData }
 void initFloatHdrData(FloatHdrData *);
 int allocFloatHdrData(FloatHdrData *, int, int);
+int copyFloatHdrData(FloatHdrData * target, const FloatHdrData * src, enum StorageOrder targetStorageOrder);
 void freeFloatHdrData(FloatHdrData *);
 # define IShortHdrData { NULL, { 0, 0, 0, 0 }, IHdr, IShortData }
 void initShortHdrData(ShortHdrData *);
 int allocShortHdrData(ShortHdrData *, int, int);
+int copyShortHdrData(ShortHdrData * target, const ShortHdrData * src, enum StorageOrder targetStorageOrder);
 void freeShortHdrData(ShortHdrData *);
 
 # define IFloatHdrLine { NULL, IHdr, False, 0, NULL }
@@ -719,6 +731,7 @@ IShortHdrData }
 void initSingleGroup(SingleGroup *);
 int allocSingleGroup(SingleGroup *, int, int);
 void freeSingleGroup(SingleGroup *);
+int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder);
 # define IMultiGroup { 0, NULL }
 void initMultiGroup(MultiGroup *);
 int allocMultiGroup(MultiGroup *, int);
