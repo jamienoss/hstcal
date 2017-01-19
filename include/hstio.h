@@ -680,11 +680,15 @@ void updateWCS (Hdr *hdr, int xbeg, int ybeg);
 void initFloatData(FloatTwoDArray *);
 int allocFloatData(FloatTwoDArray *, int, int, Bool zeroInitialize);
 void freeFloatData(FloatTwoDArray *);
+int copyFloatDataToRowMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
 int copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
 # define IShortData { NULL, 0, 0, 0, 0, 0, NULL }
 void initShortData(ShortTwoDArray *);
 int allocShortData(ShortTwoDArray *, int, int, Bool zeroInitialize);
 void freeShortData(ShortTwoDArray *);
+int copyShortDataToColumnMajor(ShortTwoDArray * target, const ShortTwoDArray * source);
+int copyShortDataToRowMajor(ShortTwoDArray * target, const ShortTwoDArray * source);
+
 
 # define IFloatLine { NULL, 0 }
 void initFloatLine  (FloatHdrLine *);
@@ -701,19 +705,19 @@ int  allocDQLine  (SingleGroupLine *);
 
 # define IHdr { 0, 0, NULL }
 void initHdr(Hdr *);
-int allocHdr(Hdr *, int);
+int allocHdr(Hdr *, int, Bool zeroInitialize);
 int reallocHdr(Hdr *, int);
 void freeHdr(Hdr *);
 int copyHdr(Hdr *to, const Hdr *from);
 
 # define IFloatHdrData { NULL, { 0, 0, 0, 0 }, IHdr, IFloatData }
 void initFloatHdrData(FloatHdrData *);
-int allocFloatHdrData(FloatHdrData *, int, int);
+int allocFloatHdrData(FloatHdrData *, int, int, Bool zeroInitialize);
 int copyFloatHdrData(FloatHdrData * target, const FloatHdrData * src, enum StorageOrder targetStorageOrder);
 void freeFloatHdrData(FloatHdrData *);
 # define IShortHdrData { NULL, { 0, 0, 0, 0 }, IHdr, IShortData }
 void initShortHdrData(ShortHdrData *);
-int allocShortHdrData(ShortHdrData *, int, int);
+int allocShortHdrData(ShortHdrData *, int, int, Bool zeroInitialize);
 int copyShortHdrData(ShortHdrData * target, const ShortHdrData * src, enum StorageOrder targetStorageOrder);
 void freeShortHdrData(ShortHdrData *);
 
@@ -729,7 +733,7 @@ void freeShortHdrLine  (ShortHdrLine *);
 # define ISingleGroup { NULL, 0, NULL, IFloatHdrData, IFloatHdrData, \
 IShortHdrData }
 void initSingleGroup(SingleGroup *);
-int allocSingleGroup(SingleGroup *, int, int);
+int allocSingleGroup(SingleGroup *, int, int, Bool zeroInitialize);
 void freeSingleGroup(SingleGroup *);
 int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder);
 # define IMultiGroup { 0, NULL }

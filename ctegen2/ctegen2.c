@@ -2,6 +2,7 @@
 #include <math.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <time.h>
 
 # ifdef _OPENMP
 #include <omp.h>
@@ -30,27 +31,47 @@
   This is a big old time sink function
  ***/
 
-
+#define Pix(a,i,j)      (a).data[(i)*(a).tot_ny + (j)]
 
 int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
+    clock_t t1 = clock();
+
+    const unsigned nx = rsz->sci.data.nx;
+    const unsigned ny = rsz->sci.data.ny;
+
     //Convert all arrays to column major for efficiency.
     SingleGroup rszColumnMajor;
     SingleGroup rscColumnMajor;
     SingleGroup trapPixelMapColumnMajor;
 
-    copySingleGroup(&rszColumnMajor, rsz, ROWMAJOR);
-    copySingleGroup(&rscColumnMajor, rsc, ROWMAJOR);
-    copySingleGroup(&trapPixelMapColumnMajor, trapPixelMap, ROWMAJOR);
+    //Initialize
+    initSingleGroup(&rszColumnMajor);
+    initSingleGroup(&rscColumnMajor);
+    initSingleGroup(&trapPixelMapColumnMajor);
 
-    return inverseCTEBlurWithColumnMajorInput(rszColumnMajor, rscColumnMajor, trapPixelMapColumnMajor, cte, verbose, expstart);
-}
+    //Allocate
+    allocSingleGroup(&rszColumnMajor, nx, ny, False);
+    allocSingleGroup(&rscColumnMajor, nx, ny, False);
+    allocSingleGroup(&trapPixelMapColumnMajor, nx, ny, False);
 
-int inverseCTEBlurWithColumnMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
-        const int verbose, const double expstart)
-{
-    return inverseCTEBlur(rsz, rsc, trapPixelMap, cte, verbose, expstart);
+    //Copy
+    assert(!copySingleGroup(&rszColumnMajor, rsz, COLUMNMAJOR));
+    assert(!copySingleGroup(&rscColumnMajor, rsc, COLUMNMAJOR));
+    assert(!copySingleGroup(&trapPixelMapColumnMajor, trapPixelMap, COLUMNMAJOR));
+
+    int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte, verbose, expstart);
+
+    //copy data back
+    copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
+
+    freeSingleGroup(&rszColumnMajor);
+    freeSingleGroup(&rscColumnMajor);
+    freeSingleGroup(&trapPixelMapColumnMajor);
+
+    printf("Time taken to swap storage order: %f (secs)", ((float)(clock() - t1)/CLOCKS_PER_SEC));
+    return ret;
 }
 
 int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
