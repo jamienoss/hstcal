@@ -84,7 +84,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup subab; /*subarray chip*/
     SingleGroup raz; /* THE LARGE FORMAT COMBINATION OF CDAB*/
     SingleGroup rsz; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
-    SingleGroup rsc; /* CTE CORRECTED*/
     SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
     SingleGroup raw; /* THE RAW IMAGE IN RAZ FORMAT */
 
@@ -219,9 +218,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&rsz);
     allocSingleGroup(&rsz, RAZ_COLS, RAZ_ROWS, True);
 
-    initSingleGroup(&rsc);
-    allocSingleGroup(&rsc, RAZ_COLS, RAZ_ROWS, True);
-
     initSingleGroup(&rzc);
     allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, True);
 
@@ -229,7 +225,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
 
     /*hardset the science arrays*/
-    for (i=0;i<RAZ_COLS;i++){
+   /* for (i=0;i<RAZ_COLS;i++){
         for(j=0;j<RAZ_ROWS;j++){
             Pix(raw.sci.data,i,j)=hardset;
             Pix(raz.sci.data,i,j)=hardset;
@@ -238,6 +234,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             Pix(rzc.sci.data,i,j)=hardset;
         }
     }
+    */
 
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
@@ -457,12 +454,24 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /***CALCULATE THE SMOOTH READNOISE IMAGE***/
     trlmessage("CTE: Calculating smooth readnoise image");
 
+    //Convert all arrays to column major for efficiency.
+                   SingleGroup rszColumnMajor;
 
+                   //Initialize
+                   initSingleGroup(&rszColumnMajor);
+
+                   //Allocate
+                   const unsigned nx = rsz.sci.data.nx;
+                   const unsigned ny = rsz.sci.data.ny;
+                   allocSingleGroup(&rszColumnMajor, nx, ny, False);
+
+                   //Copy
+                   assert(!copySingleGroup(&rszColumnMajor, &rsz, COLUMNMAJOR));
 
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        if (raz2rsz(&wf3, &raz, &rsz, cte_pars.rn_amp, max_threads))
+        if (cteSmoothImage(&raz, &rsz, cte_pars.rn_amp, max_threads, wf3.verbose))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
@@ -470,23 +479,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     }
 
 
-    //Convert all arrays to column major for efficiency.
-               SingleGroup rszColumnMajor;
-               SingleGroup rscColumnMajor;
 
-               //Initialize
-               initSingleGroup(&rszColumnMajor);
-               initSingleGroup(&rscColumnMajor);
-
-               //Allocate
-               const unsigned nx = rsz.sci.data.nx;
-               const unsigned ny = rsz.sci.data.ny;
-               allocSingleGroup(&rszColumnMajor, nx, ny, False);
-               allocSingleGroup(&rscColumnMajor, nx, ny, False);
-
-               //Copy
-               assert(!copySingleGroup(&rszColumnMajor, &rsz, COLUMNMAJOR));
-               assert(!copySingleGroup(&rscColumnMajor, &rsc, COLUMNMAJOR));
 
     //CONVERT THE READNOISE SMOOTHED IMAGE TO RSC IMAGE
     SingleGroup trapPixelMap;
@@ -498,8 +491,12 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return status;
     }
 
+    SingleGroup cteCorrectedImage;
+    initSingleGroup(&cteCorrectedImage);
+    allocSingleGroup(&cteCorrectedImage, RAZ_COLS, RAZ_ROWS, True);
+
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(&rszColumnMajor, &cteCorrectedImage, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
 
     const double scaleFraction = cte_pars.scale_frac;
@@ -512,13 +509,12 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-           double change = (PixColumnMajor(rscColumnMajor.sci.data,j,i) - PixColumnMajor(rszColumnMajor.sci.data,j,i))/wf3.ccdgain;
+           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(rszColumnMajor.sci.data,j,i))/wf3.ccdgain;
            Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + change;
         }
     }
     freeSingleGroup(&rszColumnMajor);
-    freeSingleGroup(&rscColumnMajor);
-    freeSingleGroup(&rsc);
+    freeSingleGroup(&cteCorrectedImage);
     freeSingleGroup(&raw);
 
 
@@ -824,170 +820,6 @@ int findPreScanBias(SingleGroup *raz, float *mean, float *sigma){
 }
 
 
-int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads){
-    /*
-       This routine will read in a RAZ image and will output the smoothest
-       image that is consistent with being the observed image plus readnoise. (RSZ image)
-       This is necessary because we want the CTE-correction algorithm to produce the smoothest
-       possible reconstruction, consistent with the original image and the
-       known readnoise.  This algorithm constructs a model that is smooth
-       where the pixel-to-pixel variations can be thought of as being related
-       to readnoise, but if the variations are too large, then it respects
-       the pixel values.  Basically... it uses a 2-sigma threshold.
-
-       This is strategy #1 in a two-pronged strategy to mitigate the readnoise
-       amplification.  Strategy #2 will be to not iterate when the deblurring
-       is less than the readnoise.
-
-*/
-
-    extern int status;
-
-    int imid;
-    double dptr=0.0;
-    double  rms=0.0;
-    double  rmsu=0.0;
-    double nrms=0.0;
-    double nrmsu=0.0;
-    float hardset=0.0f;
-    double setdbl=0.0;
-
-
-    /*1D ARRAYS FOR CENTRAL AND NEIGHBORING RAZ_COLS*/
-    double obs_loc[3][RAZ_ROWS] ;
-    double rsz_loc[3][RAZ_ROWS] ;
-
-    clock_t begin = clock();
-
-    /*ALL ELEMENTS TO FLAG*/
-    for(unsigned i = 0; i < 3; ++i){
-        for (unsigned j = 0; j < RAZ_ROWS; ++j){
-            obs_loc[i][j]=setdbl;
-            rsz_loc[i][j]=setdbl;
-        }
-    }
-
-    /***INITIALIZE THE LOCAL IMAGE GROUPS***/
-    SingleGroup rnz;
-    initSingleGroup(&rnz);
-    allocSingleGroup(&rnz, RAZ_COLS, RAZ_ROWS, True);
-
-    SingleGroup zadj;
-    initSingleGroup(&zadj);
-    allocSingleGroup(&zadj, RAZ_COLS, RAZ_ROWS, True);
-
-
-    /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
-      AND INITIALIZE THE OTHER IMAGES*/
-    for(unsigned i = 0; i < RAZ_COLS; ++i){
-        for (unsigned j = 0; j < RAZ_ROWS; ++j){
-            Pix(rsz->sci.data,i,j) = Pix(raz->sci.data,i,j);
-            Pix(rsz->dq.data,i,j) = Pix(raz->dq.data,i,j);
-            Pix(rnz.sci.data,i,j) = hardset;
-            Pix(zadj.sci.data,i,j) = hardset;
-        }
-    }
-
-
-    /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
-    if (rnsig < 0.1){
-        trlmessage("rnsig < 0.1, No read-noise mitigation needed");
-        return(status);
-    }
-
-    /*GO THROUGH THE ENTIRE IMAGE AND ADJUST PIXELS TO MAKE THEM
-      SMOOTHER, BUT NOT SO MUCH THAT IT IS NOT CONSISTENT WITH
-      READNOISE.  DO THIS IN BABY STEPS SO THAT EACH ITERATION
-      DOES VERY LITTLE ADJUSTMENT AND INFORMATION CAN GET PROPAGATED
-      DOWN THE LINE.
-      */
-
-    rms=setdbl;
-
-    for(unsigned NIT=1; NIT<=100; ++NIT){
-#ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic) \
-        private(imid,obs_loc,rsz_loc,dptr)\
-        shared(raz, rsz, rnsig,rms,nrms, zadj)
-#endif
-        for(unsigned i = 0; i < RAZ_COLS; ++i){
-            imid=i;
-            /*RESET TO MIDDLE RAZ_COLS AT ENDPOINTS*/
-            if (imid < 1)
-                imid=1;
-            if (imid == RAZ_COLS-1)
-                imid = RAZ_COLS-2;
-
-            /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
-            for(unsigned j = 0; j < RAZ_ROWS; ++j){
-                obs_loc[0][j] = Pix(raz->sci.data,imid-1,j);
-                obs_loc[1][j] = Pix(raz->sci.data,imid,j);
-                obs_loc[2][j] = Pix(raz->sci.data,imid+1,j);
-
-                rsz_loc[0][j] = Pix(rsz->sci.data,imid-1,j);
-                rsz_loc[1][j] = Pix(rsz->sci.data,imid,j);
-                rsz_loc[2][j] = Pix(rsz->sci.data,imid+1,j);
-            }
-            for (unsigned j = 0; j < RAZ_ROWS; ++j){
-             if(Pix(raz->dq.data,imid,j)) {
-                find_dadj(1+i-imid,j, obs_loc, rsz_loc, rnsig, &dptr);
-                Pix(zadj.sci.data,i,j) = dptr;
-              }
-            }
-        } /*end the parallel for*/
-
-        /*NOW GO OVER ALL THE RAZ_COLS AND RAZ_ROWS AGAIN TO SCALE THE PIXELS
-        */
-        for(unsigned i = 0; i < RAZ_COLS; ++i){
-            for(unsigned j = 0; j < RAZ_ROWS; ++j){
-                if (Pix(raz->dq.data,i,j)){
-                    Pix(rsz->sci.data,i,j) +=  (Pix(zadj.sci.data,i,j)*0.75);
-                    Pix(rnz.sci.data,i,j) = (Pix(raz->sci.data,i,j) - Pix(rsz->sci.data,i,j));
-                }
-            }
-        }
-
-        rms=setdbl;
-        nrms=setdbl;
-
-        /*This is probably a time sink because the arrays are being
-          accessed out of storage order, careful of page faults */
-        #pragma omp parallel for schedule(dynamic,1)\
-        private(rmsu,nrmsu) \
-        shared(raz,rsz,rms,rnsig,nrms)
-        for(unsigned j = 0; j < RAZ_ROWS; ++j){
-            nrmsu=setdbl;
-            rmsu=setdbl;
-            for(unsigned i = 0; i < RAZ_COLS; ++i){
-                if ( (fabs(Pix(raz->sci.data,i,j)) > 0.1) ||
-                        (fabs(Pix(rsz->sci.data,i,j)) > 0.1) ){
-                    rmsu  +=  ( Pix(rnz.sci.data,i,j) * Pix(rnz.sci.data,i,j) );
-                    nrmsu += 1.0;
-                }
-            }
-            #pragma omp critical (rms)
-            {   rms  += rmsu;
-                nrms += nrmsu;
-            }
-        }
-        rms = sqrt(rms/nrms);
-
-        /*epsilon type comparison*/
-        if ( (rnsig-rms) < 0.00001) break; /*this exits the NIT for loop*/
-    } /*end NIT*/
-
-    freeSingleGroup(&zadj);
-    freeSingleGroup(&rnz);
-
-    if (wf3->verbose)
-    {
-    	double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-    	sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i procs/threads\n",timeSpent/max_threads,max_threads);
-    	trlmessage(MsgText);
-    }
-
-    return (status);
-}
 
 
 int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig, double *d){
