@@ -32,7 +32,6 @@
  ***/
 
 //#define PixColumnMajor(a,j,i) ( (a).storageOrder == ROWMAJOR ? (a).data[(j)*(a).tot_nx + (i)] : (a).data[(i)*(a).tot_ny + (j)] )
-#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_ny + (i)]
 //#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_nx + (i)] // := Pix
 
 int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
@@ -86,6 +85,7 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
 int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
+	//WARNING: This function assumes column major storage for 'rsz', 'rsc', & 'trapPixelMap'
     extern int status;
 
     const unsigned nRows = rsc->sci.data.ny;
@@ -436,7 +436,6 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
 
-    int j;
     double cte_i=0.0;
     double cte_j=0.0;
     double ro=0;
@@ -465,26 +464,29 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
         ff_by_col[i][1]=1.;
         ff_by_col[i][2]=1.;
         ff_by_col[i][3]=1.;
-        j= cte->iz_data[i]; /*which column to scale*/
-        ff_by_col[j][0]=cte->scale512[i];
-        ff_by_col[j][1]=cte->scale1024[i];
-        ff_by_col[j][2]=cte->scale1536[i];
-        ff_by_col[j][3]=cte->scale2048[i];
+        unsigned column = cte->iz_data[i]; /*which column to scale*/
+        ff_by_col[column][0]=cte->scale512[i];
+        ff_by_col[column][1]=cte->scale1024[i];
+        ff_by_col[column][2]=cte->scale1536[i];
+        ff_by_col[column][3]=cte->scale2048[i];
 
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
           */
 
-        for(j=0; j<nRows; j++){//non contig swap with iter over i
-            //Pix(trapPixelMap->sci.data,i,j)=hardset; //remove
-            ro = j/512.0; /*ro can be zero, it's an index*/
-            if (ro <0 ) ro=0.;
-            if (ro > 2.999) ro=2.999; /*only 4 quads, 0 to 3*/
+        for (unsigned j = 0; j < nRows; ++j)
+        {
+            //Pix(trapPixelMap->sci.data,i,j)=hardset;
+            ro = (double)j / 512.0; /*ro can be zero, it's an index*/
+            if (ro > 2.999)
+            	ro = 2.999; // only 4 quads, 0 to 3
+            else if (ro < 0)
+            	ro = 0;
             io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
-            cte_j= (j+1) / 2048.0;
-            cte_i= ff_by_col[i][io] + (ff_by_col[i][io+1] -ff_by_col[i][io]) * (ro-io);
-            Pix(trapPixelMap->sci.data,i,j) =  (cte_i*cte_j);
+            cte_j = (j+1) / 2048.0;
+            cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
+            PixColumnMajor(trapPixelMap->sci.data,j,i) = (cte_i * cte_j);
         }
     }
 

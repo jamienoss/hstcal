@@ -3,6 +3,8 @@
 
 #include "hstio.h"
 
+#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_ny + (i)]
+
 typedef struct {
     int noise_mit; /*read noise mitigation algorithm*/
     int cte_len; // max length of cte trail
