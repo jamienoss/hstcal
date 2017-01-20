@@ -31,9 +31,11 @@
   This is a big old time sink function
  ***/
 
-//#define Pix(a,i,j)      (a).data[(i)*(a).tot_ny + (j)]
+//#define PixColumnMajor(a,j,i) ( (a).storageOrder == ROWMAJOR ? (a).data[(j)*(a).tot_nx + (i)] : (a).data[(i)*(a).tot_ny + (j)] )
+#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_ny + (i)]
+//#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_nx + (i)] // := Pix
 
-int inverseCTEBlurWithRowMajorInput( SingleGroup * rsz, SingleGroup * rsc,  SingleGroup * trapPixelMap, CTEParams * cte,
+int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
     clock_t t1 = clock();
@@ -62,22 +64,22 @@ int inverseCTEBlurWithRowMajorInput( SingleGroup * rsz, SingleGroup * rsc,  Sing
     assert(!copySingleGroup(&trapPixelMapColumnMajor, trapPixelMap, COLUMNMAJOR));
 
 
-    assert(!copySingleGroup(rsz, &rszColumnMajor, ROWMAJOR));
+/*  assert(!copySingleGroup(rsz, &rszColumnMajor, ROWMAJOR));
     assert(!copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR));
     assert(!copySingleGroup(trapPixelMap, &trapPixelMapColumnMajor, ROWMAJOR));
     int ret = inverseCTEBlur(rsz, rsc, trapPixelMap, cte, verbose, expstart);
+*/
 
-
-    //int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte, verbose, expstart);
+    int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte, verbose, expstart);
 
     //copy data back
-    //copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
+    copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
 
     freeSingleGroup(&rszColumnMajor);
     freeSingleGroup(&rscColumnMajor);
     freeSingleGroup(&trapPixelMapColumnMajor);
 
-    printf("Time taken to swap storage order: %f (secs)", ((float)(clock() - t1))/CLOCKS_PER_SEC);
+    printf("\nTime taken to swap storage order: %f (secs)\n", ((float)(clock() - t1))/CLOCKS_PER_SEC);
     return ret;
 }
 
@@ -146,7 +148,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         Bool hasFlux = False;
         for (unsigned i = 0; i < nRows; ++i)
         {
-            if (Pix(rsz->dq.data,j,i))
+            if (PixColumnMajor(rsz->dq.data,i,j))
             {
                 hasFlux = True;
                 break;
@@ -156,7 +158,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         if (!hasFlux)
         {
             for (unsigned i = 0; i < nRows; ++i){
-                Pix(rsc->sci.data, j, i) = 0; //check to see if even needed
+                PixColumnMajor(rsc->sci.data, i, j) = 0; //check to see if even needed
             }
             continue;
         }
@@ -165,9 +167,9 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
         for (unsigned i = 0; i < nRows; ++i)
         {
-            observedAll[i] = Pix(rsz->sci.data,j,i); //Only left in to match master implementation
-            observed[i] = Pix(rsz->dq.data,j,i) ? observedAll[i] : 0;
-            pix_ctef[i] =  cte_ff * Pix(trapPixelMap->sci.data, j, i);
+            observedAll[i] = PixColumnMajor(rsz->sci.data,i,j); //Only left in to match master implementation
+            observed[i] = PixColumnMajor(rsz->dq.data,i,j) ? observedAll[i] : 0;
+            pix_ctef[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
         }
 
         unsigned NREDO = 0;
@@ -218,7 +220,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         //Update source array
         for (unsigned i = 0; i < nRows; ++i)
         {
-            Pix(rsc->sci.data, j, i) = Pix(rsz->dq.data, j, i) ? model[i] : 0;
+            PixColumnMajor(rsc->sci.data, i, j) = PixColumnMajor(rsz->dq.data, i, j) ? model[i] : 0;
         }
     } //end loop over columns
 
