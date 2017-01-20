@@ -166,7 +166,7 @@ def configure(conf):
     # A list of the local (hstcal) libraries that are typically linked
     # with the executables
     conf.env.LOCAL_LIBS = [
-        'applib', 'xtables', 'hstio', 'cvos', 'CFITSIO', 'ctegen2']
+        'applib', 'xtables', 'hstio', 'cvos', 'CFITSIO']
 
     # A list of external libraries that are typically linked with the
     # executables
