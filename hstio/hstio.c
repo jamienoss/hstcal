@@ -352,7 +352,7 @@ int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum S
     //should this check be raise higher up the call stack also?
     if (targetStorageOrder != source->storageOrder)
     {
-        if (allocFloatData(target, source->ny, source->nx, False))
+        if (allocFloatData(target, source->nx, source->ny, False))
             return -1; //allocFloatData() initializes before returning
         return swapFloatStorageOrder(target, source, targetStorageOrder);
         //fall through and copy normally
@@ -378,18 +378,8 @@ int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source
     if (targetStorageOrder == source->storageOrder)
     	return 0;
 
-    unsigned nCols = 0;
-    unsigned nRows = 0;
-    if (targetStorageOrder == COLUMNMAJOR)
-    {
-    	nCols = target->nx;
-    	nRows = target->ny;
-    }
-    else //target->storageOrder == ROWMAJOR
-    {
-    	nCols = target->ny;
-    	nRows = target->nx;
-    }
+    const unsigned nRows = target->ny;
+    const unsigned nCols = target->nx;
 
     for (unsigned j = 0; j < nCols; ++j)
     {
@@ -417,18 +407,8 @@ int swapShortStorageOrder(ShortTwoDArray * target, const ShortTwoDArray * source
     if (targetStorageOrder == source->storageOrder)
     	return 0;
 
-    unsigned nCols = 0;
-    unsigned nRows = 0;
-    if (targetStorageOrder == COLUMNMAJOR)
-    {
-    	nCols = target->nx;
-    	nRows = target->ny;
-    }
-    else //target->storageOrder == ROWMAJOR
-    {
-    	nCols = target->ny;
-    	nRows = target->nx;
-    }
+    const unsigned nRows = target->ny;
+    const unsigned nCols = target->nx;
 
     for (unsigned j = 0; j < nCols; ++j)
     {
@@ -509,7 +489,7 @@ int copyShortData(ShortTwoDArray * target, const ShortTwoDArray * source, enum S
     //should this check be raise higher up the call stack also?
     if (targetStorageOrder != source->storageOrder)
     {
-        if (allocShortData(target, source->ny, source->nx, False))
+        if (allocShortData(target, source->nx, source->ny, False))
             return -1; //allocFloatData() initializes before returning
         return swapShortStorageOrder(target, source, targetStorageOrder);
         //fall through and copy normally
