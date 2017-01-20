@@ -350,18 +350,11 @@ int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum S
     //initFloatData(target);
 
     //should this check be raise higher up the call stack also?
-    if (targetStorageOrder == COLUMNMAJOR && source->storageOrder == ROWMAJOR)
+    if (targetStorageOrder != source->storageOrder)
     {
         if (allocFloatData(target, source->ny, source->nx, False))
             return -1; //allocFloatData() initializes before returning
-        return copyFloatDataToColumnMajor(target, source);
-        //fall through and copy normally
-    }
-    else if (targetStorageOrder ==  ROWMAJOR && source->storageOrder == COLUMNMAJOR)
-    {
-        if (allocFloatData(target, source->ny, source->nx, False))
-            return -1; //allocFloatData() initializes before returning
-        return copyFloatDataToRowMajor(target, source);
+        return swapFloatStorageOrder(target, source, targetStorageOrder);
         //fall through and copy normally
     }
 
@@ -373,89 +366,81 @@ int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum S
     return 0;
 }
 
-int copyFloatDataToRowMajor(FloatTwoDArray * target, const FloatTwoDArray * source)
+int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source, enum StorageOrder targetStorageOrder)
 {
     //WARNING: This assumes source is Column major
 
     //this probably breaks use of Pix on target? Do we need to swap nx & ny?
-    if (!target || !source || source->storageOrder != COLUMNMAJOR)
+    if (!target || !source)
         return -1;
-    unsigned nCols = target->nx;
-    unsigned nRows = target->ny;
-    target->storageOrder = ROWMAJOR;
+
+    target->storageOrder = targetStorageOrder;
+    if (targetStorageOrder == source->storageOrder)
+    	return 0;
+
+    unsigned nCols = 0;
+    unsigned nRows = 0;
+    if (targetStorageOrder == COLUMNMAJOR)
+    {
+    	nCols = target->nx;
+    	nRows = target->ny;
+    }
+    else //target->storageOrder == ROWMAJOR
+    {
+    	nCols = target->ny;
+    	nRows = target->nx;
+    }
 
     for (unsigned j = 0; j < nCols; ++j)
     {
         for (unsigned i = 0; i < nRows; ++i)
         {
-            //target->data[j*nRows + i] = source->data[i*nCols + j];
-            target->data[i*nCols + j] = source->data[j*nRows + i];
+        	if (targetStorageOrder == COLUMNMAJOR)
+        		target->data[j*nRows + i] = source->data[i*nCols + j];
+        	else
+        		target->data[i*nCols + j] = source->data[j*nRows + i];
         }
     }
     return 0;
 }
 
-int copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source)
-{
-    //WARNING: This assumes source is ROW major
-
-    //this probably breaks use of Pix on target? Do we need to swap nx & ny?
-    if (!target || !source || source->storageOrder != ROWMAJOR)
-        return -1;
-    unsigned nCols = target->nx;
-    unsigned nRows = target->ny;
-    target->storageOrder = COLUMNMAJOR;
-
-    for (unsigned j = 0; j < nCols; ++j)
-    {
-        for (unsigned i = 0; i < nRows; ++i)
-        {
-            target->data[j*nRows + i] = source->data[i*nCols + j];
-        }
-    }
-    return 0;
-}
-
-int copyShortDataToRowMajor(ShortTwoDArray * target, const ShortTwoDArray * source)
+int swapShortStorageOrder(ShortTwoDArray * target, const ShortTwoDArray * source, enum StorageOrder targetStorageOrder)
 {
     //WARNING: This assumes source is Column major
 
     //this probably breaks use of Pix on target? Do we need to swap nx & ny?
-    if (!target || !source || source->storageOrder != COLUMNMAJOR)
+
+    if (!target || !source)
         return -1;
-    unsigned nCols = target->nx;
-    unsigned nRows = target->ny;
-    target->storageOrder = ROWMAJOR;
+
+    target->storageOrder = targetStorageOrder;
+    if (targetStorageOrder == source->storageOrder)
+    	return 0;
+
+    unsigned nCols = 0;
+    unsigned nRows = 0;
+    if (targetStorageOrder == COLUMNMAJOR)
+    {
+    	nCols = target->nx;
+    	nRows = target->ny;
+    }
+    else //target->storageOrder == ROWMAJOR
+    {
+    	nCols = target->ny;
+    	nRows = target->nx;
+    }
 
     for (unsigned j = 0; j < nCols; ++j)
     {
         for (unsigned i = 0; i < nRows; ++i)
         {
-            //target->data[j*nRows + i] = source->data[i*nCols + j];
-            target->data[i*nCols + j] = source->data[j*nRows + i];
+        	if (targetStorageOrder == COLUMNMAJOR)
+        		target->data[j*nRows + i] = source->data[i*nCols + j];
+        	else
+        		target->data[i*nCols + j] = source->data[j*nRows + i];
         }
     }
-    return 0;
-}
 
-int copyShortDataToColumnMajor(ShortTwoDArray * target, const ShortTwoDArray * source)
-{
-    //WARNING: This assumes source is ROW major
-
-    //this probably breaks use of Pix on target?
-    if (!target || !source || source->storageOrder != ROWMAJOR)
-        return -1;
-    unsigned nCols = target->nx;
-    unsigned nRows = target->ny;
-    target->storageOrder = COLUMNMAJOR;
-
-    for (unsigned j = 0; j < nCols; ++j)
-    {
-        for (unsigned i = 0; i < nRows; ++i)
-        {
-            target->data[j*nRows + i] = source->data[i*nCols + j];
-        }
-    }
     return 0;
 }
 
@@ -522,18 +507,11 @@ int copyShortData(ShortTwoDArray * target, const ShortTwoDArray * source, enum S
     //initShortData(target);
 
     //should this check be raise higher up the call stack also?
-    if (targetStorageOrder == COLUMNMAJOR && source->storageOrder == ROWMAJOR)
+    if (targetStorageOrder != source->storageOrder)
     {
         if (allocShortData(target, source->ny, source->nx, False))
             return -1; //allocFloatData() initializes before returning
-        return copyShortDataToColumnMajor(target, source);
-        //fall through and copy normally
-    }
-    else if (targetStorageOrder ==  ROWMAJOR && source->storageOrder == COLUMNMAJOR)
-    {
-        if (allocShortData(target, source->ny, source->nx, False))
-            return -1; //allocFloatData() initializes before returning
-        return copyShortDataToRowMajor(target, source);
+        return swapShortStorageOrder(target, source, targetStorageOrder);
         //fall through and copy normally
     }
 

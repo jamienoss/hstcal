@@ -680,15 +680,12 @@ void updateWCS (Hdr *hdr, int xbeg, int ybeg);
 void initFloatData(FloatTwoDArray *);
 int allocFloatData(FloatTwoDArray *, int, int, Bool zeroInitialize);
 void freeFloatData(FloatTwoDArray *);
-int copyFloatDataToRowMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
-int copyFloatDataToColumnMajor(FloatTwoDArray * target, const FloatTwoDArray * source);
+int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source, enum StorageOrder targetStorageOrder);
 # define IShortData { NULL, 0, 0, 0, 0, 0, NULL }
 void initShortData(ShortTwoDArray *);
 int allocShortData(ShortTwoDArray *, int, int, Bool zeroInitialize);
 void freeShortData(ShortTwoDArray *);
-int copyShortDataToColumnMajor(ShortTwoDArray * target, const ShortTwoDArray * source);
-int copyShortDataToRowMajor(ShortTwoDArray * target, const ShortTwoDArray * source);
-
+int swapShortStorageOrder(ShortTwoDArray * target, const ShortTwoDArray * source, enum StorageOrder targetStorageOrder);
 
 # define IFloatLine { NULL, 0 }
 void initFloatLine  (FloatHdrLine *);

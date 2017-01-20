@@ -31,9 +31,9 @@
   This is a big old time sink function
  ***/
 
-#define Pix(a,i,j)      (a).data[(i)*(a).tot_ny + (j)]
+//#define Pix(a,i,j)      (a).data[(i)*(a).tot_ny + (j)]
 
-int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
+int inverseCTEBlurWithRowMajorInput( SingleGroup * rsz, SingleGroup * rsc,  SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
     clock_t t1 = clock();
@@ -61,16 +61,23 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
     assert(!copySingleGroup(&rscColumnMajor, rsc, COLUMNMAJOR));
     assert(!copySingleGroup(&trapPixelMapColumnMajor, trapPixelMap, COLUMNMAJOR));
 
-    int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte, verbose, expstart);
+
+    assert(!copySingleGroup(rsz, &rszColumnMajor, ROWMAJOR));
+    assert(!copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR));
+    assert(!copySingleGroup(trapPixelMap, &trapPixelMapColumnMajor, ROWMAJOR));
+    int ret = inverseCTEBlur(rsz, rsc, trapPixelMap, cte, verbose, expstart);
+
+
+    //int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte, verbose, expstart);
 
     //copy data back
-    copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
+    //copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
 
     freeSingleGroup(&rszColumnMajor);
     freeSingleGroup(&rscColumnMajor);
     freeSingleGroup(&trapPixelMapColumnMajor);
 
-    printf("Time taken to swap storage order: %f (secs)", ((float)(clock() - t1)/CLOCKS_PER_SEC));
+    printf("Time taken to swap storage order: %f (secs)", ((float)(clock() - t1))/CLOCKS_PER_SEC);
     return ret;
 }
 
@@ -104,8 +111,8 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
     initFloatData(&cteCprof);
     allocFloatData(&cteRprof, cte->rprof->data.nx, cte->rprof->data.ny, False);
     allocFloatData(&cteCprof, cte->cprof->data.nx, cte->cprof->data.ny, False);
-    copyFloatDataToColumnMajor(&cteRprof, &cte->rprof->data);
-    copyFloatDataToColumnMajor(&cteCprof, &cte->cprof->data);
+    swapFloatStorageOrder(&cteRprof, &cte->rprof->data, COLUMNMAJOR);
+    swapFloatStorageOrder(&cteCprof, &cte->cprof->data, COLUMNMAJOR);
 
 #ifdef _OPENMP
     const unsigned nThreads = omp_get_num_procs();
