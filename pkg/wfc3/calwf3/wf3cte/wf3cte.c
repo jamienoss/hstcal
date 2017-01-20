@@ -86,7 +86,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup rsz; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     SingleGroup rsc; /* CTE CORRECTED*/
     SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
-    SingleGroup chg; /* THE CHANGE DUE TO CTE  */
     SingleGroup raw; /* THE RAW IMAGE IN RAZ FORMAT */
 
     int i,j; /*loop vars*/
@@ -229,9 +228,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&raw);
     allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
 
-    initSingleGroup(&chg);
-    allocSingleGroup(&chg, RAZ_COLS, RAZ_ROWS, True);
-
     /*hardset the science arrays*/
     for (i=0;i<RAZ_COLS;i++){
         for(j=0;j<RAZ_ROWS;j++){
@@ -240,7 +236,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             Pix(rsz.sci.data,i,j)=hardset;
             Pix(rsc.sci.data,i,j)=hardset;
             Pix(rzc.sci.data,i,j)=hardset;
-            Pix(chg.sci.data,i,j)=hardset;
         }
     }
 
@@ -463,6 +458,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     trlmessage("CTE: Calculating smooth readnoise image");
 
 
+
+
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
         if (raz2rsz(&wf3, &raz, &rsz, cte_pars.rn_amp, max_threads))
@@ -472,27 +469,58 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status=ERROR_RETURN);
     }
 
+
+    //Convert all arrays to column major for efficiency.
+               SingleGroup rszColumnMajor;
+               SingleGroup rscColumnMajor;
+
+               //Initialize
+               initSingleGroup(&rszColumnMajor);
+               initSingleGroup(&rscColumnMajor);
+
+               //Allocate
+               const unsigned nx = rsz.sci.data.nx;
+               const unsigned ny = rsz.sci.data.ny;
+               allocSingleGroup(&rszColumnMajor, nx, ny, False);
+               allocSingleGroup(&rscColumnMajor, nx, ny, False);
+
+               //Copy
+               assert(!copySingleGroup(&rszColumnMajor, &rsz, COLUMNMAJOR));
+               assert(!copySingleGroup(&rscColumnMajor, &rsc, COLUMNMAJOR));
+
     //CONVERT THE READNOISE SMOOTHED IMAGE TO RSC IMAGE
     SingleGroup trapPixelMap;
     initSingleGroup(&trapPixelMap);
     allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, True);
-
     if (populateTrapPixelMap(&trapPixelMap, &cte_pars))
+    {
+    	//Geez, do we not want to free everything???
         return status;
+    }
 
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlurWithRowMajorInput(&rsz, &rsc, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
 
+    const double scaleFraction = cte_pars.scale_frac;
+    freeCTEParams(&cte_pars);
     freeSingleGroup(&trapPixelMap);
 
+
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
-    for (i=0;i<RAZ_COLS;i++){
-        for(j=0; j<RAZ_ROWS; j++){
-           Pix(chg.sci.data,i,j) = (Pix(rsc.sci.data,i,j) - Pix(rsz.sci.data,i,j))/wf3.ccdgain;
-           Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + Pix(chg.sci.data,i,j);
+	for (unsigned i = 0; i < RAZ_COLS; ++i)
+    {
+        for(unsigned j = 0; j < RAZ_ROWS; ++j)
+        {
+           double change = (PixColumnMajor(rscColumnMajor.sci.data,j,i) - PixColumnMajor(rszColumnMajor.sci.data,j,i))/wf3.ccdgain;
+           Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + change;
         }
     }
+    freeSingleGroup(&rszColumnMajor);
+    freeSingleGroup(&rscColumnMajor);
+    freeSingleGroup(&rsc);
+    freeSingleGroup(&raw);
+
 
     /*BACK TO NORMAL FORMATTING*/
     /*Copies rzc data to cd->sci.data and ab->sci.data */
@@ -509,7 +537,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
 
             Full2Sub(&wf3, &subcd, &cd, 0, 1, 1);
@@ -522,7 +550,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subab.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subab.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
 
             Full2Sub(&wf3, &subab, &ab, 0, 1, 1);
@@ -536,7 +564,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return (status);
 
         /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-        PutKeyDbl(cd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+        PutKeyDbl(cd.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
         trlmessage("PCTEFRAC saved to header");
 
         putSingleGroup(output,cd.group_num, &cd,0);
@@ -545,15 +573,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /** CLEAN UP ON AISLE 3 **/
     freeSingleGroup(&rzc);
-    freeSingleGroup(&rsc);
-    freeSingleGroup(&chg);
     freeSingleGroup(&raz);
     freeSingleGroup(&rsz);
-    freeSingleGroup(&raw);
     freeSingleGroup(&cd);
     freeSingleGroup(&ab);
-
-    freeCTEParams(&cte_pars);
 
     time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
     if (verbose){
