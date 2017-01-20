@@ -55,7 +55,6 @@ int doCteBias (WF3Info *, SingleGroup *);
 int GetCTEFlags (WF3Info *, Hdr *);
 int a2d_raz(WF3Info *);
 int raw2raz(WF3Info *, SingleGroup *, SingleGroup *, SingleGroup *);
-int raz2rsz(WF3Info *, SingleGroup *, SingleGroup *, double , int );
 int findPostScanBias(SingleGroup *, float *, float * );
 int findPreScanBias(SingleGroup *, float *, float *);
 int find_dadj(int ,int , double [][RAZ_ROWS], double [][RAZ_ROWS], double , double *);

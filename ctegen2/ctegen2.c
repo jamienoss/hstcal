@@ -9,8 +9,12 @@
 # endif
 
 #include "ctegen2.h"
-#include "pcte.h"
-#include "acs.h"
+//#include "pcte.h"
+//#include "acs.h"
+
+char MsgText[256];
+extern void trlmessage (char *message);
+
 
 /*** this routine does the inverse CTE blurring... it takes an observed
   image and generates the image that would be pushed through the readout
@@ -154,14 +158,18 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
                 break;
             }
         }
-
         if (!hasFlux)
+        	continue;
+
+        //allocated with calloc
+       /* if (!hasFlux)
         {
             for (unsigned i = 0; i < nRows; ++i){
                 PixColumnMajor(rsc->sci.data, i, j) = 0; //check to see if even needed
             }
             continue;
         }
+        */
 
         //rsz->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
@@ -492,14 +500,182 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
 
     /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
 
-      int   iz_data[RAZ_ROWS];  column number in raz format
-      double scale512[RAZ_ROWS];      scaling appropriate at row 512
-      double scale1024[RAZ_ROWS];     scaling appropriate at row 1024
-      double scale1536[RAZ_ROWS];     scaling appropriate at row 1536
-      double scale2048[RAZ_ROWS];     scaling appropriate at row 2048
+      int   iz_data[nRows];  column number in raz format
+      double scale512[nRows];      scaling appropriate at row 512
+      double scale1024[nRows];     scaling appropriate at row 1024
+      double scale1536[nRows];     scaling appropriate at row 1536
+      double scale2048[nRows];     scaling appropriate at row 2048
       */
 
     return(status);
 }
 
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads, int verbose)
+{
+    /*
+       This routine will read in a RAZ image and will output the smoothest
+       image that is consistent with being the observed image plus readnoise. (RSZ image)
+       This is necessary because we want the CTE-correction algorithm to produce the smoothest
+       possible reconstruction, consistent with the original image and the
+       known readnoise.  This algorithm constructs a model that is smooth
+       where the pixel-to-pixel variations can be thought of as being related
+       to readnoise, but if the variations are too large, then it respects
+       the pixel values.  Basically... it uses a 2-sigma threshold.
+
+       This is strategy #1 in a two-pronged strategy to mitigate the readnoise
+       amplification.  Strategy #2 will be to not iterate when the deblurring
+       is less than the readnoise.
+
+*/
+
+    extern int status;
+
+    const unsigned nRows = input->sci.data.nx;
+    const unsigned nColumns = input->sci.data.ny;
+
+    int imid;
+    double dptr=0.0;
+    double  rms=0.0;
+    double  rmsu=0.0;
+    double nrms=0.0;
+    double nrmsu=0.0;
+    //float hardset=0.0f;
+    double setdbl=0.0;
+
+
+    /*1D ARRAYS FOR CENTRAL AND NEIGHBORING nColumns*/
+    double obs_loc[3][nRows] ; //swap order
+    double rsz_loc[3][nRows] ;
+
+    clock_t begin = clock();
+
+    /*ALL ELEMENTS TO FLAG*/
+    for(unsigned i = 0; i < 3; ++i){
+        for (unsigned j = 0; j < nRows; ++j){
+            obs_loc[i][j]=setdbl;
+            rsz_loc[i][j]=setdbl;
+        }
+    }
+
+    /***INITIALIZE THE LOCAL IMAGE GROUPS***/
+    SingleGroup rnz;
+    initSingleGroup(&rnz);
+    allocSingleGroup(&rnz, nColumns, nRows, True);
+
+    SingleGroup zadj;
+    initSingleGroup(&zadj);
+    allocSingleGroup(&zadj, nColumns, nRows, True);
+
+
+    /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
+      AND INITIALIZE THE OTHER IMAGES*/
+    for(unsigned i = 0; i < nColumns; ++i){
+        for (unsigned j = 0; j < nRows; ++j){
+            Pix(output->sci.data,i,j) = PixColumnMajor(input->sci.data,j,i);
+            Pix(output->dq.data,i,j) = PixColumnMajor(input->dq.data,j,i);
+            //Pix(rnz.sci.data,i,j) = hardset;
+            //Pix(zadj.sci.data,i,j) = hardset;
+        }
+    }
+
+
+    /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
+    if (readNoiseAmp < 0.1){
+        trlmessage("rnsig < 0.1, No read-noise mitigation needed");
+        return(status);
+    }
+
+    /*GO THROUGH THE ENTIRE IMAGE AND ADJUST PIXELS TO MAKE THEM
+      SMOOTHER, BUT NOT SO MUCH THAT IT IS NOT CONSISTENT WITH
+      READNOISE.  DO THIS IN BABY STEPS SO THAT EACH ITERATION
+      DOES VERY LITTLE ADJUSTMENT AND INFORMATION CAN GET PROPAGATED
+      DOWN THE LINE.
+      */
+
+    rms=setdbl;
+
+    for(unsigned NIT=1; NIT<=100; ++NIT){
+#ifdef _OPENMP
+        #pragma omp parallel for schedule(dynamic) \
+        private(imid,obs_loc,rsz_loc,dptr)\
+        shared(input, output, readNoiseAmp, rms, nrms, zadj)
+#endif
+        for(unsigned i = 0; i < nColumns; ++i){
+            imid=i;
+            /*RESET TO MIDDLE nColumns AT ENDPOINTS*/
+            if (imid < 1)
+                imid=1;
+            if (imid == nColumns-1)
+                imid = nColumns-2;
+
+            /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
+            for(unsigned j = 0; j < nRows; ++j){
+                obs_loc[0][j] = PixColumnMajor(input->sci.data, j, imid-1);
+                obs_loc[1][j] = PixColumnMajor(input->sci.data, j, imid);
+                obs_loc[2][j] = PixColumnMajor(input->sci.data, j, imid+1);
+
+                rsz_loc[0][j] = Pix(output->sci.data,imid-1,j);
+                rsz_loc[1][j] = Pix(output->sci.data,imid,j);
+                rsz_loc[2][j] = Pix(output->sci.data,imid+1,j);
+            }
+            for (unsigned j = 0; j < nRows; ++j){
+             if(PixColumnMajor(input->dq.data, j, imid)) {
+                find_dadj(1+i-imid,j, obs_loc, rsz_loc, readNoiseAmp, &dptr);
+                Pix(zadj.sci.data,i,j) = dptr;
+              }
+            }
+        } /*end the parallel for*/
+
+        /*NOW GO OVER ALL THE nColumns AND nRows AGAIN TO SCALE THE PIXELS
+        */
+        for(unsigned i = 0; i < nColumns; ++i){
+            for(unsigned j = 0; j < nRows; ++j){
+                if (PixColumnMajor(input->dq.data,j,i)){
+                    Pix(output->sci.data,i,j) +=  (Pix(zadj.sci.data,i,j)*0.75);
+                    Pix(rnz.sci.data,i,j) = (PixColumnMajor(input->sci.data,j,i) - Pix(output->sci.data,i,j));
+                }
+            }
+        }
+
+        rms=setdbl;
+        nrms=setdbl;
+
+        /*This is probably a time sink because the arrays are being
+          accessed out of storage order, careful of page faults */
+        #pragma omp parallel for schedule(dynamic,1)\
+        private(rmsu,nrmsu) \
+        shared(input, output, rms, readNoiseAmp, nrms)
+        for(unsigned j = 0; j < nRows; ++j){
+            nrmsu=setdbl;
+            rmsu=setdbl;
+            for(unsigned i = 0; i < nColumns; ++i){
+                if ( (fabs(PixColumnMajor(input->sci.data,j, i)) > 0.1) ||
+                        (fabs(Pix(output->sci.data,i,j)) > 0.1) ){
+                    rmsu  +=  ( Pix(rnz.sci.data,i,j) * Pix(rnz.sci.data,i,j) );
+                    nrmsu += 1.0;
+                }
+            }
+            #pragma omp critical (rms)
+            {   rms  += rmsu;
+                nrms += nrmsu;
+            }
+        }
+        rms = sqrt(rms/nrms);
+
+        /*epsilon type comparison*/
+        if ( (readNoiseAmp-rms) < 0.00001) break; /*this exits the NIT for loop*/
+    } /*end NIT*/
+
+    freeSingleGroup(&zadj);
+    freeSingleGroup(&rnz);
+
+    if (verbose)
+    {
+    	double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
+    	sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i procs/threads\n",timeSpent/maxThreads,maxThreads);
+    	trlmessage(MsgText);
+    }
+
+    return (status);
+}
 

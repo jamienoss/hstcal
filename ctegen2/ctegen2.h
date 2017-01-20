@@ -55,6 +55,7 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
         const unsigned nRows, const double threshHold);
 
 int populateTrapPixelMap(SingleGroup * input, CTEParams * params);
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads , int verbose);
 
 //helpers
 void * newAndZero(void ** ptr, const size_t count, const size_t size);
