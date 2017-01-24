@@ -15,6 +15,8 @@
 char MsgText[256];
 extern void trlmessage (char *message);
 
+# define RAZ_COLS 8412
+# define RAZ_ROWS 2070
 
 /*** this routine does the inverse CTE blurring... it takes an observed
   image and generates the image that would be pushed through the readout
@@ -525,7 +527,6 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
        This is strategy #1 in a two-pronged strategy to mitigate the readnoise
        amplification.  Strategy #2 will be to not iterate when the deblurring
        is less than the readnoise.
-
 */
 
     extern int status;
@@ -545,7 +546,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
       AND INITIALIZE THE OTHER IMAGES*/
     memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
     memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
-    return status;
+    //return status;
 
     /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
     if (readNoiseAmp < 0.1){
@@ -575,14 +576,14 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #endif
     {
     /*1D ARRAYS FOR CENTRAL AND NEIGHBORING nColumns*/
-    FloatTwoDArray obs_loc;
+    /*FloatTwoDArray obs_loc;
     FloatTwoDArray rsz_loc;
     initFloatData(&obs_loc);
     initFloatData(&rsz_loc);
     allocFloatData(&obs_loc, nRows, 3, False);
     allocFloatData(&rsz_loc, nRows, 3, False);
-
-    for(unsigned NIT=1; NIT<=100; ++NIT)
+   */
+    for(unsigned iter = 0; iter < 100; ++iter)
     {
         double rmsLocal = 0;
         double nrmsLocal = 0;
@@ -591,17 +592,28 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #endif
         for(unsigned i = 0; i < nColumns; ++i)
         {
-            unsigned imid=i;
+            unsigned imid = i;
             /*RESET TO MIDDLE nColumns AT ENDPOINTS*/
             if (imid < 1)
-                imid=1;
+                imid = 1;
             if (imid == nColumns-1)
                 imid = nColumns-2;
 
             //is copy needed?
             /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
+
+            double obs_loc[3][RAZ_ROWS] ;
+            double rsz_loc[3][RAZ_ROWS] ;
             for(unsigned j = 0; j < nRows; ++j)
             {
+                obs_loc[0][j] = PixColumnMajor(input->sci.data, j, imid-1);
+                obs_loc[1][j] = PixColumnMajor(input->sci.data, j, imid);
+                obs_loc[2][j] = PixColumnMajor(input->sci.data, j, imid+1);
+
+                rsz_loc[0][j] = PixColumnMajor(output->sci.data,j,imid-1);
+                rsz_loc[1][j] = PixColumnMajor(output->sci.data,j,imid);
+                rsz_loc[2][j] = PixColumnMajor(output->sci.data,j,imid+1);
+                /*
                 Pix(obs_loc, j, 0) = PixColumnMajor(input->sci.data, j, imid-1);
                 Pix(obs_loc, j, 1) = PixColumnMajor(input->sci.data, j, imid);
                 Pix(obs_loc, j, 2) = PixColumnMajor(input->sci.data, j, imid+1);
@@ -609,11 +621,15 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
                 Pix(rsz_loc, j, 0) = PixColumnMajor(output->sci.data,j,imid-1);
                 Pix(rsz_loc, j, 1) = PixColumnMajor(output->sci.data,j,imid);
                 Pix(rsz_loc, j, 2) = PixColumnMajor(output->sci.data,j,imid+1);
+                */
             }
+
             for (unsigned j = 0; j < nRows; ++j)
             {
              if(PixColumnMajor(input->dq.data, j, imid))
-                PixColumnMajor(zadj.sci.data,j,i) = find_dadj(j, 1+i-imid, &obs_loc, &rsz_loc, nRows, readNoiseAmp);
+                //PixColumnMajor(zadj.sci.data,j,i) = find_dadj(j, 1+i-imid, &obs_loc, &rsz_loc, readNoiseAmp);
+                 PixColumnMajor(zadj.sci.data,j,i) = find_dadj_old(1+i-imid, j, obs_loc, rsz_loc, readNoiseAmp);
+
             }
         } /*end the parallel for*/ //implicit omp barrier
 
@@ -624,9 +640,12 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #ifdef _OPENMP
         #pragma omp for schedule(dynamic, 1)
 #endif
-        for(unsigned i = 0; i < nColumns; ++i){
-            for(unsigned j = 0; j < nRows; ++j){
-                if (PixColumnMajor(input->dq.data,j,i)){
+        for(unsigned i = 0; i < nColumns; ++i)
+        {
+            for(unsigned j = 0; j < nRows; ++j)
+            {
+                if (PixColumnMajor(input->dq.data,j,i))
+                {
                     PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(zadj.sci.data,j, i)*0.75);
                     PixColumnMajor(rnz.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
                 }
@@ -634,30 +653,33 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         }//implicit omp barrier
 
         //we don't care if each thread does this to these shared variables
-        rms=0;
-        nrms=0;
+#ifdef _OPENMP
+        #pragma omp single
+        {
+            rms=0;
+            nrms=0;
+        }
+#endif
 
-        /*This is probably a time sink because the arrays are being
-          accessed out of storage order, careful of page faults */
 #ifdef _OPENMP
         #pragma omp for schedule(dynamic, 1)
 #endif
         for(unsigned j = 0; j < nRows; ++j)
         {
-            nrmsLocal=0;
-            rmsLocal=0;
+            nrmsLocal = 0;
+            rmsLocal = 0;
             for(unsigned i = 0; i < nColumns; ++i)
             {
                 if ( (fabs(PixColumnMajor(input->sci.data,j, i)) > 0.1) ||
                         (fabs(PixColumnMajor(output->sci.data,j,i)) > 0.1))
                 {
-                    unsigned tmp = PixColumnMajor(rnz.sci.data,j, i);
+                    double tmp = PixColumnMajor(rnz.sci.data,j, i);
                     rmsLocal  +=  tmp*tmp;
                     nrmsLocal += 1.0;
                 }
             }
 #ifdef _OPENMP
-            #pragma omp critical (accumulate)
+            #pragma omp critical (aggregate)
 #endif
             {
                 rms  += rmsLocal;
@@ -665,18 +687,22 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             }
         }//implicit omp barrier
 
-        //we don't care if each thread does this to these shared variables (above crit sec & barrier make this one ok)
-        rms = sqrt(rms/nrms);
+#ifdef _OPENMP
+        #pragma omp single
+        {
+            rms = sqrt(rms/nrms);
+        }
+#endif
 
         // if it is true that one breaks then it is will be true for all
         /*epsilon type comparison*/
-        if ( (readNoiseAmp-rms) < 0.00001) break; /*this exits the NIT for loop*/
+        if ( (readNoiseAmp - rms) < 0.00001) break; /*this exits the NIT for loop*/
 #ifdef _OPENMP
-    #pragma omp barrier
+        #pragma omp barrier
 #endif
     } /*end NIT*/
-    freeFloatData(&obs_loc);
-    freeFloatData(&rsz_loc);
+    //freeFloatData(&obs_loc);
+    //freeFloatData(&rsz_loc);
     } // close parallel block
     freeSingleGroup(&zadj);
     freeSingleGroup(&rnz);
@@ -691,7 +717,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     return (status);
 }
 
-double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsloc, const FloatTwoDArray * rszloc, const unsigned nRows, const double readNoiseAmp)
+double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsloc, const FloatTwoDArray * rszloc, const double readNoiseAmp)
 {
     /*
        This function determines for a given pixel how it can
@@ -708,6 +734,7 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
        accommodation is made for both considerations.
        */
 
+    const unsigned nRows = rszloc->nx;
     const double mval = Pix(*rszloc, i, j);
     const double dval0  = Pix(*obsloc, i, j) - mval;
     double dval0u = dval0;
@@ -732,7 +759,7 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
                 Pix(*obsloc, i+1, j+1)- Pix(*rszloc, i+1, j+1);
     }
 
-    dval9 =dval9 / 9.;
+    dval9 = dval9 / 9.;
     double dval9u = dval9;
 
     if (dval9u > (readNoiseAmp*0.33))
@@ -783,8 +810,7 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
             (dmod2u * w2 * 0.25f) ; /* desire to get closer to the pixel above*/
 }
 
-# define RAZ_COLS 8412
-# define RAZ_ROWS 2070
+
 double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig){
     /*
        This function determines for a given pixel how it can

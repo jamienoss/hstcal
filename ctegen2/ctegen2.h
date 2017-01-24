@@ -56,7 +56,7 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
 
 int populateTrapPixelMap(SingleGroup * input, CTEParams * params);
 int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads , int verbose);
-double find_dadj(const unsigned i ,const unsigned j, const FloatTwoDArray * obsloc, const FloatTwoDArray * rszloc, const unsigned nRows, const double readNoiseAmp);
+double find_dadj(const unsigned i ,const unsigned j, const FloatTwoDArray * obsloc, const FloatTwoDArray * rszloc, const double readNoiseAmp);
 
 //helpers
 void * newAndZero(void ** ptr, const size_t count, const size_t size);
@@ -81,7 +81,8 @@ int PutKeyInt (Hdr *, char *, int , char *);
 int PutKeyDbl (Hdr *, char *, double , char *);
 int PutKeyStr(Hdr *, char *, char *, char *);
 
-
+# define RAZ_ROWS 2070
+double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig);
 
 
 #endif
