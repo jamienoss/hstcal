@@ -451,17 +451,17 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     trlmessage("CTE: Calculating smooth readnoise image");
 
 
+    SingleGroup razColumnMajor;
+       initSingleGroup(&razColumnMajor);
+       allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
+       assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
+       freeSingleGroup(&raz);
 
 
    SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
    initSingleGroup(&smoothedImage);
    allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, True);
 
-   SingleGroup razColumnMajor;
-      initSingleGroup(&razColumnMajor);
-      allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
-      assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
-      freeSingleGroup(&raz);
 
 
 
@@ -562,7 +562,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /** CLEAN UP ON AISLE 3 **/
     freeSingleGroup(&rzc);
-    freeSingleGroup(&smoothedImage);
     freeSingleGroup(&cd);
     freeSingleGroup(&ab);
 
