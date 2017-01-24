@@ -452,9 +452,9 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     SingleGroup razColumnMajor;
     initSingleGroup(&razColumnMajor);
-    allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, True);
-    //assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
-    //freeSingleGroup(&raz);
+    allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
+    assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
+    freeSingleGroup(&raz);
 
 
     SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
@@ -466,16 +466,15 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        //if (cteSmoothImage(&razColumnMajor, &smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
-        if (cteSmoothImage_old(&raz, &smoothedImage, cte_pars.rn_amp, max_threads))
+        if (cteSmoothImage(&razColumnMajor, &smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+        //if (cteSmoothImage_old(&raz, &smoothedImage, cte_pars.rn_amp, max_threads))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
         return (status=ERROR_RETURN);
     }
-
-    //freeSingleGroup(&razColumnMajor);
-    assert(!copySingleGroup(&razColumnMajor, &smoothedImage, COLUMNMAJOR));
+    freeSingleGroup(&razColumnMajor);
+    //assert(!copySingleGroup(&razColumnMajor, &smoothedImage, COLUMNMAJOR));
 
     SingleGroup trapPixelMap;
     initSingleGroup(&trapPixelMap);
@@ -491,7 +490,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     allocSingleGroup(&cteCorrectedImage, RAZ_COLS, RAZ_ROWS, True);
 
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(&razColumnMajor, &cteCorrectedImage, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(&smoothedImage, &cteCorrectedImage, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
 
     const double scaleFraction = cte_pars.scale_frac;
@@ -504,7 +503,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(razColumnMajor.sci.data,j,i))/wf3.ccdgain;
+           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(smoothedImage.sci.data,j,i))/wf3.ccdgain;
            Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + change;
         }
     }
