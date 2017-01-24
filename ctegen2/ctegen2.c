@@ -576,13 +576,13 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #endif
     {
     /*1D ARRAYS FOR CENTRAL AND NEIGHBORING nColumns*/
-    /*FloatTwoDArray obs_loc;
+    FloatTwoDArray obs_loc;
     FloatTwoDArray rsz_loc;
     initFloatData(&obs_loc);
     initFloatData(&rsz_loc);
     allocFloatData(&obs_loc, nRows, 3, False);
     allocFloatData(&rsz_loc, nRows, 3, False);
-   */
+
     for(unsigned iter = 0; iter < 100; ++iter)
     {
         double rmsLocal = 0;
@@ -602,18 +602,18 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             //is copy needed?
             /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
 
-            double obs_loc[3][RAZ_ROWS] ;
-            double rsz_loc[3][RAZ_ROWS] ;
+            //double obs_loc[3][RAZ_ROWS] ;
+            //double rsz_loc[3][RAZ_ROWS] ;
             for(unsigned j = 0; j < nRows; ++j)
             {
-                obs_loc[0][j] = PixColumnMajor(input->sci.data, j, imid-1);
+               /* obs_loc[0][j] = PixColumnMajor(input->sci.data, j, imid-1);
                 obs_loc[1][j] = PixColumnMajor(input->sci.data, j, imid);
                 obs_loc[2][j] = PixColumnMajor(input->sci.data, j, imid+1);
 
                 rsz_loc[0][j] = PixColumnMajor(output->sci.data,j,imid-1);
                 rsz_loc[1][j] = PixColumnMajor(output->sci.data,j,imid);
                 rsz_loc[2][j] = PixColumnMajor(output->sci.data,j,imid+1);
-                /*
+                */
                 Pix(obs_loc, j, 0) = PixColumnMajor(input->sci.data, j, imid-1);
                 Pix(obs_loc, j, 1) = PixColumnMajor(input->sci.data, j, imid);
                 Pix(obs_loc, j, 2) = PixColumnMajor(input->sci.data, j, imid+1);
@@ -621,14 +621,14 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
                 Pix(rsz_loc, j, 0) = PixColumnMajor(output->sci.data,j,imid-1);
                 Pix(rsz_loc, j, 1) = PixColumnMajor(output->sci.data,j,imid);
                 Pix(rsz_loc, j, 2) = PixColumnMajor(output->sci.data,j,imid+1);
-                */
+
             }
 
             for (unsigned j = 0; j < nRows; ++j)
             {
              if(PixColumnMajor(input->dq.data, j, imid))
-                //PixColumnMajor(zadj.sci.data,j,i) = find_dadj(j, 1+i-imid, &obs_loc, &rsz_loc, readNoiseAmp);
-                 PixColumnMajor(zadj.sci.data,j,i) = find_dadj_old(1+i-imid, j, obs_loc, rsz_loc, readNoiseAmp);
+                PixColumnMajor(zadj.sci.data,j,i) = find_dadj(j, 1+i-imid, &obs_loc, &rsz_loc, readNoiseAmp);
+                 //PixColumnMajor(zadj.sci.data,j,i) = find_dadj_old(1+i-imid, j, obs_loc, rsz_loc, readNoiseAmp);
 
             }
         } /*end the parallel for*/ //implicit omp barrier
@@ -701,8 +701,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         #pragma omp barrier
 #endif
     } /*end NIT*/
-    //freeFloatData(&obs_loc);
-    //freeFloatData(&rsz_loc);
+    freeFloatData(&obs_loc);
+    freeFloatData(&rsz_loc);
     } // close parallel block
     freeSingleGroup(&zadj);
     freeSingleGroup(&rnz);
@@ -739,15 +739,18 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
     const double dval0  = Pix(*obsloc, i, j) - mval;
     double dval0u = dval0;
 
-    if (dval0u >1.0)
-        dval0u =  1.0;
-    if (dval0u <-1.0)
+    if (dval0u > 1.0)
+        dval0u = 1.0;
+    if (dval0u < -1.0)
         dval0u = -1.0;
 
     /*COMPARE THE SURROUNDING PIXELS*/
     double dval9 = 0;
-    if (j == 1 &&  nRows-1>=i  && i>0 )
+    if (j == 1 &&  i > 0 && i <= nRows-1)//move out to caller or move up to very top and return 0?
     {
+        dval9 =
+
+
         dval9 = Pix(*obsloc, i, j-1)  - Pix(*rszloc, i, j-1) +
                 Pix(*obsloc, i, j)    - Pix(*rszloc, i, j)  +
                 Pix(*obsloc, i, j+1)  - Pix(*rszloc, i, j+1) +
