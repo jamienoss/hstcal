@@ -57,7 +57,6 @@ int a2d_raz(WF3Info *);
 int raw2raz(WF3Info *, SingleGroup *, SingleGroup *, SingleGroup *);
 int findPostScanBias(SingleGroup *, float *, float * );
 int findPreScanBias(SingleGroup *, float *, float *);
-int find_dadj(int ,int , double [][RAZ_ROWS], double [][RAZ_ROWS], double , double *);
 int cteHistory (WF3Info *, Hdr *);
 int free_array(float **ptr, int rows, int columns);
 int GetCTESwitch (WF3Info *, Hdr *);
