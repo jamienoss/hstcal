@@ -15,9 +15,6 @@
 char MsgText[256];
 extern void trlmessage (char *message);
 
-# define RAZ_COLS 8412
-# define RAZ_ROWS 2070
-
 /*** this routine does the inverse CTE blurring... it takes an observed
   image and generates the image that would be pushed through the readout
   algorithm to generate the observation
@@ -540,13 +537,10 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
     clock_t begin = clock();
 
-
-
     /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
       AND INITIALIZE THE OTHER IMAGES*/
     memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
     memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
-    //return status;
 
     /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
     if (readNoiseAmp < 0.1){
@@ -608,9 +602,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
             for (unsigned j = 0; j < nRows; ++j)
             {
-             if(PixColumnMajor(input->dq.data, j, imid))
-                PixColumnMajor(zadj.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
-               //  PixColumnMajor(zadj.sci.data,j,i) = find_dadj_old(1+i-imid, j, obs_loc, rsz_loc, readNoiseAmp);
+                if(PixColumnMajor(input->dq.data, j, imid))
+                    PixColumnMajor(zadj.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
             }
         } /*end the parallel for*/ //implicit omp barrier
 
@@ -726,15 +719,15 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
     double dval9 = 0;
     if (i == 1 &&  nRows-1>=j  && j>0 )
     {
-        dval9 = *(obsloc[i] + j-1)   - *(rszloc[i] + j-1) +
-                *(obsloc[i] + j)     - *(rszloc[i] + j)   +
-                *(obsloc[i] + j+1)   - *(rszloc[i] + j+1) +
-                *(obsloc[i-1] + j-1) - *(rszloc[i-1] + j-1) +
-                *(obsloc[i-1] + j)   - *(rszloc[i-1] + j)   +
-                *(obsloc[i-1] + j+1) - *(rszloc[i-1] + j+1) +
-                *(obsloc[i+1] + j-1) - *(rszloc[i+1] + j-1) +
-                *(obsloc[i+1] + j)   - *(rszloc[i+1] + j)   +
-                *(obsloc[i+1] + j+1) - *(rszloc[i+1] + j+1);
+        dval9 = (double)*(obsloc[i] + j-1)   - (double)*(rszloc[i] + j-1) +
+                (double)*(obsloc[i] + j)     - (double)*(rszloc[i] + j)   +
+                (double)*(obsloc[i] + j+1)   - (double)*(rszloc[i] + j+1) +
+                (double)*(obsloc[i-1] + j-1) - (double)*(rszloc[i-1] + j-1) +
+                (double)*(obsloc[i-1] + j)   - (double)*(rszloc[i-1] + j)   +
+                (double)*(obsloc[i-1] + j+1) - (double)*(rszloc[i-1] + j+1) +
+                (double)*(obsloc[i+1] + j-1) - (double)*(rszloc[i+1] + j-1) +
+                (double)*(obsloc[i+1] + j)   - (double)*(rszloc[i+1] + j)   +
+                (double)*(obsloc[i+1] + j+1) - (double)*(rszloc[i+1] + j+1);
     }
 
     dval9 = dval9 / 9.;
@@ -765,7 +758,6 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
     else if (dmod2u < readNoiseAmp*-0.33)
         dmod2u = readNoiseAmp*-0.33;
 
-
     /*
        IF IT'S WITHIN 2 SIGMA OF THE READNOISE, THEN
        TEND TO TREAT AS READNOISE; IF IT'S FARTHER OFF
@@ -786,129 +778,4 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
             dval9u * w9 * 0.25f + /* desire to keep the original sum over 3x3*/
             dmod1u * w1 * 0.25f + /* desire to get closer to the pixel below*/
             dmod2u * w2 * 0.25f; /* desire to get closer to the pixel above*/
-}
-
-
-double find_dadj_old(int i ,int j, const float * obsloc[3],  const float * rszloc[3], double rnsig){
-    /*
-       This function determines for a given pixel how it can
-       adjust in a way that is not inconsistent with its being
-       readnoise.  To do this, it looks at its upper and lower
-       neighbors and sees whether it is consistent with either
-       (modulo readnoise).  To the extent that it is consistent
-       then move it towards them.  But also bear in mind that
-       that we don't want it to be more than 2 RN sigmas away
-       from its original value.  This is pretty much a tug of
-       war... with readnoise considerations pushing pixels to
-       be closer to their neighbors, but the original pixel
-       values also pull to keep the pixel where it was.  Some
-       accommodation is made for both considerations.
-       */
-
-    extern int status;
-
-    double mval=0.0;
-    double    dval0, dval0u, w0;
-    double    dval9, dval9u, w9;
-    double    dmod1, dmod1u, w1;
-    double    dmod2, dmod2u, w2;
-
-    dval0=0.;
-    dval0u=0.;
-    w0=0.;
-    dval9=0.;
-    dval9u=0.;
-    w9=0.;
-    dmod1=0.;
-    dmod1u=0.;
-    w1=0.;
-    dmod2=0.;
-    dmod2u=0.;
-    w2=0.;
-
-    mval = *(rszloc[i] + j);
-    dval0  = *(rszloc[i] + j) - mval;
-    dval0u = dval0;
-
-    if (dval0u >1.0)
-        dval0u =  1.0;
-    if (dval0u <-1.0)
-        dval0u = -1.0;
-
-    dval9 = 0.;
-
-    /*COMPARE THE SURROUNDING PIXELS*/
-    if (i==1 &&  RAZ_ROWS-1>=j  && j>0 ) {
-        dval9 = *(obsloc[i] + j-1)   - *(rszloc[i] + j-1) +
-                *(obsloc[i] + j)     - *(rszloc[i] + j)   +
-                *(obsloc[i] + j+1)   - *(rszloc[i] + j+1) +
-                *(obsloc[i-1] + j-1) - *(rszloc[i-1] + j-1) +
-                *(obsloc[i-1] + j)   - *(rszloc[i-1] + j)   +
-                *(obsloc[i-1] + j+1) - *(rszloc[i-1] + j+1) +
-                *(obsloc[i+1] + j-1) - *(rszloc[i+1] + j-1) +
-                *(obsloc[i+1] + j)   - *(rszloc[i+1] + j)   +
-                *(obsloc[i+1] + j+1) - *(rszloc[i+1] + j+1);
-        /*
-        dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
-            obsloc[i][j]    - rszloc[i][j]  +
-            obsloc[i][j+1]  - rszloc[i][j+1] +
-            obsloc[i-1][j-1]- rszloc[i-1][j-1] +
-            obsloc[i-1][j]  - rszloc[i-1][j] +
-            obsloc[i-1][j+1]- rszloc[i-1][j+1] +
-            obsloc[i+1][j-1]- rszloc[i+1][j-1] +
-            obsloc[i+1][j]  - rszloc[i+1][j] +
-            obsloc[i+1][j+1]- rszloc[i+1][j+1];
-            */
-    }
-
-    dval9 =dval9 / 9.;
-    dval9u = dval9;
-
-    if (dval9u > (rnsig*0.33))
-        dval9u =  rnsig*0.33;
-    if (dval9u <  rnsig*-0.33)
-        dval9u = rnsig*-0.33;
-
-    dmod1 = 0.;
-    if (j>0)
-        dmod1 = *(rszloc[i] + j-1) - mval;
-
-    dmod1u = dmod1;
-    if (dmod1u > rnsig*0.33)
-        dmod1u =  rnsig*0.33;
-    if (dmod1u < rnsig*-0.33)
-        dmod1u = rnsig*-0.33;
-
-    dmod2 = 0.;
-    if (j < RAZ_ROWS-1)
-        dmod2 =  *(rszloc[i] + j+1) - mval;
-
-    dmod2u = dmod2;
-    if (dmod2u > rnsig*0.33)
-        dmod2u =  rnsig*0.33;
-    if (dmod2u < rnsig*-0.33)
-        dmod2u = rnsig*-0.33;
-
-
-    /*
-       IF IT'S WITHIN 2 SIGMA OF THE READNOISE, THEN
-       TEND TO TREAT AS READNOISE; IF IT'S FARTHER OFF
-       THAN THAT, THEN DOWNWEIGHT THE INFLUENCE
-       */
-    w0 =   (dval0*dval0) / ((dval0*dval0)+ 4.0*(rnsig*rnsig));
-    w9 =   (dval9*dval9) / ((dval9*dval9)+ 18.0*(rnsig*rnsig));
-    w1 = (4*rnsig*rnsig) / ((dmod1*dmod1)+4.0*(rnsig*rnsig));
-    w2 = (4*rnsig*rnsig) / ((dmod2*dmod2)+4.0*(rnsig*rnsig));
-
-    /*(note that with the last two, if a pixel
-      is too discordant with its upper or lower
-      that neighbor has less of an ability to
-      pull it)*/
-
-    return ((dval0u * w0 * 0.25f) + /* desire to keep the original pixel value */
-            (dval9u*w9*0.25f) + /* desire to keep the original sum over 3x3*/
-            (dmod1u*w1*0.25f) + /*desire to get closer to the pixel below*/
-            (dmod2u*w2*0.25f)) ; /*desire to get closer to the pixel above*/
-
-    //return(status);
 }

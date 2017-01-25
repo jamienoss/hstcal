@@ -81,7 +81,4 @@ int PutKeyInt (Hdr *, char *, int , char *);
 int PutKeyDbl (Hdr *, char *, double , char *);
 int PutKeyStr(Hdr *, char *, char *, char *);
 
-double find_dadj_old(int i ,int j, const float * obsloc[3], const float * rszloc[3], double rnsig);
-
-
 #endif
