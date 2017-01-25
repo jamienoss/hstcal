@@ -575,13 +575,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #pragma omp parallel num_threads(nThreads) shared(input, output, readNoiseAmp, rms, nrms, zadj, rnz)
 #endif
     {
-    /*1D ARRAYS FOR CENTRAL AND NEIGHBORING nColumns*/
-    FloatTwoDArray obs_loc;
-    FloatTwoDArray rsz_loc;
-    initFloatData(&obs_loc);
-    initFloatData(&rsz_loc);
-    allocFloatData(&obs_loc, nRows, 3, False);
-    allocFloatData(&rsz_loc, nRows, 3, False);
+    const float * obs_loc[3];
+    const float * rsz_loc[3];
 
     double rmsLocal;
     double nrmsLocal;
@@ -602,38 +597,20 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             else if (imid == nColumns-1) // NOTE: use of elseif breaks if nColumns = 1
                 imid = nColumns-2;
 
-            //is copy needed?
-            /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
+            /*LOCATE THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
+            obs_loc[0] = input->sci.data.data + (imid-1)*nRows;
+            obs_loc[1] = input->sci.data.data + (imid)*nRows;
+            obs_loc[2] = input->sci.data.data + (imid+1)*nRows;
 
-            //double obs_loc[3][RAZ_ROWS] ;
-            //double rsz_loc[3][RAZ_ROWS] ;
-            for(unsigned j = 0; j < nRows; ++j)
-            {
-               /* obs_loc[0][j] = PixColumnMajor(input->sci.data, j, imid-1);
-                obs_loc[1][j] = PixColumnMajor(input->sci.data, j, imid);
-                obs_loc[2][j] = PixColumnMajor(input->sci.data, j, imid+1);
-
-                rsz_loc[0][j] = PixColumnMajor(output->sci.data,j,imid-1);
-                rsz_loc[1][j] = PixColumnMajor(output->sci.data,j,imid);
-                rsz_loc[2][j] = PixColumnMajor(output->sci.data,j,imid+1);
-                */
-            	//when working replace with memcpy
-                Pix(obs_loc, j, 0) = PixColumnMajor(input->sci.data, j, imid-1);
-                Pix(obs_loc, j, 1) = PixColumnMajor(input->sci.data, j, imid);
-                Pix(obs_loc, j, 2) = PixColumnMajor(input->sci.data, j, imid+1);
-
-                Pix(rsz_loc, j, 0) = PixColumnMajor(output->sci.data, j, imid-1);
-                Pix(rsz_loc, j, 1) = PixColumnMajor(output->sci.data, j, imid);
-                Pix(rsz_loc, j, 2) = PixColumnMajor(output->sci.data, j, imid+1);
-
-            }
+            rsz_loc[0] = output->sci.data.data + (imid-1)*nRows;
+            rsz_loc[1] = output->sci.data.data + (imid)*nRows;
+            rsz_loc[2] = output->sci.data.data + (imid+1)*nRows;
 
             for (unsigned j = 0; j < nRows; ++j)
             {
              if(PixColumnMajor(input->dq.data, j, imid))
-                PixColumnMajor(zadj.sci.data,j,i) = find_dadj(j, 1+i-imid, &obs_loc, &rsz_loc, readNoiseAmp);
-                 //PixColumnMajor(zadj.sci.data,j,i) = find_dadj_old(1+i-imid, j, obs_loc, rsz_loc, readNoiseAmp);
-
+                PixColumnMajor(zadj.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
+               //  PixColumnMajor(zadj.sci.data,j,i) = find_dadj_old(1+i-imid, j, obs_loc, rsz_loc, readNoiseAmp);
             }
         } /*end the parallel for*/ //implicit omp barrier
 
@@ -705,8 +682,6 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         #pragma omp barrier
 #endif
     } /*end NIT*/
-    freeFloatData(&obs_loc);
-    freeFloatData(&rsz_loc);
     } // close parallel block
     freeSingleGroup(&zadj);
     freeSingleGroup(&rnz);
@@ -721,7 +696,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     return (status);
 }
 
-double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsloc, const FloatTwoDArray * rszloc, const double readNoiseAmp)
+double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp)
 {
     /*
        This function determines for a given pixel how it can
@@ -738,9 +713,8 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
        accommodation is made for both considerations.
        */
 
-    const unsigned nRows = rszloc->nx;
-    const double mval = Pix(*rszloc, i, j);
-    const double dval0  = Pix(*obsloc, i, j) - mval;
+    const double mval = *(rszloc[i] + j);
+    const double dval0  = *(obsloc[i] + j) - mval;
     double dval0u = dval0;
 
     if (dval0u > 1.0)
@@ -749,18 +723,18 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
         dval0u = -1.0;
 
     /*COMPARE THE SURROUNDING PIXELS*/
-  	double dval9 = 0;
-    if (j == 1 &&  nRows-1>=i  && i>0 )
+    double dval9 = 0;
+    if (i == 1 &&  nRows-1>=j  && j>0 )
     {
-    	dval9 = Pix(*obsloc, i,   j-1) - Pix(*rszloc, i,   j-1) +
-    			Pix(*obsloc, i,   j)   - Pix(*rszloc, i,   j)   +
-				Pix(*obsloc, i,   j+1) - Pix(*rszloc, i,   j+1) +
-				Pix(*obsloc, i-1, j-1) - Pix(*rszloc, i-1, j-1) +
-				Pix(*obsloc, i-1, j)   - Pix(*rszloc, i-1, j)   +
-				Pix(*obsloc, i-1, j+1) - Pix(*rszloc, i-1, j+1) +
-				Pix(*obsloc, i+1, j-1) - Pix(*rszloc, i+1, j-1) +
-				Pix(*obsloc, i+1, j)   - Pix(*rszloc, i+1, j)   +
-				Pix(*obsloc, i+1, j+1) - Pix(*rszloc, i+1, j+1);
+        dval9 = *(obsloc[i] + j-1)   - *(rszloc[i] + j-1) +
+                *(obsloc[i] + j)     - *(rszloc[i] + j)   +
+                *(obsloc[i] + j+1)   - *(rszloc[i] + j+1) +
+                *(obsloc[i-1] + j-1) - *(rszloc[i-1] + j-1) +
+                *(obsloc[i-1] + j)   - *(rszloc[i-1] + j)   +
+                *(obsloc[i-1] + j+1) - *(rszloc[i-1] + j+1) +
+                *(obsloc[i+1] + j-1) - *(rszloc[i+1] + j-1) +
+                *(obsloc[i+1] + j)   - *(rszloc[i+1] + j)   +
+                *(obsloc[i+1] + j+1) - *(rszloc[i+1] + j+1);
     }
 
     dval9 = dval9 / 9.;
@@ -772,8 +746,8 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
         dval9u = readNoiseAmp*-0.33;
 
     double dmod1 = 0;
-    if (i > 0)
-        dmod1 = Pix(*rszloc, i, j-1) - mval;
+    if (j > 0)
+        dmod1 = *(rszloc[i] + j-1) - mval;
 
     double dmod1u = dmod1;
     if (dmod1u > readNoiseAmp*0.33)
@@ -782,8 +756,8 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
         dmod1u = readNoiseAmp*-0.33;
 
     double dmod2 = 0;
-    if (i < nRows-1)
-    	dmod2 = Pix(*rszloc, i, j+1) - mval;
+    if (j < nRows-1)
+        dmod2 = *(rszloc[i] + j+1) - mval;
 
     double dmod2u = dmod2;
     if (dmod2u > readNoiseAmp*0.33)
@@ -815,7 +789,7 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
 }
 
 
-double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig){
+double find_dadj_old(int i ,int j, const float * obsloc[3],  const float * rszloc[3], double rnsig){
     /*
        This function determines for a given pixel how it can
        adjust in a way that is not inconsistent with its being
@@ -852,8 +826,8 @@ double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
     dmod2u=0.;
     w2=0.;
 
-    mval = rszloc[i][j];
-    dval0  = obsloc[i][j] - mval;
+    mval = *(rszloc[i] + j);
+    dval0  = *(rszloc[i] + j) - mval;
     dval0u = dval0;
 
     if (dval0u >1.0)
@@ -865,7 +839,16 @@ double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
 
     /*COMPARE THE SURROUNDING PIXELS*/
     if (i==1 &&  RAZ_ROWS-1>=j  && j>0 ) {
-
+        dval9 = *(obsloc[i] + j-1)   - *(rszloc[i] + j-1) +
+                *(obsloc[i] + j)     - *(rszloc[i] + j)   +
+                *(obsloc[i] + j+1)   - *(rszloc[i] + j+1) +
+                *(obsloc[i-1] + j-1) - *(rszloc[i-1] + j-1) +
+                *(obsloc[i-1] + j)   - *(rszloc[i-1] + j)   +
+                *(obsloc[i-1] + j+1) - *(rszloc[i-1] + j+1) +
+                *(obsloc[i+1] + j-1) - *(rszloc[i+1] + j-1) +
+                *(obsloc[i+1] + j)   - *(rszloc[i+1] + j)   +
+                *(obsloc[i+1] + j+1) - *(rszloc[i+1] + j+1);
+        /*
         dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
             obsloc[i][j]    - rszloc[i][j]  +
             obsloc[i][j+1]  - rszloc[i][j+1] +
@@ -875,6 +858,7 @@ double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
             obsloc[i+1][j-1]- rszloc[i+1][j-1] +
             obsloc[i+1][j]  - rszloc[i+1][j] +
             obsloc[i+1][j+1]- rszloc[i+1][j+1];
+            */
     }
 
     dval9 =dval9 / 9.;
@@ -887,7 +871,7 @@ double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
 
     dmod1 = 0.;
     if (j>0)
-        dmod1 = rszloc[i][j-1] - mval;
+        dmod1 = *(rszloc[i] + j-1) - mval;
 
     dmod1u = dmod1;
     if (dmod1u > rnsig*0.33)
@@ -897,7 +881,7 @@ double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
 
     dmod2 = 0.;
     if (j < RAZ_ROWS-1)
-        dmod2 =  rszloc[i][j+1] - mval;
+        dmod2 =  *(rszloc[i] + j+1) - mval;
 
     dmod2u = dmod2;
     if (dmod2u > rnsig*0.33)
@@ -927,157 +911,4 @@ double find_dadj_old(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
             (dmod2u*w2*0.25f)) ; /*desire to get closer to the pixel above*/
 
     //return(status);
-}
-int cteSmoothImage_old(SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads){
-    /*
-       This routine will read in a RAZ image and will output the smoothest
-       image that is consistent with being the observed image plus readnoise. (RSZ image)
-       This is necessary because we want the CTE-correction algorithm to produce the smoothest
-       possible reconstruction, consistent with the original image and the
-       known readnoise.  This algorithm constructs a model that is smooth
-       where the pixel-to-pixel variations can be thought of as being related
-       to readnoise, but if the variations are too large, then it respects
-       the pixel values.  Basically... it uses a 2-sigma threshold.
-       This is strategy #1 in a two-pronged strategy to mitigate the readnoise
-       amplification.  Strategy #2 will be to not iterate when the deblurring
-       is less than the readnoise.
-*/
-
-    extern int status;
-
-    int i, j, NIT; /*loop variables*/
-    int imid;
-    double dptr=0.0;
-    double  rms=0.0;
-    double  rmsu=0.0;
-    double nrms=0.0;
-    double nrmsu=0.0;
-    float hardset=0.0f;
-    double setdbl=0.0;
-
-
-    /*1D ARRAYS FOR CENTRAL AND NEIGHBORING RAZ_COLS*/
-    double obs_loc[3][RAZ_ROWS] ;
-    double rsz_loc[3][RAZ_ROWS] ;
-
-    NIT=1;
-
-    /*ALL ELEMENTS TO FLAG*/
-    for(i=0;i<3;i++){
-        for (j=0; j<RAZ_ROWS; j++){
-            obs_loc[i][j]=setdbl;
-            rsz_loc[i][j]=setdbl;
-        }
-    }
-
-    /***INITIALIZE THE LOCAL IMAGE GROUPS***/
-    SingleGroup rnz;
-    initSingleGroup(&rnz);
-    allocSingleGroup(&rnz, RAZ_COLS, RAZ_ROWS, True);
-
-    SingleGroup zadj;
-    initSingleGroup(&zadj);
-    allocSingleGroup(&zadj, RAZ_COLS, RAZ_ROWS, True);
-
-
-    /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
-      AND INITIALIZE THE OTHER IMAGES*/
-    for(i=0;i<RAZ_COLS;i++){
-        for (j=0;j<RAZ_ROWS;j++){
-            Pix(rsz->sci.data,i,j) = Pix(raz->sci.data,i,j);
-            Pix(rsz->dq.data,i,j) = Pix(raz->dq.data,i,j);
-            Pix(rnz.sci.data,i,j) = hardset;
-            Pix(zadj.sci.data,i,j) = hardset;
-        }
-    }
-
-
-    /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
-    if (rnsig < 0.1){
-        trlmessage("rnsig < 0.1, No read-noise mitigation needed");
-        return(status);
-    }
-
-    /*GO THROUGH THE ENTIRE IMAGE AND ADJUST PIXELS TO MAKE THEM
-      SMOOTHER, BUT NOT SO MUCH THAT IT IS NOT CONSISTENT WITH
-      READNOISE.  DO THIS IN BABY STEPS SO THAT EACH ITERATION
-      DOES VERY LITTLE ADJUSTMENT AND INFORMATION CAN GET PROPAGATED
-      DOWN THE LINE.
-      */
-
-    rms=setdbl;
-
-    for(NIT=1; NIT<=100; NIT++){
-        #pragma omp parallel for schedule(dynamic) \
-        private(i,j,imid,obs_loc,rsz_loc,dptr)\
-        shared(raz, rsz, rnsig,rms,nrms, zadj)
-        for(i=0; i<RAZ_COLS; i++){
-            imid=i;
-            /*RESET TO MIDDLE RAZ_COLS AT ENDPOINTS*/
-            if (imid < 1)
-                imid=1;
-            if (imid == RAZ_COLS-1)
-                imid = RAZ_COLS-2;
-
-            /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
-            for(j=0; j<RAZ_ROWS; j++){
-                obs_loc[0][j] = Pix(raz->sci.data,imid-1,j);
-                obs_loc[1][j] = Pix(raz->sci.data,imid,j);
-                obs_loc[2][j] = Pix(raz->sci.data,imid+1,j);
-
-                rsz_loc[0][j] = Pix(rsz->sci.data,imid-1,j);
-                rsz_loc[1][j] = Pix(rsz->sci.data,imid,j);
-                rsz_loc[2][j] = Pix(rsz->sci.data,imid+1,j);
-            }
-            for (j=0; j<RAZ_ROWS; j++){
-             if(Pix(raz->dq.data,imid,j)) {
-                Pix(zadj.sci.data,i,j) = find_dadj_old(1+i-imid,j, obs_loc, rsz_loc, rnsig);
-              }
-            }
-        } /*end the parallel for*/
-
-        /*NOW GO OVER ALL THE RAZ_COLS AND RAZ_ROWS AGAIN TO SCALE THE PIXELS
-        */
-        for(i=0; i<RAZ_COLS;i++){
-            for(j=0; j<RAZ_ROWS; j++){
-                if (Pix(raz->dq.data,i,j)){
-                    Pix(rsz->sci.data,i,j) +=  (Pix(zadj.sci.data,i,j)*0.75);
-                    Pix(rnz.sci.data,i,j) = (Pix(raz->sci.data,i,j) - Pix(rsz->sci.data,i,j));
-                }
-            }
-        }
-
-        rms=setdbl;
-        nrms=setdbl;
-
-        /*This is probably a time sink because the arrays are being
-          accessed out of storage order, careful of page faults */
-        #pragma omp parallel for schedule(dynamic,1)\
-        private(i,j,rmsu,nrmsu) \
-        shared(raz,rsz,rms,rnsig,nrms)
-        for(j=0; j<RAZ_ROWS; j++){
-            nrmsu=setdbl;
-            rmsu=setdbl;
-            for(i = 0;i<RAZ_COLS; i++){
-                if ( (fabs(Pix(raz->sci.data,i,j)) > 0.1) ||
-                        (fabs(Pix(rsz->sci.data,i,j)) > 0.1) ){
-                    rmsu  +=  ( Pix(rnz.sci.data,i,j) * Pix(rnz.sci.data,i,j) );
-                    nrmsu += 1.0;
-                }
-            }
-            #pragma omp critical (rms)
-            {   rms  += rmsu;
-                nrms += nrmsu;
-            }
-        }
-        rms = sqrt(rms/nrms);
-
-        /*epsilon type comparison*/
-        if ( (rnsig-rms) < 0.00001) break; /*this exits the NIT for loop*/
-    } /*end NIT*/
-
-    freeSingleGroup(&zadj);
-    freeSingleGroup(&rnz);
-
-    return (status);
 }
