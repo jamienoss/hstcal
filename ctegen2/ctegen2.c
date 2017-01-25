@@ -583,10 +583,12 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     allocFloatData(&obs_loc, nRows, 3, False);
     allocFloatData(&rsz_loc, nRows, 3, False);
 
+    double rmsLocal;
+    double nrmsLocal;
     for(unsigned iter = 0; iter < 100; ++iter)
     {
-        double rmsLocal = 0;
-        double nrmsLocal = 0;
+        rmsLocal = 0;
+        nrmsLocal = 0;
 #ifdef _OPENMP
         #pragma omp for schedule(dynamic, 1)
 #endif
@@ -594,9 +596,10 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         {
             unsigned imid = i;
             /*RESET TO MIDDLE nColumns AT ENDPOINTS*/
+            // This seems odd, the edge columns get accounted for twice?
             if (imid < 1)
                 imid = 1;
-            if (imid == nColumns-1)
+            else if (imid == nColumns-1) // NOTE: use of elseif breaks if nColumns = 1
                 imid = nColumns-2;
 
             //is copy needed?
@@ -614,13 +617,14 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
                 rsz_loc[1][j] = PixColumnMajor(output->sci.data,j,imid);
                 rsz_loc[2][j] = PixColumnMajor(output->sci.data,j,imid+1);
                 */
+            	//when working replace with memcpy
                 Pix(obs_loc, j, 0) = PixColumnMajor(input->sci.data, j, imid-1);
                 Pix(obs_loc, j, 1) = PixColumnMajor(input->sci.data, j, imid);
                 Pix(obs_loc, j, 2) = PixColumnMajor(input->sci.data, j, imid+1);
 
-                Pix(rsz_loc, j, 0) = PixColumnMajor(output->sci.data,j,imid-1);
-                Pix(rsz_loc, j, 1) = PixColumnMajor(output->sci.data,j,imid);
-                Pix(rsz_loc, j, 2) = PixColumnMajor(output->sci.data,j,imid+1);
+                Pix(rsz_loc, j, 0) = PixColumnMajor(output->sci.data, j, imid-1);
+                Pix(rsz_loc, j, 1) = PixColumnMajor(output->sci.data, j, imid);
+                Pix(rsz_loc, j, 2) = PixColumnMajor(output->sci.data, j, imid+1);
 
             }
 
@@ -741,52 +745,49 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
 
     if (dval0u > 1.0)
         dval0u = 1.0;
-    if (dval0u < -1.0)
+    else if (dval0u < -1.0)
         dval0u = -1.0;
 
     /*COMPARE THE SURROUNDING PIXELS*/
-    double dval9 = 0;
-    if (j == 1 &&  i > 0 && i <= nRows-1)//move out to caller or move up to very top and return 0?
+  	double dval9 = 0;
+    if (j == 1 &&  nRows-1>=i  && i>0 )
     {
-        dval9 =
-
-
-        dval9 = Pix(*obsloc, i, j-1)  - Pix(*rszloc, i, j-1) +
-                Pix(*obsloc, i, j)    - Pix(*rszloc, i, j)  +
-                Pix(*obsloc, i, j+1)  - Pix(*rszloc, i, j+1) +
-                Pix(*obsloc, i-1, j-1)- Pix(*rszloc, i-1, j-1) +
-                Pix(*obsloc, i-1, j)  - Pix(*rszloc, i-1, j) +
-                Pix(*obsloc, i-1, j+1)- Pix(*rszloc, i-1, j+1) +
-                Pix(*obsloc, i+1, j-1)- Pix(*rszloc, i+1, j-1) +
-                Pix(*obsloc, i+1, j)  - Pix(*rszloc, i+1, j) +
-                Pix(*obsloc, i+1, j+1)- Pix(*rszloc, i+1, j+1);
+    	dval9 = Pix(*obsloc, i,   j-1) - Pix(*rszloc, i,   j-1) +
+    			Pix(*obsloc, i,   j)   - Pix(*rszloc, i,   j)   +
+				Pix(*obsloc, i,   j+1) - Pix(*rszloc, i,   j+1) +
+				Pix(*obsloc, i-1, j-1) - Pix(*rszloc, i-1, j-1) +
+				Pix(*obsloc, i-1, j)   - Pix(*rszloc, i-1, j)   +
+				Pix(*obsloc, i-1, j+1) - Pix(*rszloc, i-1, j+1) +
+				Pix(*obsloc, i+1, j-1) - Pix(*rszloc, i+1, j-1) +
+				Pix(*obsloc, i+1, j)   - Pix(*rszloc, i+1, j)   +
+				Pix(*obsloc, i+1, j+1) - Pix(*rszloc, i+1, j+1);
     }
 
     dval9 = dval9 / 9.;
     double dval9u = dval9;
 
-    if (dval9u > (readNoiseAmp*0.33))
-        dval9u =  readNoiseAmp*0.33;
-    else if (dval9u <  readNoiseAmp*-0.33)
+    if (dval9u > readNoiseAmp*0.33)
+        dval9u = readNoiseAmp*0.33;
+    else if (dval9u < readNoiseAmp*-0.33)
         dval9u = readNoiseAmp*-0.33;
 
     double dmod1 = 0;
-    if (i>0)
+    if (i > 0)
         dmod1 = Pix(*rszloc, i, j-1) - mval;
 
     double dmod1u = dmod1;
     if (dmod1u > readNoiseAmp*0.33)
-        dmod1u =  readNoiseAmp*0.33;
+        dmod1u = readNoiseAmp*0.33;
     else if (dmod1u < readNoiseAmp*-0.33)
         dmod1u = readNoiseAmp*-0.33;
 
     double dmod2 = 0;
     if (i < nRows-1)
-        dmod2 = Pix(*rszloc, i, j+1) - mval;
+    	dmod2 = Pix(*rszloc, i, j+1) - mval;
 
     double dmod2u = dmod2;
     if (dmod2u > readNoiseAmp*0.33)
-        dmod2u =  readNoiseAmp*0.33;
+        dmod2u = readNoiseAmp*0.33;
     else if (dmod2u < readNoiseAmp*-0.33)
         dmod2u = readNoiseAmp*-0.33;
 
@@ -797,20 +798,20 @@ double find_dadj(const unsigned i, const unsigned j, const FloatTwoDArray * obsl
        THAN THAT, THEN DOWNWEIGHT THE INFLUENCE
        */
     const double readNoiseAmp2 = readNoiseAmp*readNoiseAmp;
-    const double w0 =   (dval0*dval0) / ((dval0*dval0)+ 4.0*(readNoiseAmp2));
-    const double w9 =   (dval9*dval9) / ((dval9*dval9)+ 18.0*(readNoiseAmp2));
-    const double w1 = (4*readNoiseAmp2) / ((dmod1*dmod1)+4.0*(readNoiseAmp2));
-    const double w2 = (4*readNoiseAmp2) / ((dmod2*dmod2)+4.0*(readNoiseAmp2));
+    const double w0 =     dval0 * dval0 / (dval0 * dval0 + 4.0 * readNoiseAmp2);
+    const double w9 =     dval9 * dval9 / (dval9 * dval9 + 18.0 * readNoiseAmp2);
+    const double w1 = 4 * readNoiseAmp2 / (dmod1 * dmod1 + 4.0 * readNoiseAmp2);
+    const double w2 = 4 * readNoiseAmp2 / (dmod2 * dmod2 + 4.0 * readNoiseAmp2);
 
     /*(note that with the last two, if a pixel
       is too discordant with its upper or lower
       that neighbor has less of an ability to
       pull it)*/
 
-    return  (dval0u * w0 * 0.25f) + /* desire to keep the original pixel value */
-            (dval9u * w9 * 0.25f) + /* desire to keep the original sum over 3x3*/
-            (dmod1u * w1 * 0.25f) + /* desire to get closer to the pixel below*/
-            (dmod2u * w2 * 0.25f) ; /* desire to get closer to the pixel above*/
+    return  dval0u * w0 * 0.25f + /* desire to keep the original pixel value */
+            dval9u * w9 * 0.25f + /* desire to keep the original sum over 3x3*/
+            dmod1u * w1 * 0.25f + /* desire to get closer to the pixel below*/
+            dmod2u * w2 * 0.25f; /* desire to get closer to the pixel above*/
 }
 
 
