@@ -220,18 +220,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&raw);
     allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
 
-    /*hardset the science arrays*/
-   /* for (i=0;i<RAZ_COLS;i++){
-        for(j=0;j<RAZ_ROWS;j++){
-            Pix(raw.sci.data,i,j)=hardset;
-            Pix(raz.sci.data,i,j)=hardset;
-            Pix(smoothedImage.sci.data,i,j)=hardset;
-            Pix(rsc.sci.data,i,j)=hardset;
-            Pix(rzc.sci.data,i,j)=hardset;
-        }
-    }
-    */
-
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParams(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
@@ -450,11 +438,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /***CALCULATE THE SMOOTH READNOISE IMAGE***/
     trlmessage("CTE: Calculating smooth readnoise image");
 
+    /*
     SingleGroup razColumnMajor;
     initSingleGroup(&razColumnMajor);
     allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
     assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
     freeSingleGroup(&raz);
+     */
 
     SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     initSingleGroup(&smoothedImage);
@@ -462,13 +452,20 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        if (cteSmoothImage(&razColumnMajor, &smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+        if (cteSmoothImageRowMajor(&raz, &smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
         return (status=ERROR_RETURN);
     }
-    freeSingleGroup(&razColumnMajor);
+    //freeSingleGroup(&razColumnMajor);
+    freeSingleGroup(&raz);//could just re-use this
+
+    SingleGroup smoothedImageColumnMajor;
+    initSingleGroup(&smoothedImageColumnMajor);
+    allocSingleGroup(&smoothedImageColumnMajor, RAZ_COLS, RAZ_ROWS, False);
+    assert(!copySingleGroup(&smoothedImageColumnMajor, &smoothedImage, COLUMNMAJOR));
+    freeSingleGroup(&smoothedImage);
 
     SingleGroup trapPixelMap;
     initSingleGroup(&trapPixelMap);
@@ -484,7 +481,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     allocSingleGroup(&cteCorrectedImage, RAZ_COLS, RAZ_ROWS, True);
 
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(&smoothedImage, &cteCorrectedImage, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(&smoothedImageColumnMajor, &cteCorrectedImage, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
 
     const double scaleFraction = cte_pars.scale_frac;
@@ -501,11 +498,12 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(smoothedImage.sci.data,j,i))/ccdgain;
+           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(smoothedImageColumnMajor.sci.data,j,i))/ccdgain;
            Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + change;
         }
     }
-    freeSingleGroup(&smoothedImage);
+    //freeSingleGroup(&smoothedImage);
+    freeSingleGroup(&smoothedImageColumnMajor);
     freeSingleGroup(&cteCorrectedImage);
     freeSingleGroup(&raw);
 

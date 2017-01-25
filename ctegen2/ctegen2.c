@@ -793,3 +793,181 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
             dmod1u * w1 * 0.25f + /* desire to get closer to the pixel below*/
             dmod2u * w2 * 0.25f; /* desire to get closer to the pixel above*/
 }
+
+int cteSmoothImageRowMajor(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads, int verbose)
+{
+    /*
+       This routine will read in a RAZ image and will output the smoothest
+       image that is consistent with being the observed image plus readnoise. (RSZ image)
+       This is necessary because we want the CTE-correction algorithm to produce the smoothest
+       possible reconstruction, consistent with the original image and the
+       known readnoise.  This algorithm constructs a model that is smooth
+       where the pixel-to-pixel variations can be thought of as being related
+       to readnoise, but if the variations are too large, then it respects
+       the pixel values.  Basically... it uses a 2-sigma threshold.
+
+       This is strategy #1 in a two-pronged strategy to mitigate the readnoise
+       amplification.  Strategy #2 will be to not iterate when the deblurring
+       is less than the readnoise.
+*/
+
+    extern int status;
+
+    const unsigned nRows = input->sci.data.ny;
+    const unsigned nColumns = input->sci.data.nx;
+
+    double rms=0;
+    double nrms=0;
+
+    clock_t begin = clock();
+
+    /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
+      AND INITIALIZE THE OTHER IMAGES*/
+    memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
+    memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
+
+    /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
+    if (readNoiseAmp < 0.1){
+        trlmessage("rnsig < 0.1, No read-noise mitigation needed");
+        return(status);
+    }
+
+    /*GO THROUGH THE ENTIRE IMAGE AND ADJUST PIXELS TO MAKE THEM
+      SMOOTHER, BUT NOT SO MUCH THAT IT IS NOT CONSISTENT WITH
+      READNOISE.  DO THIS IN BABY STEPS SO THAT EACH ITERATION
+      DOES VERY LITTLE ADJUSTMENT AND INFORMATION CAN GET PROPAGATED
+      DOWN THE LINE.
+      */
+
+    SingleGroup zadj;
+    initSingleGroup(&zadj);
+    allocSingleGroup(&zadj, nColumns, nRows, False);
+
+    /***INITIALIZE THE LOCAL IMAGE GROUPS***/
+    SingleGroup rnz;
+    initSingleGroup(&rnz);
+    allocSingleGroup(&rnz, nColumns, nRows, False);
+
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs(); //need to change this (and all others) to use maxThreads passed into main()
+#pragma omp parallel num_threads(nThreads) shared(input, output, readNoiseAmp, rms, nrms, zadj, rnz)
+#endif
+    {
+    const float * obs_loc[3];
+    const float * rsz_loc[3];
+
+    double rmsLocal;
+    double nrmsLocal;
+    for(unsigned iter = 0; iter < 100; ++iter)
+    {
+        rmsLocal = 0;
+        nrmsLocal = 0;
+#ifdef _OPENMP
+        #pragma omp for schedule(dynamic, 1)
+#endif
+        for(unsigned i = 0; i < nRows; ++i)
+        {
+            unsigned imid = i;
+            /*RESET TO MIDDLE nColumns AT ENDPOINTS*/
+            // This seems odd, the edge columns get accounted for twice?
+            if (imid < 1)
+                imid = 1;
+            else if (imid == nRows-1) // NOTE: use of elseif breaks if nColumns = 1
+                imid = nRows-2;
+
+            /*LOCATE THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
+            obs_loc[0] = input->sci.data.data + (imid-1)*nColumns;
+            obs_loc[1] = input->sci.data.data + (imid)*nColumns;
+            obs_loc[2] = input->sci.data.data + (imid+1)*nColumns;
+
+            rsz_loc[0] = output->sci.data.data + (imid-1)*nColumns;
+            rsz_loc[1] = output->sci.data.data + (imid)*nColumns;
+            rsz_loc[2] = output->sci.data.data + (imid+1)*nColumns;
+
+            for (unsigned j = 0; j < nColumns; ++j)
+            {
+                if(Pix(input->dq.data, j, imid))
+                    Pix(zadj.sci.data,j,i) = find_dadj(1+i-imid, j, nColumns, obs_loc, rsz_loc, readNoiseAmp);
+            }
+        } //implicit omp barrier
+
+        /*NOW GO OVER ALL THE nColumns AND nRows AGAIN TO SCALE THE PIXELS
+        */
+#ifdef _OPENMP
+        #pragma omp for schedule(dynamic, 1)
+#endif
+        for(unsigned i = 0; i < nRows; ++i)
+        {
+            for(unsigned j = 0; j < nColumns; ++j)
+            {
+                if (Pix(input->dq.data,j,i))
+                {
+                    Pix(output->sci.data,j,i) += (Pix(zadj.sci.data,j, i)*0.75);
+                    Pix(rnz.sci.data,j,i) = (Pix(input->sci.data,j,i) - Pix(output->sci.data,j,i));
+                }
+            }
+        }//implicit omp barrier
+
+#ifdef _OPENMP
+        #pragma omp single
+        {
+            rms=0;
+            nrms=0;
+        }
+#endif
+
+#ifdef _OPENMP
+        #pragma omp for schedule(dynamic, 1)
+#endif
+        for(unsigned j = 0; j < nRows; ++j)
+        {
+            nrmsLocal = 0;
+            rmsLocal = 0;
+            for(unsigned i = 0; i < nColumns; ++i)
+            {
+                if ( Pix(input->dq.data, i, j) &&
+                     (fabs(Pix(input->sci.data, i, j)) > 0.1 ||
+                     fabs(Pix(output->sci.data, i, j)) > 0.1))
+                {
+                    double tmp = Pix(rnz.sci.data, i, j);
+                    rmsLocal  +=  tmp*tmp;
+                    nrmsLocal += 1.0;
+                }
+            }
+#ifdef _OPENMP
+            #pragma omp critical (aggregate)
+#endif
+            {
+                rms  += rmsLocal;
+                nrms += nrmsLocal;
+            }
+        }//implicit omp barrier
+
+#ifdef _OPENMP
+        #pragma omp single
+        {
+            rms = sqrt(rms/nrms);
+        }
+#endif
+
+        // if it is true that one breaks then it is will be true for all
+        /*epsilon type comparison*/
+        if ( (readNoiseAmp - rms) < 0.00001)
+            break; // this exits loop over iter
+#ifdef _OPENMP
+        #pragma omp barrier
+#endif
+    } // end loop over iter
+    } // close parallel block
+    freeSingleGroup(&zadj);
+    freeSingleGroup(&rnz);
+
+    if (verbose)
+    {
+        double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
+        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i procs/threads\n",timeSpent/maxThreads,maxThreads);
+        trlmessage(MsgText);
+    }
+
+    return (status);
+}
