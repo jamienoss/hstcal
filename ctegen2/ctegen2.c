@@ -434,57 +434,79 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
     return redo;
 }
 
-
-
 int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
 {
+    /*These are already in the parameter structure
+         int     Ws              the number of traps < 999999, taken from pctetab read
+         int     q_w[TRAPS];     the run of charge with level  cte->qlevq_data[]
+         float   dpde_w[TRAPS];  the run of charge loss with level cte->dpdew_data[]
+
+         float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel, TRAPS=999
+         float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)
+
+         The rprof array gives the fraction of charge that comes out of every parallel serial-shift
+         the cummulative distribution in cprof then tells you what's left
+
+   */
+   /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
+     THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
+     IN THE REFERENCE FILE*/
+    /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
+
+          int   iz_data[nRows];  column number in raz format
+          double scale512[nRows];      scaling appropriate at row 512
+          double scale1024[nRows];     scaling appropriate at row 1024
+          double scale1536[nRows];     scaling appropriate at row 1536
+          double scale2048[nRows];     scaling appropriate at row 2048
+     */
     extern int status;
 
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
 
-    double cte_i=0.0;
-    double cte_j=0.0;
-    double ro=0;
-    int io=0;
-    double ff_by_col[nColumns][4];
-    //float hardset=0.0;
+    //double ff_by_col[nColumns][4];
 
-    /*These are already in the parameter structure
-      int     Ws              the number of traps < 999999, taken from pctetab read
-      int     q_w[TRAPS];     the run of charge with level  cte->qlevq_data[]
-      float   dpde_w[TRAPS];  the run of charge loss with level cte->dpdew_data[]
-
-      float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel, TRAPS=999
-      float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)
-
-      The rprof array gives the fraction of charge that comes out of every parallel serial-shift
-      the cummulative distribution in cprof then tells you what's left
-
-*/
-    /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
-      THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
-      IN THE REFERENCE FILE*/
-
-    for (unsigned i = 0; i < nColumns; ++i){
-        ff_by_col[i][0]=1.;
-        ff_by_col[i][1]=1.;
-        ff_by_col[i][2]=1.;
-        ff_by_col[i][3]=1.;
-        unsigned column = cte->iz_data[i]; /*which column to scale*/
+   /* for (unsigned i = 0; i < nColumns; ++i){
+        ff_by_col[i][0]=1;
+        ff_by_col[i][1]=1;
+        ff_by_col[i][2]=1;
+        ff_by_col[i][3]=1;
+        unsigned column = cte->iz_data[i]; //which column to scale
         ff_by_col[column][0]=cte->scale512[i];
         ff_by_col[column][1]=cte->scale1024[i];
         ff_by_col[column][2]=cte->scale1536[i];
         ff_by_col[column][3]=cte->scale2048[i];
+    }*/
 
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs(); //need to change this (and all others) to use maxThreads passed into main()
+    #pragma omp parallel num_threads(nThreads) shared(trapPixelMap, cte)
+#endif
+    {
+    double trapsByColumn[4];
+    double cte_i;
+    double cte_j;
+    double ro;
+    int io;
+
+#ifdef _OPENMP
+    #pragma omp for schedule(dynamic, 1)
+#endif
+    for (unsigned i = 0; i < nColumns; ++i)
+    {
+        //this is only my guess of what should be happening
+        unsigned column = cte->iz_data[i]; /*which column to scale*/
+        //should check 'column' within bounds(?)
+        trapsByColumn[0]=cte->scale512[column];
+        trapsByColumn[1]=cte->scale1024[column];
+        trapsByColumn[2]=cte->scale1536[column];
+        trapsByColumn[3]=cte->scale2048[column];
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
-          */
-
+         */
         for (unsigned j = 0; j < nRows; ++j)
         {
-            //Pix(trapPixelMap->sci.data,i,j)=hardset;
             ro = (double)j / 512.0; /*ro can be zero, it's an index*/
             if (ro > 2.999)
             	ro = 2.999; // only 4 quads, 0 to 3
@@ -492,20 +514,12 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
             	ro = 0;
             io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
             cte_j = (j+1) / 2048.0;
-            cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
+            cte_i = trapsByColumn[io] + (trapsByColumn[io+1] - trapsByColumn[io]) * (ro - io);
+            //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
             PixColumnMajor(trapPixelMap->sci.data,j,i) = (cte_i * cte_j);
         }
     }
-
-    /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
-
-      int   iz_data[nRows];  column number in raz format
-      double scale512[nRows];      scaling appropriate at row 512
-      double scale1024[nRows];     scaling appropriate at row 1024
-      double scale1536[nRows];     scaling appropriate at row 1536
-      double scale2048[nRows];     scaling appropriate at row 2048
-      */
-
+    } // end parallel block
     return(status);
 }
 
