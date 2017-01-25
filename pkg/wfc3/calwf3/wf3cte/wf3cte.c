@@ -456,29 +456,23 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
     freeSingleGroup(&raz);
 
-
     SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     initSingleGroup(&smoothedImage);
-    allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, True);
-
-
-
+    allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, True);//check whether zero init needed
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
         if (cteSmoothImage(&razColumnMajor, &smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
-        //if (cteSmoothImage_old(&raz, &smoothedImage, cte_pars.rn_amp, max_threads))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
         return (status=ERROR_RETURN);
     }
     freeSingleGroup(&razColumnMajor);
-    //assert(!copySingleGroup(&razColumnMajor, &smoothedImage, COLUMNMAJOR));
 
     SingleGroup trapPixelMap;
     initSingleGroup(&trapPixelMap);
-    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, True);
+    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, True);//check whether zero init needed
     if (populateTrapPixelMap(&trapPixelMap, &cte_pars))
     {
     	//Geez, do we not want to free everything???
@@ -499,11 +493,15 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
-	for (unsigned i = 0; i < RAZ_COLS; ++i)
+    const float ccdgain = wf3.ccdgain;
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic, 1), shared(cteCorrectedImage, smoothedImage, raw, rzc)
+#endif
+    for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
         {
-           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(smoothedImage.sci.data,j,i))/wf3.ccdgain;
+           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(smoothedImage.sci.data,j,i))/ccdgain;
            Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + change;
         }
     }
