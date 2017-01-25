@@ -607,12 +607,12 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
             /*LOCATE THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
             obs_loc[0] = input->sci.data.data + (imid-1)*nRows;
-            obs_loc[1] = input->sci.data.data + (imid)*nRows;
-            obs_loc[2] = input->sci.data.data + (imid+1)*nRows;
+            obs_loc[1] = obs_loc[0] + nRows;
+            obs_loc[2] = obs_loc[1] + nRows;
 
             rsz_loc[0] = output->sci.data.data + (imid-1)*nRows;
-            rsz_loc[1] = output->sci.data.data + (imid)*nRows;
-            rsz_loc[2] = output->sci.data.data + (imid+1)*nRows;
+            rsz_loc[1] = rsz_loc[0] + nRows;
+            rsz_loc[2] = rsz_loc[1] + nRows;
 
             for (unsigned j = 0; j < nRows; ++j)
             {
