@@ -650,11 +650,9 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         #pragma omp for schedule(dynamic, 1)
 #endif
         //this is now out of mem order
-        for(unsigned i = 0; i < nRows; ++i)
+        for(unsigned j = 0; j < nColumns; ++j)
         {
-            nrmsLocal = 0;
-            rmsLocal = 0;
-            for(unsigned j = 0; j < nColumns; ++j)
+            for(unsigned i = 0; i < nRows; ++i)
             {
                 if ( PixColumnMajor(input->dq.data, i, j) &&
                      (fabs(PixColumnMajor(input->sci.data, i, j)) > 0.1 ||
@@ -665,14 +663,18 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
                     nrmsLocal += 1.0;
                 }
             }
-#ifdef _OPENMP
-            #pragma omp critical (aggregate)
-#endif
-            {
-                rms  += rmsLocal;
-                nrms += nrmsLocal;
-            }
         }//implicit omp barrier
+
+#ifdef _OPENMP
+        #pragma omp critical (aggregate)
+#endif
+        {
+            rms  += rmsLocal;
+            nrms += nrmsLocal;
+        }
+#ifdef _OPENMP
+        #pragma omp barrier
+#endif
 
 #ifdef _OPENMP
         #pragma omp single
