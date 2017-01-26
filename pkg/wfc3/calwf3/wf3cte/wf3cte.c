@@ -442,9 +442,11 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     }
 
+    //CONVERT TO RAZ
+    makeRAZ(&cd, &ab, &raz);
 
-    /*CONVERT TO RAZ, SUBTRACT BIAS AND CORRECT FOR GAIN*/
-    if (raw2raz(&wf3, &cd, &ab, &raz))
+    //SUBTRACT BIAS AND CORRECT FOR GAIN
+    if (biasAndGainCorrect(&raz, wf3.ccdgain, wf3.subarray))
         return (status);
 
     /***CALCULATE THE SMOOTH READNOISE IMAGE***/
@@ -580,7 +582,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 /********************* SUPPORTING SUBROUTINES *****************************/
 
-int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
+int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubarray){
     /*
 
        convert a raw file to raz file: CDAB longwise amps, save data array
@@ -620,55 +622,65 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 */
     extern int status;
 
-    int i,j,k;              /*loop counters*/
-    int subcol = (RAZ_COLS/4); /* for looping over quads  */
-    extern int status;      /* variable for return status */
+    const unsigned nRows = raz->sci.data.ny;
+    const unsigned subcol = nRows/4; /* for looping over quads  */
+
     float bias_post[4];
     float bsig_post[4];
     float bias_pre[4];
     float bsig_pre[4];
-    float gain;
 
     /*INIT THE ARRAYS*/
-    for(i=0;i<4;i++){
-        bias_post[i]=0.;
-        bsig_post[i]=0.;
-        bias_pre[i]=0.;
-        bsig_pre[i]=0.;
+    for(unsigned i = 0; i < 4; ++i)
+    {
+        bias_post[i]=0;
+        bsig_post[i]=0;
+        bias_pre[i]=0;
+        bsig_pre[i]=0;
     }
-
-    gain=wf3->ccdgain;
-
-    /*REFORMAT TO RAZ*/
-    makeRAZ(cd,ab,raz);
-
 
     /*SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
       Note that for user subarray the image is in only 1 quad, and only
       has prescan bias pixels so the regions are different for full and subarrays
     */
-    if (wf3->subarray){
-        findPreScanBias(raz, bias_pre, bsig_pre);
-        for (k=0;k<4;k++){
-            for (i=0; i<subcol;i++){
-                for (j=0;j<RAZ_ROWS; j++){
-                    if(Pix(raz->dq.data,i+k*subcol,j))
-                        Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
-                        Pix(raz->sci.data,i+k*subcol,j) *= gain;
-                }
-            }
-        }
-    } else {
-        findPostScanBias(raz, bias_post, bsig_post);
-        for (k=0;k<4;k++){
-            for (i=0; i<subcol;i++){
-                for (j=0;j<RAZ_ROWS; j++){
-                    Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
-                    Pix(raz->sci.data,i+k*subcol,j) *= gain;
-                }
+
+    float * bias = bias_post;
+    float * bsig = bsig_post;
+    int (*findScanBias)(SingleGroup *, float *, float * ) = &findPostScanBias;
+
+    if (isSubarray)
+    {
+        bias = bias_pre;
+        bsig = bsig_pre;
+        findScanBias = &findPreScanBias;
+    }
+
+    (*findScanBias)(raz, bias, bsig);
+    for (unsigned k = 0; k < 4; ++k)
+    {
+        for (unsigned i = 0; i < subcol; ++i)
+        {
+            for (unsigned j = 0; j < nRows; ++j)
+            {
+                if(Pix(raz->dq.data,i+k*subcol,j))
+                    Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
+                    Pix(raz->sci.data,i+k*subcol,j) *= ccdGain;
             }
         }
     }
+    /*}
+    else
+    {
+        findPostScanBias(raz, bias_post, bsig_post);
+        for (unsigned k = 0; k < 4; k++){
+            for (i=0; i<subcol;i++){
+                for (j=0;j<RAZ_ROWS; j++){
+                    Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
+                    Pix(raz->sci.data,i+k*subcol,j) *= ccdGain;
+                }
+            }
+        }
+    }*/
 
     return(status);
 }
