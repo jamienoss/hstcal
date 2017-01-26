@@ -220,18 +220,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&raw);
     allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
 
-    /*hardset the science arrays*/
-   /* for (i=0;i<RAZ_COLS;i++){
-        for(j=0;j<RAZ_ROWS;j++){
-            Pix(raw.sci.data,i,j)=hardset;
-            Pix(raz.sci.data,i,j)=hardset;
-            Pix(smoothedImage.sci.data,i,j)=hardset;
-            Pix(rsc.sci.data,i,j)=hardset;
-            Pix(rzc.sci.data,i,j)=hardset;
-        }
-    }
-    */
-
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParams(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
@@ -582,105 +570,55 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 /********************* SUPPORTING SUBROUTINES *****************************/
 
-int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubarray){
-    /*
-
-       convert a raw file to raz file: CDAB longwise amps, save data array
-       for comparison with what jay has during testing
-
-       -->do an additional bias correction using the  residual bias level measured for each amplifier from the
-       steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
-
-       ---> convert into electrons at the end
-       ---> add supplemental bias info to the header
-
-       allocate contiguous 2d array on the heap
-       with pointers and return the pointer to the head of the array
-
-       The Following macros are used to represent 2-d indexing.
-       Two dimensional arrays are stored in FITS order.
-
-       ny
-       ^
-       N | a05   a15   a25   a35
-       A | a04   a14   a24   a34
-       X | a03   a13   a23   a33
-       I | a02   a12   a22   a32
-       S | a01   a11   a21   a31
-       2 | a00   a10   a20   a30
-       ---------------------------> nx
-       NAXIS1
-
-       NAXIS1 is 4 and NAXIS2 is 6
-       PIX(a,1,4) accesses a14
-
-       In the raz image, each quadrant has been rotated such that the readout amp is located at the lower left.
-       The reoriented four quadrants are then arranged into a single 8412x2070 image (science pixels plus overscan),
-       with amps C, D, A, and B, in that order. In the raz image, pixels are all parallel-shifted down,
-       then serial-shifted to the left.
-
-*/
+int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const int isSubarray)
+{
     extern int status;
 
     const unsigned nRows = raz->sci.data.ny;
-    const unsigned subcol = nRows/4; /* for looping over quads  */
+    const unsigned subColumn = nRows/4; /* for looping over quads  */
 
-    float bias_post[4];
-    float bsig_post[4];
-    float bias_pre[4];
-    float bsig_pre[4];
+    float bias[4];
+    float bsig[4];
 
     /*INIT THE ARRAYS*/
     for(unsigned i = 0; i < 4; ++i)
     {
-        bias_post[i]=0;
-        bsig_post[i]=0;
-        bias_pre[i]=0;
-        bsig_pre[i]=0;
+        bias[i] = 0;
+        bsig[i] = 0;
     }
 
-    /*SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
-      Note that for user subarray the image is in only 1 quad, and only
-      has prescan bias pixels so the regions are different for full and subarrays
-    */
-
-    float * bias = bias_post;
-    float * bsig = bsig_post;
-    int (*findScanBias)(SingleGroup *, float *, float * ) = &findPostScanBias;
-
+    // Note that for user subarray the image is in only 1 quad, and only
+    // has prescan bias pixels so the regions are different for full and subarrays
+    int (*findScanBias)(SingleGroup *, float *, float * ) = NULL;
     if (isSubarray)
-    {
-        bias = bias_pre;
-        bsig = bsig_pre;
         findScanBias = &findPreScanBias;
-    }
+    else
+        findScanBias = &findPostScanBias;
 
+    // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
     (*findScanBias)(raz, bias, bsig);
     for (unsigned k = 0; k < 4; ++k)
     {
-        for (unsigned i = 0; i < subcol; ++i)
+        for (unsigned i = 0; i < subColumn; ++i)
         {
             for (unsigned j = 0; j < nRows; ++j)
             {
-                if(Pix(raz->dq.data,i+k*subcol,j))
-                    Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
-                    Pix(raz->sci.data,i+k*subcol,j) *= ccdGain;
-            }
-        }
-    }
-    /*}
-    else
-    {
-        findPostScanBias(raz, bias_post, bsig_post);
-        for (unsigned k = 0; k < 4; k++){
-            for (i=0; i<subcol;i++){
-                for (j=0;j<RAZ_ROWS; j++){
-                    Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
-                    Pix(raz->sci.data,i+k*subcol,j) *= ccdGain;
+                if (isSubarray)
+                {
+                    if(Pix(raz->dq.data, i+k*subColumn, j))
+                    //{
+                        Pix(raz->sci.data, i+k*subColumn, j) -= bias[k];
+                        Pix(raz->sci.data, i+k*subColumn, j) *= ccdGain;
+                    //}
+                }
+                else
+                {
+                    Pix(raz->sci.data, i+k*subColumn, j) -= bias[k];
+                    Pix(raz->sci.data, i+k*subColumn, j) *= ccdGain;
                 }
             }
         }
-    }*/
+    }
 
     return(status);
 }

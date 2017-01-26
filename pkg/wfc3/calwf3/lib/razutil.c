@@ -26,7 +26,43 @@
 
 /*convert the sci and dq extensions to the long format*/
 int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
+    /*
 
+         convert a raw file to raz file: CDAB longwise amps, save data array
+         for comparison with what jay has during testing
+
+         -->do an additional bias correction using the  residual bias level measured for each amplifier from the
+         steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
+
+         ---> convert into electrons at the end
+         ---> add supplemental bias info to the header
+
+         allocate contiguous 2d array on the heap
+         with pointers and return the pointer to the head of the array
+
+         The Following macros are used to represent 2-d indexing.
+         Two dimensional arrays are stored in FITS order.
+
+         ny
+         ^
+         N | a05   a15   a25   a35
+         A | a04   a14   a24   a34
+         X | a03   a13   a23   a33
+         I | a02   a12   a22   a32
+         S | a01   a11   a21   a31
+         2 | a00   a10   a20   a30
+         ---------------------------> nx
+         NAXIS1
+
+         NAXIS1 is 4 and NAXIS2 is 6
+         PIX(a,1,4) accesses a14
+
+         In the raz image, each quadrant has been rotated such that the readout amp is located at the lower left.
+         The reoriented four quadrants are then arranged into a single 8412x2070 image (science pixels plus overscan),
+         with amps C, D, A, and B, in that order. In the raz image, pixels are all parallel-shifted down,
+         then serial-shifted to the left.
+
+  */
     extern int status;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;

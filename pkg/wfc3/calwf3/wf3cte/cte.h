@@ -54,7 +54,7 @@ int GetCorner (Hdr *, int, int *, int *);
 int doCteBias (WF3Info *, SingleGroup *);
 int GetCTEFlags (WF3Info *, Hdr *);
 int a2d_raz(WF3Info *);
-int biasAndGainCorrect(SingleGroup * raz, const float ccdGain, const Bool isSubarray);
+int biasAndGainCorrect(SingleGroup * raz, const float ccdGain, const int isSubarray);
 int findPostScanBias(SingleGroup *, float *, float * );
 int findPreScanBias(SingleGroup *, float *, float *);
 int cteHistory (WF3Info *, Hdr *);
