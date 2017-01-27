@@ -60,6 +60,10 @@ def options(opt):
     opt.add_option(
         '--release-with-symbols', dest='releaseWithSymbols', action='store_true', default=False,
         help='Create a Release build with debug symbols, i.e. with "-g"')
+        
+    opt.add_option(
+        '--O3', dest='optO3', action='store_true', default=False,
+        help='Create a Release build with full optimization, i.e. with "-O3"')
 
     opt.recurse('cfitsio')
 
@@ -196,8 +200,12 @@ def configure(conf):
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
     else:
-        if conf.check_cc(cflags='-O2'):
-            conf.env.append_value('CFLAGS','-O2')
+        if not conf.options.optO3:
+            if conf.check_cc(cflags='-O2'):
+                conf.env.append_value('CFLAGS','-O2')
+        else:
+            if conf.check_cc(cflags='-O3'):
+                conf.env.append_value('CFLAGS','-O3')
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
         #if conf.check_cc(cflags='-fstack-protector-all'):
@@ -206,7 +214,6 @@ def configure(conf):
     if conf.options.releaseWithSymbols and not conf.options.debug:
         if conf.check_cc(cflags='-g'):
             conf.env.append_value('CFLAGS', '-g')
-            
 
 def build(bld):
     bld(name='lib', always=True)

@@ -459,7 +459,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status=ERROR_RETURN);
     }
 
-    // reuse ab
     razColumnMajor = NULL;
     SingleGroup * trapPixelMap = &tempGroup1;
     if (populateTrapPixelMap(trapPixelMap, &cte_pars))
