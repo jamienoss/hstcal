@@ -594,8 +594,7 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
         findOverScanBias(raz, bias, bsig, POSTSCAN);
 
 #ifdef _OPENMP
-    const unsigned nThreads = omp_get_num_procs();
-    #pragma omp parallel num_threads(nThreads) shared(raz, bias, bsig)
+    #pragma omp parallel shared(raz, bias, bsig)
 #endif
     {
     for (unsigned nthChip = 0; nthChip < 4; ++nthChip)

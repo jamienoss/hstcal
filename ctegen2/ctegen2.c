@@ -15,25 +15,6 @@
 char MsgText[256];
 extern void trlmessage (char *message);
 
-/*** this routine does the inverse CTE blurring... it takes an observed
-  image and generates the image that would be pushed through the readout
-  algorithm to generate the observation
-
-  CTE_FF is found using the observation date of the data
-  FIX_ROCRs is cte->fix_rocr
-  Ws is the number of TRAPS that are < 999999
-
-  this is sub_wfc3uv_raz2rac_par in jays code
-
-  floor rounds to negative infinity
-  ceiling rounds to positive infinity
-  truncate rounds up or down to zero
-  round goes to the nearest integer
-
-  fff is the input cte scaling array calculated over all pixels
-  This is a big old time sink function
- ***/
-
 //#define PixColumnMajor(a,j,i) ( (a).storageOrder == ROWMAJOR ? (a).data[(j)*(a).tot_nx + (i)] : (a).data[(i)*(a).tot_ny + (j)] )
 //#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_nx + (i)] // := Pix
 
@@ -88,7 +69,7 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
 int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
-	//WARNING: This function assumes column major storage for 'rsz', 'rsc', & 'trapPixelMap'
+    //WARNING: This function assumes column major storage for 'rsz', 'rsc', & 'trapPixelMap'
     extern int status;
 
     const unsigned nRows = output->sci.data.ny;
@@ -120,8 +101,8 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
     swapFloatStorageOrder(&cteCprof, &cte->cprof->data, COLUMNMAJOR);
 
 #ifdef _OPENMP
-    const unsigned nThreads = omp_get_num_procs();
-#pragma omp parallel num_threads(nThreads) shared(input, output, cte, cteRprof, cteCprof, trapPixelMap)
+    unsigned nThreads = omp_get_num_procs();
+#pragma omp parallel shared(input, output, cte, cteRprof, cteCprof, trapPixelMap)
 #endif
 {
     //get rid of asserts
@@ -131,8 +112,8 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
     assert(model);
     double * tempModel   = malloc(sizeof(*tempModel)*nRows);
     assert(tempModel);
-    double * pix_ctef    = malloc(sizeof(*pix_ctef)*nRows);
-    assert(pix_ctef);
+    double * traps    = malloc(sizeof(*traps)*nRows);
+    assert(traps);
     double * observedAll = malloc(sizeof(*observedAll)*nRows);
     assert(observedAll);
 
@@ -158,25 +139,15 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
             }
         }
         if (!hasFlux)
-        	continue;
-
-        //allocated with calloc
-       /* if (!hasFlux)
-        {
-            for (unsigned i = 0; i < nRows; ++i){
-                PixColumnMajor(rsc->sci.data, i, j) = 0; //check to see if even needed
-            }
             continue;
-        }
-        */
 
-        //rsz->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
+        //input->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
         for (unsigned i = 0; i < nRows; ++i)
         {
             observedAll[i] = PixColumnMajor(input->sci.data,i,j); //Only left in to match master implementation
             observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
-            pix_ctef[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
+            traps[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
         }
 
         unsigned NREDO = 0;
@@ -192,8 +163,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
             for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
             {
                 memcpy(tempModel, model, sizeof(*model)*nRows);
-                simulateColumnReadout(model, pix_ctef, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
-                //memcpy(model, tempModel, sizeof(*model)*nRows);
+                simulateColumnReadout(model, traps, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
 
                 //Now that the updated readout has been simulated, subtract this from the model
                 //to reproduce the actual image, without the CTE trails.
@@ -214,15 +184,17 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
 
             //Do the last forward iteration but don't dampen... no idea why???
             memcpy(tempModel, model, sizeof(*model)*nRows);
-            simulateColumnReadout(model, pix_ctef, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
+            simulateColumnReadout(model, traps, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
             //Now subtract the simulated readout
             for (unsigned i = 0; i < nRows; ++i)
                 model[i] = tempModel[i] - (model[i] - observed[i]);
 
-            REDO =  cte->fix_rocr ? correctCROverSubtraction(pix_ctef, model, observed, nRows,
+            REDO = cte->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
                     cte->thresh) : False;
 
-        } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then need NREDO++
+           // if (REDO)
+             //   printf("Readout cosmic ray detected, redoing computation\n");
+        } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
 
         //Update source array
         for (unsigned i = 0; i < nRows; ++i)
@@ -236,7 +208,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
     delete((void*)&tempModel);
     delete((void*)&observed);
     delete((void*)&model);
-    delete((void*)&pix_ctef);
+    delete((void*)&traps);
 }// close scope for #pragma omp parallel
     freeFloatData(&cteRprof);
     freeFloatData(&cteCprof);
@@ -317,46 +289,47 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
             pixel = pixelColumn[i];
             Bool isInsideTrailLength = nTransfersFromTrap < cte->cte_len;
             Bool isAboveChargeThreshold = pixel >= cte->qlevq_data[w] - 1.;
-            if (isInsideTrailLength || isAboveChargeThreshold)
+
+            if (!isInsideTrailLength && !isAboveChargeThreshold)
+                continue;
+
+            if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
             {
-                if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
-                {
-                    pixel = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
-                    double floored = floor(pixel);
-                    releasedFlux = pixel - floored; /*carry the charge remainder*/
-                    pixel = floored; /*reset pixel*/
-                }
+                pixel = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
+                double floored = floor(pixel);
+                releasedFlux = pixel - floored; /*carry the charge remainder*/
+                pixel = floored; /*reset pixel*/
+            }
 
-                /*HAPPENS AFTER FIRST PASS*/
-                /*SHUFFLE CHARGE IN*/
-                //move out of loop to separate instance?
-                if (i > 0)
-                {
-                    if (pixf[i] < pixf[i-1])
-                        trappedFlux *= (pixf[i] / pixf[i-1]);
-                }
+            /*HAPPENS AFTER FIRST PASS*/
+            /*SHUFFLE CHARGE IN*/
+            //move out of loop to separate instance?
+            if (i > 0)
+            {
+                if (pixf[i] < pixf[i-1])
+                    trappedFlux *= (pixf[i] / pixf[i-1]);
+            }
 
-                /*RELEASE THE CHARGE*/
-                chargeToAdd=0;
-                if (isInsideTrailLength)
-                {
-                    ++nTransfersFromTrap;
-                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
-                }
+            /*RELEASE THE CHARGE*/
+            chargeToAdd = 0;
+            if (isInsideTrailLength)
+            {
+                ++nTransfersFromTrap;
+                chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
+            }
 
-                extraChargeToAdd = 0;
-                chargeToRemove = 0;
-                if (pixel >= cte->qlevq_data[w])
-                {
-                    chargeToRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
-                    if (nTransfersFromTrap < cte->cte_len)
-                        extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
-                    nTransfersFromTrap = 0;
-                    trappedFlux = chargeToRemove;
-                }
+            extraChargeToAdd = 0;
+            chargeToRemove = 0;
+            if (pixel >= cte->qlevq_data[w])
+            {
+                chargeToRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
+                if (nTransfersFromTrap < cte->cte_len)
+                    extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
+                nTransfersFromTrap = 0;
+                trappedFlux = chargeToRemove;
+            }
 
-                pixelColumn[i] += chargeToAdd + extraChargeToAdd - chargeToRemove;
-            } //replaces trap continue
+            pixelColumn[i] += chargeToAdd + extraChargeToAdd - chargeToRemove;
         } //end for i
     } //end for w
     return status;
@@ -409,21 +382,17 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
                  (pix_model[i] + pix_model[i+1] - pix_observed[i] - pix_observed[i+1] < -12.)) ||
 
                 (((pix_model[i] + pix_model[i+1] + pix_model[i+2]) < -15.) &&
-                 ((pix_model[i] + pix_model[i+1] + pix_model[i+2] -pix_observed[i] -
-                   pix_observed[i+1] - pix_observed[i+2]) <-15.))  )
+                 ((pix_model[i] + pix_model[i+1] + pix_model[i+2] - pix_observed[i] -
+                   pix_observed[i+1] - pix_observed[i+2]) < -15.))  )
         {
             redo = True;
             unsigned iMax = i;
 
             /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
-            double deltaFromOffendingCR = pix_model[iMax] - pix_observed[iMax];
             for (unsigned ii = i-10; ii <= i; ++ii)
             {
-                if (pix_model[ii] - pix_observed[ii] > deltaFromOffendingCR)
-                {
+                if ( (pix_model[ii] - pix_observed[ii]) > (pix_model[iMax] - pix_observed[iMax]) )
                     iMax = ii;
-                    deltaFromOffendingCR = pix_model[iMax] - pix_observed[iMax];
-                }
             }
             /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
                BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
@@ -479,11 +448,10 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
     }*/
 
 #ifdef _OPENMP
-    const unsigned nThreads = omp_get_num_procs(); //need to change this (and all others) to use maxThreads passed into main()
-    #pragma omp parallel num_threads(nThreads) shared(trapPixelMap, cte)
+    #pragma omp parallel shared(trapPixelMap, cte)
 #endif
     {
-    double trapsByColumn[4];
+    double trapColumnScale[4];
     double cte_i;
     double cte_j;
     double ro;
@@ -497,10 +465,10 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
         //this is only my guess of what should be happening
         unsigned column = cte->iz_data[i]; /*which column to scale*/
         //should check 'column' within bounds(?)
-        trapsByColumn[0]=cte->scale512[column];
-        trapsByColumn[1]=cte->scale1024[column];
-        trapsByColumn[2]=cte->scale1536[column];
-        trapsByColumn[3]=cte->scale2048[column];
+        trapColumnScale[0]=cte->scale512[column];
+        trapColumnScale[1]=cte->scale1024[column];
+        trapColumnScale[2]=cte->scale1536[column];
+        trapColumnScale[3]=cte->scale2048[column];
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
@@ -514,7 +482,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
             	ro = 0;
             io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
             cte_j = (j+1) / 2048.0;
-            cte_i = trapsByColumn[io] + (trapsByColumn[io+1] - trapsByColumn[io]) * (ro - io);
+            cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
             PixColumnMajor(trapPixelMap->sci.data,j,i) = (cte_i * cte_j);
         }
@@ -579,8 +547,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     allocSingleGroup(&rnz, nColumns, nRows, False);
 
 #ifdef _OPENMP
-    const unsigned nThreads = omp_get_num_procs(); //need to change this (and all others) to use maxThreads passed into main()
-#pragma omp parallel num_threads(nThreads) shared(input, output, readNoiseAmp, rms, nrms, zadj, rnz)
+    #pragma omp parallel shared(input, output, readNoiseAmp, rms, nrms, zadj, rnz)
 #endif
     {
     const float * obs_loc[3];
