@@ -502,7 +502,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /*BACK TO NORMAL FORMATTING*/
     /*Copies rzc data to cd->sci.data and ab->sci.data */
-    undoRAZ(&cd,&ab,&rzc);
+    undoRAZ(&cd, &ab, &rzc);
+    freeSingleGroup(&rzc);
 
     /* COPY BACK THE SCIENCE SUBARRAYS AND
        SAVE THE NEW RAW FILE WITH UPDATED SCIENCE
@@ -550,7 +551,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     }
 
     /** CLEAN UP ON AISLE 3 **/
-    freeSingleGroup(&rzc);
     freeSingleGroup(&cd);
     freeSingleGroup(&ab);
 
@@ -570,12 +570,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 /********************* SUPPORTING SUBROUTINES *****************************/
 
-int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const int isSubarray)
+int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubarray)
 {
     extern int status;
 
+    const unsigned nColumns = raz->sci.data.nx;
     const unsigned nRows = raz->sci.data.ny;
-    const unsigned subColumn = nRows/4; /* for looping over quads  */
+    const unsigned nColumnsPerChip = nColumns / 4; /* for looping over quads  */
 
     float bias[4];
     float bsig[4];
@@ -589,32 +590,28 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const int isSubarr
 
     // Note that for user subarray the image is in only 1 quad, and only
     // has prescan bias pixels so the regions are different for full and subarrays
-    int (*findScanBias)(SingleGroup *, float *, float * ) = NULL;
-    if (isSubarray)
-        findScanBias = &findPreScanBias;
-    else
-        findScanBias = &findPostScanBias;
+    int (*findScanBias)(SingleGroup *, float *, float * ) = isSubarray ? &findPreScanBias : &findPostScanBias;
 
     // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
     (*findScanBias)(raz, bias, bsig);
-    for (unsigned k = 0; k < 4; ++k)
+    for (unsigned nthChip = 0; nthChip < 4; ++nthChip)
     {
-        for (unsigned i = 0; i < subColumn; ++i)
+        for (unsigned i = 0; i < nColumnsPerChip; ++i)
         {
             for (unsigned j = 0; j < nRows; ++j)
             {
                 if (isSubarray)
                 {
-                    if(Pix(raz->dq.data, i+k*subColumn, j))
+                    if(Pix(raz->dq.data, i+nthChip*nColumnsPerChip, j))
                     //{
-                        Pix(raz->sci.data, i+k*subColumn, j) -= bias[k];
-                        Pix(raz->sci.data, i+k*subColumn, j) *= ccdGain;
+                        Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) -= bias[nthChip];
+                        Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) *= ccdGain;
                     //}
                 }
                 else
                 {
-                    Pix(raz->sci.data, i+k*subColumn, j) -= bias[k];
-                    Pix(raz->sci.data, i+k*subColumn, j) *= ccdGain;
+                    Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) -= bias[nthChip];
+                    Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) *= ccdGain;
                 }
             }
         }
