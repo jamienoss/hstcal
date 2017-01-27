@@ -433,18 +433,18 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     //CONVERT TO RAZ
     makeRAZ(&cd, &ab, &raz);
 
-    //SUBTRACT BIAS AND CORRECT FOR GAIN
-    if (biasAndGainCorrect(&raz, wf3.ccdgain, wf3.subarray))
-        return (status);
-
-    /***CALCULATE THE SMOOTH READNOISE IMAGE***/
-    trlmessage("CTE: Calculating smooth readnoise image");
-
     SingleGroup razColumnMajor;
     initSingleGroup(&razColumnMajor);
     allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
     assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
     freeSingleGroup(&raz);
+
+    //SUBTRACT BIAS AND CORRECT FOR GAIN
+    if (biasAndGainCorrect(&razColumnMajor, wf3.ccdgain, wf3.subarray))
+        return (status);
+
+    /***CALCULATE THE SMOOTH READNOISE IMAGE***/
+    trlmessage("CTE: Calculating smooth readnoise image");
 
     SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     initSingleGroup(&smoothedImage);
@@ -607,16 +607,16 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
             {
                 if (isSubarray)
                 {
-                    if(Pix(raz->dq.data, i+nthChip*nColumnsPerChip, j))
+                    if(PixColumnMajor(raz->dq.data, j, i+nthChip*nColumnsPerChip))
                     //{
-                        Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) -= bias[nthChip];
-                        Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) *= ccdGain;
+                        PixColumnMajor(raz->sci.data, j, i+nthChip*nColumnsPerChip) -= bias[nthChip];
+                        PixColumnMajor(raz->sci.data, j, i+nthChip*nColumnsPerChip) *= ccdGain;
                     //}
                 }
                 else
                 {
-                    Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) -= bias[nthChip];
-                    Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j) *= ccdGain;
+                    PixColumnMajor(raz->sci.data, j, i+nthChip*nColumnsPerChip) -= bias[nthChip];
+                    PixColumnMajor(raz->sci.data, j, i+nthChip*nColumnsPerChip) *= ccdGain;
                 }
             }
         }
@@ -680,13 +680,13 @@ int findOverScanBias(SingleGroup *raz, float *mean, float *sigma, enum OverScanT
         rsigma = 0;
         for (unsigned i = iBegin; i < iEnd; ++i)
         {
-            for (unsigned j = 0; j < 2051; ++j) //why 2051 not 2070 (pro where overscan starts)
+            for (unsigned j = 0; j < 2051; ++j) //why 2051 not 2070 (prob where overscan starts)
             { /*all rows*/
                 if (npix < arraySize )
                 {
-                    if (Pix(raz->dq.data, i+(nthChip*nColumnsPerChip), j))
+                    if (PixColumnMajor(raz->dq.data, j, i+(nthChip*nColumnsPerChip))) // is this needed for full frame?
                     {
-                        plist[npix] = Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j);
+                        plist[npix] = PixColumnMajor(raz->sci.data, j, i+nthChip*nColumnsPerChip);
                         npix++;
                     }
                 }
