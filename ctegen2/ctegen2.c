@@ -85,14 +85,14 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
     return ret;
 }
 
-int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
+int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
 	//WARNING: This function assumes column major storage for 'rsz', 'rsc', & 'trapPixelMap'
     extern int status;
 
-    const unsigned nRows = rsc->sci.data.ny;
-    const unsigned nColumns = rsc->sci.data.nx;
+    const unsigned nRows = output->sci.data.ny;
+    const unsigned nColumns = output->sci.data.nx;
 
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
       APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
@@ -121,7 +121,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
 
 #ifdef _OPENMP
     const unsigned nThreads = omp_get_num_procs();
-#pragma omp parallel num_threads(nThreads) shared(rsc, rsz, cte, cteRprof, cteCprof, trapPixelMap)
+#pragma omp parallel num_threads(nThreads) shared(input, output, cte, cteRprof, cteCprof, trapPixelMap)
 #endif
 {
     //get rid of asserts
@@ -136,7 +136,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
     double * observedAll = malloc(sizeof(*observedAll)*nRows);
     assert(observedAll);
 
-    //Due to rsc->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
+    //Due to input->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
     //remove if(!hasFlux) and change schedule to 'static'
 #ifdef _OPENMP
     unsigned chunkSize = (nColumns / nThreads)*0.1; //Have each thread take 10% of its share of the queue at a time
@@ -151,7 +151,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         Bool hasFlux = False;
         for (unsigned i = 0; i < nRows; ++i)
         {
-            if (PixColumnMajor(rsz->dq.data,i,j))
+            if (PixColumnMajor(input->dq.data,i,j))
             {
                 hasFlux = True;
                 break;
@@ -174,8 +174,8 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
         for (unsigned i = 0; i < nRows; ++i)
         {
-            observedAll[i] = PixColumnMajor(rsz->sci.data,i,j); //Only left in to match master implementation
-            observed[i] = PixColumnMajor(rsz->dq.data,i,j) ? observedAll[i] : 0;
+            observedAll[i] = PixColumnMajor(input->sci.data,i,j); //Only left in to match master implementation
+            observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
             pix_ctef[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
         }
 
@@ -227,7 +227,7 @@ int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup
         //Update source array
         for (unsigned i = 0; i < nRows; ++i)
         {
-            PixColumnMajor(rsc->sci.data, i, j) = PixColumnMajor(rsz->dq.data, i, j) ? model[i] : 0;
+            PixColumnMajor(output->sci.data, i, j) = PixColumnMajor(input->dq.data, i, j) ? model[i] : 0;
         }
     } //end loop over columns
 
