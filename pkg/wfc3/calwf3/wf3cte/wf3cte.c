@@ -582,7 +582,7 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
     float bsig[4];
 
     /*INIT THE ARRAYS*/
-    for(unsigned i = 0; i < 4; ++i)
+    for (unsigned i = 0; i < 4; ++i)
     {
         bias[i] = 0;
         bsig[i] = 0;
@@ -590,10 +590,15 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
 
     // Note that for user subarray the image is in only 1 quad, and only
     // has prescan bias pixels so the regions are different for full and subarrays
-    int (*findScanBias)(SingleGroup *, float *, float * ) = isSubarray ? &findPreScanBias : &findPostScanBias;
+    //int (*findScanBias)(SingleGroup *, float *, float * ) = isSubarray ? &findPreScanBias : &findPostScanBias;
 
     // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
-    (*findScanBias)(raz, bias, bsig);
+    //(*findScanBias)(raz, bias, bsig);
+    if (isSubarray)
+        findOverScanBias(raz, bias, bsig, PRESCAN);
+    else
+        findOverScanBias(raz, bias, bsig, POSTSCAN);
+
     for (unsigned nthChip = 0; nthChip < 4; ++nthChip)
     {
         for (unsigned i = 0; i < nColumnsPerChip; ++i)
@@ -620,142 +625,88 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
     return(status);
 }
 
-/*calculate the post scan and bias after the biac file has been subtracted
-  add some history information to the header
+int findOverScanBias(SingleGroup *raz, float *mean, float *sigma, enum OverScanType overScanType)
+{
+	/*calculate the post scan and bias after the biac file has been subtracted
+	  add some history information to the header
 
-  Jay gave no explanation why plist is limited to 55377 for full arrays, his
-  subarray limitation was just 1/4 of this value
+	  Jay gave no explanation why plist is limited to 55377 for full arrays, his
+	  subarray limitation was just 1/4 of this value
 
-  the serial virtual overscan pixels are also called the trailing-edge pixels
-  these only exist in full frame images
-  */
+	  the serial virtual overscan pixels are also called the trailing-edge pixels
+	  these only exist in full frame images
+	  */
 
-int findPostScanBias(SingleGroup *raz, float *mean, float *sigma){
+	/*CALCULATE THE PRE SCAN AND BIAS AFTER THE BIAC FILE HAS BEEN SUBTRACTED
 
-    extern int status;
-    int arrsize = 55377;
-    int i,j,k;              /*Looping variables */
-    float plist[arrsize];  /*bias bpixels to measure*/
-    float *plistSub;
-    float min=0.0;
-    float max=0.0;
-    float rmean=0.0;
-    float rsigma=0.0;
-    float sigreg =7.5; /*sigma clip*/
+	  The serial physical overscan pixels are also known as the serial prescan,
+	  they are the only pixels available for subarrays. For full frame arrays
+	  the prescan is not used as part of the correction, instead the virtual
+	  overscan pixels are used and modeled in findPostScanBias.
 
-
-    int subcol = RAZ_COLS/4;
-    int npix=0; /*track array size for resistant mean*/
-
-    /*init plist for full size
-      We'll allocate heap memory for smaller arrays
-      */
-    for (i=0;i<arrsize;i++){
-        plist[i]=0.;
-    }
-
-    for (k=0;k<4;k++){  /*for each quadrant cdab = 0123*/
-        npix=0; /*reset for each quad*/
-        rmean=0.;
-        rsigma=0.;
-        for (i=RAZ_ROWS+5;i<= subcol-1; i++){ /*quad area for post scan bias pixels*/
-            for (j=0; j<2051; j++){
-                if (npix < arrsize){
-                    if ( Pix(raz->dq.data,i+k*subcol,j)) {
-                        plist[npix] = Pix(raz->sci.data,i+k*subcol,j);
-                        npix+=1;
-                    }
-                }
-            }
-        }
-        if (npix > 0 ){
-            plistSub = (float *) calloc(npix, sizeof(float));
-            if (plistSub == NULL){
-                trlerror("out of memory for resistmean entrance in findPostScanBias.");
-                free(plistSub);
-                return (ERROR_RETURN);
-            }
-            for(i=0; i<npix; i++){
-                plistSub[i]=plist[i];
-            }
-            resistmean(plistSub, npix, sigreg, &rmean, &rsigma, &min, &max);
-            free(plistSub);
-        }
-        mean[k]= rmean;
-        sigma[k] = rsigma;
-    }
-    return status;
-}
-
-/*CALCULATE THE PRE SCAN AND BIAS AFTER THE BIAC FILE HAS BEEN SUBTRACTED
-
-  The serial physical overscan pixels are also known as the serial prescan,
-  they are the only pixels available for subarrays. For full frame arrays
-  the prescan is not used as part of the correction, instead the virtual
-  overscan pixels are used and modeled in findPostScanBias.
-
-*/
-
-int findPreScanBias(SingleGroup *raz, float *mean, float *sigma){
+	*/
     /** this calls resistmean, which does a better job clipping outlying pixels
       that just a standard stddev clip single pass*/
 
     extern int status;
-    int arrsize = 55377;
-    int i,j,k;              /*Looping variables */
-    float plist[arrsize];    /*bias pixels to measure*/
-    float *plistSub; /*heap allocation for variable size plist array*/
-    float min=0.0;
-    float max=0.0;
-    float rmean;
-    float rsigma;
-    float sigreg =7.5; /*sigma clip*/
-    int subcol = RAZ_COLS/4;
-    int npix=0; /*track array size for resistant mean*/
+    const unsigned arraySize = 55377; // ????????
+    const unsigned nRows = raz->sci.data.ny;
+    const unsigned nColumns = raz->sci.data.nx;
+    const unsigned nColumnsPerChip = nColumns / 4;
 
-
-    /*init plist*/
-    for (i=0;i<arrsize;i++){
-        plist[i]=0.;
+    // post-scan settings (full frame)
+    unsigned iBegin = nRows + 5;
+    unsigned iEnd = nColumnsPerChip - 1;
+    // pre-scan settings (subarray)
+    if (overScanType == PRESCAN)
+    {
+        iBegin = 5;
+        iEnd = 25;
     }
 
-    for (k=0;k<4;k++){  /*for each quadrant, CDAB ordered*/
-        npix=0;
-        rmean=0.;
-        rsigma=0.;
-        for (i=5;i<25; i++){
-            for (j=0; j<2051; j++){ /*all rows*/
-                if (npix < arrsize ){
-                    if (Pix(raz->dq.data,i+(k*subcol),j)){
-                        plist[npix] = Pix(raz->sci.data,i+k*subcol,j);
-                        npix+=1;
+    unsigned npix; /*track array size for resistant mean*/
+    float min=0;
+    float max=0;
+    const float sigreg = 7.5; /*sigma clip*/
+    float rmean;
+    float rsigma;
+    float * plist = calloc(arraySize, sizeof(*plist));    /*bias pixels to measure*/
+    assert(plist);
+
+    for (unsigned nthChip = 0; nthChip < 4; ++nthChip)
+    {  /*for each quadrant, CDAB ordered*/
+        npix = 0;
+        rmean = 0;
+        rsigma = 0;
+        for (unsigned i = iBegin; i < iEnd; ++i)
+        {
+            for (unsigned j = 0; j < 2051; ++j) //why 2051 not 2070 (pro where overscan starts)
+            { /*all rows*/
+                if (npix < arraySize )
+                {
+                    if (Pix(raz->dq.data, i+(nthChip*nColumnsPerChip), j))
+                    {
+                        plist[npix] = Pix(raz->sci.data, i+nthChip*nColumnsPerChip, j);
+                        npix++;
                     }
                 }
             }
          }
 
-        if (0 < npix ){
-            plistSub = (float *) calloc(npix, sizeof(float));
-            if (plistSub == NULL){
-                trlerror("out of memory for resistmean entrance in findPostScanBias.");
-                free(plistSub);
-                return (ERROR_RETURN);
-            }
-            for(i=0; i<npix; i++){
-                plistSub[i]=plist[i];
-            }
-            resistmean(plistSub, npix, sigreg, &rmean, &rsigma, &min, &max);
-            free(plistSub);
-        }
+        if (npix > 0)
+            resistmean(plist, npix, sigreg, &rmean, &rsigma, &min, &max);
 
-        mean[k]= rmean;
-        sigma[k] = rsigma;
-        if(npix>0)
-            printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n",npix,k+1,rmean,k+1,rsigma);
+        mean[nthChip] = rmean;
+        sigma[nthChip] = rsigma;
+        if (npix > 0)
+            printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n",npix,nthChip+1,rmean,nthChip+1,rsigma);
     }
+
+    if (plist)
+        free(plist);
+
     return status;
 }
-
 int initCTETrl (char *input, char *output) {
 
     extern int status;
