@@ -67,6 +67,6 @@ int GetCTESwitch (WF3Info *, Hdr *);
 int initCTETrl (char *, char *);
 
 int makeRAZ(const SingleGroup *, const SingleGroup *, SingleGroup *);
-int undoRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
+int undoRAZ(SingleGroup *, SingleGroup *, const SingleGroup *);
 
 #endif
