@@ -66,7 +66,7 @@ int free_array(float **ptr, int rows, int columns);
 int GetCTESwitch (WF3Info *, Hdr *);
 int initCTETrl (char *, char *);
 
-int makeRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
+int makeRAZ(const SingleGroup *, const SingleGroup *, SingleGroup *);
 int undoRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
 
 #endif

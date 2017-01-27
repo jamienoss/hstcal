@@ -3,6 +3,10 @@
 # include "wf3.h"
 # include "wf3err.h"
 
+# ifdef _OPENMP
+#  include <omp.h>
+# endif
+
 /* These routines facilitate moving between the regular WFC3 image structre
    to the RAZ image structure used in the CTE correction and Sink pixel flagging
 
@@ -25,7 +29,8 @@
 
 
 /*convert the sci and dq extensions to the long format*/
-int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
+int makeRAZ(const SingleGroup *cd, const SingleGroup *ab, SingleGroup *raz)
+{
     /*
 
          convert a raw file to raz file: CDAB longwise amps, save data array
@@ -64,25 +69,32 @@ int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
   */
     extern int status;
-    int subcol = (RAZ_COLS/4); /* for looping over quads  */
-    int i,j;
 
-        for (i=0; i<subcol; i++){
-            for (j=0; j<RAZ_ROWS; j++){
-                Pix(raz->sci.data,i,j)=Pix(cd->sci.data,i,j);
-                Pix(raz->sci.data,i+subcol,j)=Pix(cd->sci.data,subcol*2-i-1,j);
-                Pix(raz->sci.data,i+2*subcol,j)=Pix(ab->sci.data,i,RAZ_ROWS-j-1);
-                Pix(raz->sci.data,i+3*subcol,j)=Pix(ab->sci.data,subcol*2-i-1,RAZ_ROWS-j-1);
+    const unsigned nColumns = raz->sci.data.nx;
+    const unsigned nRows = raz->sci.data.ny;
+    const unsigned nColumnsPerChip = nColumns / 4; /* for looping over quads  */
 
-                Pix(raz->dq.data,i,j)=Pix(cd->dq.data,i,j);
-                Pix(raz->dq.data,i+subcol,j)=Pix(cd->dq.data,subcol*2-i-1,j);
-                Pix(raz->dq.data,i+2*subcol,j)=Pix(ab->dq.data,i,RAZ_ROWS-j-1);
-                Pix(raz->dq.data,i+3*subcol,j)=Pix(ab->dq.data,subcol*2-i-1,RAZ_ROWS-j-1);
-            }
-        }
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+    #pragma omp parallel for num_threads(nThreads) shared(raz, cd, ab) schedule(dynamic, 1)
+#endif
+	for (unsigned i = 0; i < nColumnsPerChip; ++i)
+	{
+		for (unsigned j = 0; j < nRows; ++j)
+		{
+			Pix(raz->sci.data, i, j) = Pix(cd->sci.data, i, j);
+			Pix(raz->sci.data, i+nColumnsPerChip, j) = Pix(cd->sci.data, nColumnsPerChip*2-i-1, j);
+			Pix(raz->sci.data, i+2*nColumnsPerChip, j) = Pix(ab->sci.data, i, RAZ_ROWS-j-1);
+			Pix(raz->sci.data, i+3*nColumnsPerChip, j) = Pix(ab->sci.data, nColumnsPerChip*2-i-1, RAZ_ROWS-j-1);
 
-    return(status);
+			Pix(raz->dq.data, i, j) = Pix(cd->dq.data, i, j);
+			Pix(raz->dq.data, i+nColumnsPerChip, j) = Pix(cd->dq.data, nColumnsPerChip*2-i-1, j);
+			Pix(raz->dq.data, i+2*nColumnsPerChip, j) = Pix(ab->dq.data, i, RAZ_ROWS-j-1);
+			Pix(raz->dq.data, i+3*nColumnsPerChip, j) = Pix(ab->dq.data, nColumnsPerChip*2-i-1, RAZ_ROWS-j-1);
+		}
+	}
 
+    return status;
 }
 
 
