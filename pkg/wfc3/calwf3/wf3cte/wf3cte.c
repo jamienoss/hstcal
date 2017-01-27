@@ -447,7 +447,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     //could reuse raz?
     SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     initSingleGroup(&smoothedImage);
-    allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, True);//check whether zero init needed
+    allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, False); // don't 0 init cteSmoothImage memcpys first
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
@@ -461,7 +461,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     SingleGroup trapPixelMap;
     initSingleGroup(&trapPixelMap);
-    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, True);//check whether zero init needed
+    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, False);
     if (populateTrapPixelMap(&trapPixelMap, &cte_pars))
     {
     	//Geez, do we not want to free everything???
@@ -487,7 +487,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, False);
     const float ccdgain = wf3.ccdgain;
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1), shared(cteCorrectedImage, smoothedImage, raw, rzc)
+    #pragma omp parallel for schedule(static), shared(cteCorrectedImage, smoothedImage, raw, rzc)
 #endif
     for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
