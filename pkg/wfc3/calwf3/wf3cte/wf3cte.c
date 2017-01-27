@@ -446,6 +446,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /***CALCULATE THE SMOOTH READNOISE IMAGE***/
     trlmessage("CTE: Calculating smooth readnoise image");
 
+    //could reuse raz?
     SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     initSingleGroup(&smoothedImage);
     allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, True);//check whether zero init needed
