@@ -82,8 +82,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup ab; /*SCI 2, chip 1*/
     SingleGroup subcd; /*subarray chip*/
     SingleGroup subab; /*subarray chip*/
-    SingleGroup raz; /* THE LARGE FORMAT COMBINATION OF CDAB*/
-    SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
     SingleGroup raw; /* THE RAW IMAGE IN RAZ FORMAT */
 
     int i,j; /*loop vars*/
@@ -211,14 +209,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
     /*SET UP THE ARRAYS WHICH WILL BE PASSED AROUND*/
-    initSingleGroup(&raz);
-    allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS, True);
-
-    initSingleGroup(&rzc);
-    allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, True);
-
     initSingleGroup(&raw);
-    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
+    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, False);
 
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
@@ -431,8 +423,12 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     }
 
     //CONVERT TO RAZ
+    SingleGroup raz; /* THE LARGE FORMAT COMBINATION OF CDAB*/
+    initSingleGroup(&raz);
+    allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS, False);
     makeRAZ(&cd, &ab, &raz);
 
+    //copy to column major storage
     SingleGroup razColumnMajor;
     initSingleGroup(&razColumnMajor);
     allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
@@ -484,6 +480,9 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
+    SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
+    initSingleGroup(&rzc);
+    allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, False);
     const float ccdgain = wf3.ccdgain;
 #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic, 1), shared(cteCorrectedImage, smoothedImage, raw, rzc)
@@ -602,13 +601,13 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
 
 #ifdef _OPENMP
     const unsigned nThreads = omp_get_num_procs();
-    #pragma omp parallel num_threads(nThreads) shared(bias, bsig)
+    #pragma omp parallel num_threads(nThreads) shared(raz, bias, bsig)
 #endif
     {
     for (unsigned nthChip = 0; nthChip < 4; ++nthChip)
     {
 #ifdef _OPENMP
-        #pragma omp for schedule(dynamic, 1)
+        #pragma omp for schedule(static)
 #endif
         for (unsigned i = 0; i < nColumnsPerChip; ++i)
         {
