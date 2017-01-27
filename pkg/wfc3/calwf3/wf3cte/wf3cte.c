@@ -431,81 +431,74 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     makeRAZ(&cd, &ab, &raz);
 
     //copy to column major storage
-    SingleGroup razColumnMajor;
-    initSingleGroup(&razColumnMajor);
-    allocSingleGroup(&razColumnMajor, RAZ_COLS, RAZ_ROWS, False);
-    assert(!copySingleGroup(&razColumnMajor, &raz, COLUMNMAJOR));
-    freeSingleGroup(&raz);
+    SingleGroup tempGroup1;
+    initSingleGroup(&tempGroup1);
+    allocSingleGroup(&tempGroup1, RAZ_COLS, RAZ_ROWS, False);
+    SingleGroup * razColumnMajor = &tempGroup1;
+    assert(!copySingleGroup(razColumnMajor, &raz, COLUMNMAJOR));
 
     //SUBTRACT BIAS AND CORRECT FOR GAIN
-    if (biasAndGainCorrect(&razColumnMajor, wf3.ccdgain, wf3.subarray))
+    if (biasAndGainCorrect(razColumnMajor, wf3.ccdgain, wf3.subarray))
         return (status);
 
     /***CALCULATE THE SMOOTH READNOISE IMAGE***/
     trlmessage("CTE: Calculating smooth readnoise image");
 
-    //could reuse raz?
-    SingleGroup smoothedImage; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
-    initSingleGroup(&smoothedImage);
-    allocSingleGroup(&smoothedImage, RAZ_COLS, RAZ_ROWS, False); // don't 0 init cteSmoothImage memcpys first
+    /* LARGE FORMAT READNOISE CORRECTED IMAGE */
+    SingleGroup tempGroup2;
+    initSingleGroup(&tempGroup2);
+    allocSingleGroup(&tempGroup2, RAZ_COLS, RAZ_ROWS, False);
+    SingleGroup * smoothedImage = &tempGroup2;
 
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        if (cteSmoothImage(&razColumnMajor, &smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+        if (cteSmoothImage(razColumnMajor, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
             return (status);
     } else {
         trlmessage("Only noise model 0 implemented!");
         return (status=ERROR_RETURN);
     }
-    freeSingleGroup(&razColumnMajor);
 
-    SingleGroup trapPixelMap;
-    initSingleGroup(&trapPixelMap);
-    allocSingleGroup(&trapPixelMap, RAZ_COLS, RAZ_ROWS, False);
-    if (populateTrapPixelMap(&trapPixelMap, &cte_pars))
+    // reuse ab
+    razColumnMajor = NULL;
+    SingleGroup * trapPixelMap = &tempGroup1;
+    if (populateTrapPixelMap(trapPixelMap, &cte_pars))
     {
     	//Geez, do we not want to free everything???
         return status;
     }
 
-    SingleGroup cteCorrectedImage;
-    initSingleGroup(&cteCorrectedImage);
-    allocSingleGroup(&cteCorrectedImage, RAZ_COLS, RAZ_ROWS, True);
-
+    //reuse raz
+    SingleGroup * cteCorrectedImage = &raz;
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(&smoothedImage, &cteCorrectedImage, &trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
+    trapPixelMap = NULL;
+    freeSingleGroup(&tempGroup1);
 
     const double scaleFraction = cte_pars.scale_frac;
     freeCTEParams(&cte_pars);
-    freeSingleGroup(&trapPixelMap);
-
 
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
-    SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
-    initSingleGroup(&rzc);
-    allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, False);
     const float ccdgain = wf3.ccdgain;
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(static), shared(cteCorrectedImage, smoothedImage, raw, rzc)
+    #pragma omp parallel for schedule(static), shared(cteCorrectedImage, smoothedImage, raw)
 #endif
     for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
-           double change = (PixColumnMajor(cteCorrectedImage.sci.data,j,i) - PixColumnMajor(smoothedImage.sci.data,j,i))/ccdgain;
-           Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + change;
-        }
+            Pix(raw.sci.data,i,j) += (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
     }
-    freeSingleGroup(&smoothedImage);
-    freeSingleGroup(&cteCorrectedImage);
-    freeSingleGroup(&raw);
+    cteCorrectedImage = NULL;
+    freeSingleGroup(&raz);
+    smoothedImage = NULL;
+    freeSingleGroup(&tempGroup2);
 
 
     /*BACK TO NORMAL FORMATTING*/
     /*Copies rzc data to cd->sci.data and ab->sci.data */
-    undoRAZ(&cd, &ab, &rzc);
-    freeSingleGroup(&rzc);
+    undoRAZ(&cd, &ab, &raw);
+    freeSingleGroup(&raw);
 
     /* COPY BACK THE SCIENCE SUBARRAYS AND
        SAVE THE NEW RAW FILE WITH UPDATED SCIENCE
