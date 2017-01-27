@@ -599,8 +599,16 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
     else
         findOverScanBias(raz, bias, bsig, POSTSCAN);
 
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+    #pragma omp parallel num_threads(nThreads) shared(bias, bsig)
+#endif
+    {
     for (unsigned nthChip = 0; nthChip < 4; ++nthChip)
     {
+#ifdef _OPENMP
+        #pragma omp for schedule(dynamic, 1)
+#endif
         for (unsigned i = 0; i < nColumnsPerChip; ++i)
         {
             for (unsigned j = 0; j < nRows; ++j)
@@ -621,6 +629,7 @@ int biasAndGainCorrect(SingleGroup *raz, const float ccdGain, const Bool isSubar
             }
         }
     }
+    } // close parallel block
 
     return(status);
 }
