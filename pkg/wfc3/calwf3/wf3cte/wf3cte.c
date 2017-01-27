@@ -266,7 +266,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /*create an empty full size chip for pasting*/
             initSingleGroup(&cd);
-            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, True);
+            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, False); // CreateEmptyChip 0 init
             cd.group_num=1;
             CreateEmptyChip(&wf3, &cd);
 
@@ -295,7 +295,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /* now create an empty chip 1*/
             initSingleGroup(&ab);
-            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, True);
+            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, False); // CreateEmptyChip 0 init
             ab.group_num=2;
             CreateEmptyChip(&wf3, &ab);
 
@@ -327,7 +327,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /*make an empty fullsize chip for pasting*/ //Redo only allocate enough for subarray and not full frame!
             initSingleGroup(&ab);
-            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, True);
+            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, False); // Sub2Full will 0 init
             ab.group_num=2;
             CreateEmptyChip(&wf3, &ab);
 
@@ -357,7 +357,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
             /* now create an empty chip 2*/
             initSingleGroup(&cd);
-            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, True);
+            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, False); // CreateEmptyChip 0 init
             cd.group_num=1;
             CreateEmptyChip(&wf3, &cd);
 
@@ -393,8 +393,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         }
 
         /*setup the mask*/
-        for(i=0; i< ab.dq.data.nx; i++){
-            for(j=0; j< ab.dq.data.ny; j++){
+        for (unsigned j = 0; j < ab.dq.data.ny; ++j)
+        {
+            for (unsigned i = 0; i < ab.dq.data.nx; ++i)
+            {
                 PPix(&ab.dq.data, i, j) = 1;
                 PPix(&cd.dq.data, i, j) = 1;
             }
