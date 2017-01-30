@@ -700,7 +700,7 @@ int findOverScanBias(SingleGroup *raz, float *mean, float *sigma, enum OverScanT
 
         mean[nthChip] = rmean;
         sigma[nthChip] = rsigma;
-        if (npix > 0)
+        if (overScanType == PRESCAN && npix > 0)
             printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n",npix,nthChip+1,rmean,nthChip+1,rsigma);
     }
 
