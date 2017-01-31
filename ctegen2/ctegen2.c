@@ -774,24 +774,18 @@ int inverse_cte_blur(const SingleGroup *_rsz, SingleGroup *_rsc, SingleGroup *_f
     SingleGroup * rsz = &__rsz;
     initSingleGroup(rsz);
     allocSingleGroup(rsz, RAZ_COLS, RAZ_ROWS, False);
-    //assert(!copySingleGroup(rsz, _rsz, ROWMAJOR));
+
+    assert(_rsz->sci.data.storageOrder == COLUMNMAJOR);
+    assert(_rsz->dq.data.storageOrder == COLUMNMAJOR);
+
+    assert(!copySingleGroup(rsz, _rsz, ROWMAJOR));
 
     SingleGroup __fff;
     SingleGroup * fff = &__fff;
     initSingleGroup(fff);
     allocSingleGroup(fff, RAZ_COLS, RAZ_ROWS, False);
-    //copySingleGroup(fff, _fff, ROWMAJOR);
-
-    for (unsigned i = 0; i < RAZ_COLS; ++i)
-    {
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
-            Pix(fff->sci.data, i, j) = PixColumnMajor(_fff->sci.data, j, i);
-            Pix(rsz->sci.data, i, j) = PixColumnMajor(_rsz->sci.data, j, i);
-            Pix(rsz->dq.data, i, j) = PixColumnMajor(_rsz->dq.data, j, i);
-        }
-    }
-
+    assert(_fff->sci.data.storageOrder == COLUMNMAJOR);
+    copySingleGroup(fff, _fff, ROWMAJOR);
 
     extern int status;
 
@@ -997,26 +991,18 @@ int inverse_cte_blur(const SingleGroup *_rsz, SingleGroup *_rsc, SingleGroup *_f
 
     } /*end i*/
 
- /*   SingleGroup __rsc;
-      SingleGroup * rsc = &__rsc;
-      initSingleGroup(rsc);
-      allocSingleGroup(rsc, RAZ_COLS, RAZ_ROWS, True);
-      //assert(!copySingleGroup(rsc, _rsc, ROWMAJOR));
-*/
-
-
-    for (i=0; i< RAZ_COLS; i++){
+ /*   for (i=0; i< RAZ_COLS; i++){
         for (j=0; j< RAZ_ROWS; j++){
             if(Pix(rsz->dq.data,i,j)){
                 Pix(rsz->sci.data,i,j) = Pix(rz.sci.data,i,j);
-                PixColumnMajor(_rsc->sci.data,j,i) = Pix(rc.sci.data,i,j);
-                //Pix(_rsc->sci.data,i,j) = Pix(rc.sci.data,i,j);
+                //PixColumnMajor(_rsc->sci.data,j,i) = Pix(rc.sci.data,i,j);
+                //Pix(rsc->sci.data,i,j) = Pix(rc.sci.data,i,j);
                 Pix(fff->sci.data,i,j) = Pix(pixz_fff.sci.data,i,j);
             }
         }
     }
-
-    //copySingleGroup(_rsc, &rc, COLUMNMAJOR);
+*/
+    copySingleGroup(_rsc, &rc, COLUMNMAJOR);
 
     freeSingleGroup(&rz);
     freeSingleGroup(&rc);

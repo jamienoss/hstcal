@@ -839,6 +839,17 @@ int allocSingleGroup(SingleGroup *x, int i, int j, Bool zeroInitialize) {
         return 0;
 }
 
+void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder)
+{
+    if (!group)
+        return;
+
+    group->sci.data.storageOrder = storageOrder;
+    group->err.data.storageOrder = storageOrder;
+    group->dq.data.storageOrder = storageOrder;
+
+}
+
 int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder)
 {
     //WARNING assumes target pre allocated and initialized (entire tree). This way data can be copied to pre
@@ -847,6 +858,8 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
 
     if (!target || !source)
         return -1;
+
+    setStorageOrder(target, targetStorageOrder);
 
     if (source->filename)
     {

@@ -732,6 +732,7 @@ IShortHdrData }
 void initSingleGroup(SingleGroup *);
 int allocSingleGroup(SingleGroup *, int, int, Bool zeroInitialize);
 void freeSingleGroup(SingleGroup *);
+void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder);
 int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder);
 # define IMultiGroup { 0, NULL }
 void initMultiGroup(MultiGroup *);
