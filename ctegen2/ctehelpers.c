@@ -510,13 +510,14 @@ No.    Name         Type      Cards   Dimensions   Format
     ctemessage("Reading in image from extension 3");
 
     /* Get the coefficient images from the PCTETAB */
-    pars->rprof = calloc(1,sizeof(*pars->rprof));
+    pars->rprof = malloc(sizeof(*pars->rprof));
     if (pars->rprof == NULL){
         sprintf (MsgText, "Can't allocate memory for RPROF ref data");
         trlerror (MsgText);
         return (status = 1);
     }
     initFloatHdrData(pars->rprof);
+    pars->rprof->data.storageOrder = COLUMNMAJOR;
     if (getFloatHD (filename, "RPROF", 1, pars->rprof)){
         return (status=1);
     }
@@ -526,7 +527,7 @@ No.    Name         Type      Cards   Dimensions   Format
     /* ext number 4 : cummulative trail profile as image */
     ctemessage("Reading in image from extension 4");
 
-    pars->cprof  = calloc(1,sizeof(*pars->cprof));
+    pars->cprof  = malloc(sizeof(*pars->cprof));
     if (pars->cprof == NULL){
         sprintf (MsgText, "Can't allocate memory for CPROF ref data");
         trlerror (MsgText);
@@ -535,6 +536,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
     /* Get the coefficient images from the PCTETAB */
     initFloatHdrData (pars->cprof);
+    pars->cprof->data.storageOrder = COLUMNMAJOR;
     if (getFloatHD (filename, "CPROF", 1, pars->cprof)){
         return (status=1);
     }

@@ -177,10 +177,12 @@ typedef struct {
 */
 
 # define Pix(a,i,j)      (a).data[(j)*(a).tot_nx + (i)]
+# define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_ny + (i)]
 # define DQPix(a,i,j)    (a).data[(j)*(a).tot_nx + (i)]
 # define DQSetPix(a,i,j,value) (a).data[(j)*(a).tot_nx + (i)] = (value)
 
 # define PPix(a,i,j)      (a)->data[(j)*(a)->tot_nx + (i)]
+# define PPixColumnMajor(a,i,j) (a)->data[(j)*(a)->tot_ny + (i)]
 # define PDQPix(a,i,j)    (a)->data[(j)*(a)->tot_nx + (i)]
 # define PDQSetPix(a,i,j,value) (a)->data[(j)*(a)->tot_nx + (i)] = (value)
 
