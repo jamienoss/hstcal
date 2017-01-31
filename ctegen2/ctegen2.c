@@ -53,7 +53,7 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
     int ret = inverseCTEBlur(rsz, rsc, trapPixelMap, cte, verbose, expstart);
 */
 
-    int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte, verbose, expstart);
+    int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte);
 
     //copy data back
     copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
@@ -66,30 +66,20 @@ int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, 
     return ret;
 }
 
-int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const SingleGroup * trapPixelMap, CTEParams * cte,
-        const int verbose, const double expstart)
+int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParams * cte)
 {
     //WARNING: This function assumes column major storage for 'rsz', 'rsc', & 'trapPixelMap'
     extern int status;
 
     const unsigned nRows = output->sci.data.ny;
     const unsigned nColumns = output->sci.data.nx;
+    const double rnAmp2 = cte->rn_amp * cte->rn_amp;
 
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
       APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
       INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
       CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
       OVER 3 YEARS AFTER INSTALLATION*/
-
-    /*cte scaling based on observation date*/
-    const double cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
-    cte->scale_frac=cte_ff;   /*save to param structure for header update*/
-    const double rnAmp2 = cte->rn_amp * cte->rn_amp;
-
-    if(verbose){
-        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cte_ff);
-        trlmessage(MsgText);
-    }
 
     FloatTwoDArray * cteRprof  = &cte->rprof->data;
     FloatTwoDArray * cteCprof = &cte->cprof->data;
@@ -106,10 +96,9 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
     assert(model);
     double * tempModel   = malloc(sizeof(*tempModel)*nRows);
     assert(tempModel);
-    double * traps    = malloc(sizeof(*traps)*nRows);
-    assert(traps);
     double * observedAll = malloc(sizeof(*observedAll)*nRows);
     assert(observedAll);
+    float * traps = NULL;
 
     //Due to input->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
     //remove if(!hasFlux) and change schedule to 'static'
@@ -141,8 +130,10 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
         {
             observedAll[i] = PixColumnMajor(input->sci.data,i,j); //Only left in to match master implementation
             observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
-            traps[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
+            //don't need copy of traps
+            //traps[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
         }
+        traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
 
         unsigned NREDO = 0;
         Bool REDO;
@@ -202,7 +193,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
     delete((void*)&tempModel);
     delete((void*)&observed);
     delete((void*)&model);
-    delete((void*)&traps);
+    //delete((void*)&traps);
 }// close scope for #pragma omp parallel
 
     return(status);
@@ -231,7 +222,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
   the ttrap reference to the image array has to be -1 for C
   */
 
-int simulatePixelReadout(double * const pixelColumn, const double * const traps, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows)
 {
     extern int status;
@@ -299,7 +290,7 @@ int simulatePixelReadout(double * const pixelColumn, const double * const traps,
             if (i > 0)
             {
                 if (traps[i] < traps[i-1])
-                    trappedFlux *= (traps[i] / traps[i-1]);
+                    trappedFlux *= ((double)traps[i] / (double)traps[i-1]);
             }
 
             /*RELEASE THE CHARGE*/
@@ -314,7 +305,7 @@ int simulatePixelReadout(double * const pixelColumn, const double * const traps,
             chargeToRemove = 0;
             if (pixel >= cte->qlevq_data[w])
             {
-                chargeToRemove =  cte->dpdew_data[w] / cte->n_par * traps[i];  /*dpdew is 1 in file */
+                chargeToRemove =  cte->dpdew_data[w] / cte->n_par * (double)traps[i];  /*dpdew is 1 in file */
                 if (nTransfersFromTrap < cte->cte_len)
                     extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
                 nTransfersFromTrap = 0;
@@ -327,7 +318,7 @@ int simulatePixelReadout(double * const pixelColumn, const double * const traps,
     return status;
 }
 
-int simulateColumnReadout(double * const pixelColumn, const double * const traps, const CTEParams * const cte,
+int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts)
 {
     extern int status;
@@ -339,7 +330,7 @@ int simulateColumnReadout(double * const pixelColumn, const double * const traps
     return status;
 }
 
-Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_model, const double * const pix_observed,
+Bool correctCROverSubtraction(float * const traps, const double * const pix_model, const double * const pix_observed,
         const unsigned nRows, const double threshHold)
 {
     /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
@@ -361,7 +352,7 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
       THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
     */
 
-    if (!pix_model || !pix_observed || !pix_ctef)
+    if (!pix_model || !pix_observed || !traps)
         return False;
 
     Bool redo = False;
@@ -389,13 +380,13 @@ Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_
             /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
                BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
             for (unsigned ii = iMax; ii <= i; ++ii)
-                pix_ctef[ii] *= 0.75;
+                traps[ii] *= 0.75;
         }
     } /*end for  j*/
     return redo;
 }
 
-int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
+int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int verbose, const double expstart)
 {
     /*These are already in the parameter structure
          int     Ws              the number of traps < 999999, taken from pctetab read
@@ -425,6 +416,14 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
 
+    // cte scaling based on observation date
+    const double cteScale =  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
+    cte->scale_frac = cteScale; // save to param structure for header update
+    if (verbose)
+    {
+        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cteScale);
+        trlmessage(MsgText);
+    }
     //double ff_by_col[nColumns][4];
 
    /* for (unsigned i = 0; i < nColumns; ++i){
@@ -476,7 +475,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte)
             cte_j = (j+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
-            PixColumnMajor(trapPixelMap->sci.data,j,i) = (cte_i * cte_j);
+            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j * cteScale;
         }
     }
     } // end parallel block
