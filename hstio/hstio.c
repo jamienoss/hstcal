@@ -352,8 +352,12 @@ int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum S
     //should this check be raise higher up the call stack also?
     if (targetStorageOrder != source->storageOrder)
     {
-        if (allocFloatData(target, source->nx, source->ny, False))
-            return -1; //allocFloatData() initializes before returning
+        //assumes target initialized
+        if (!target->buffer)
+        {
+            if (allocFloatData(target, source->nx, source->ny, False))
+                return -1; //allocFloatData() initializes before returning
+        }
         return swapFloatStorageOrder(target, source, targetStorageOrder);
         //fall through and copy normally
     }
@@ -368,15 +372,13 @@ int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum S
 
 int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source, enum StorageOrder targetStorageOrder)
 {
-    //WARNING: This assumes source is Column major
-
     //this probably breaks use of Pix on target? Do we need to swap nx & ny?
     if (!target || !source)
         return -1;
 
     target->storageOrder = targetStorageOrder;
     if (targetStorageOrder == source->storageOrder)
-    	return 0;
+        return 0;
 
     const unsigned nRows = target->ny;
     const unsigned nCols = target->nx;
@@ -385,10 +387,10 @@ int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source
     {
         for (unsigned i = 0; i < nRows; ++i)
         {
-        	if (targetStorageOrder == COLUMNMAJOR)
-        		target->data[j*nRows + i] = source->data[i*nCols + j];
-        	else
-        		target->data[i*nCols + j] = source->data[j*nRows + i];
+            if (targetStorageOrder == COLUMNMAJOR)
+                target->data[j*nRows + i] = source->data[i*nCols + j];
+            else
+                target->data[i*nCols + j] = source->data[j*nRows + i];
         }
     }
     return 0;
@@ -396,16 +398,13 @@ int swapFloatStorageOrder(FloatTwoDArray * target, const FloatTwoDArray * source
 
 int swapShortStorageOrder(ShortTwoDArray * target, const ShortTwoDArray * source, enum StorageOrder targetStorageOrder)
 {
-    //WARNING: This assumes source is Column major
-
     //this probably breaks use of Pix on target? Do we need to swap nx & ny?
-
     if (!target || !source)
         return -1;
 
     target->storageOrder = targetStorageOrder;
     if (targetStorageOrder == source->storageOrder)
-    	return 0;
+        return 0;
 
     const unsigned nRows = target->ny;
     const unsigned nCols = target->nx;
@@ -414,13 +413,12 @@ int swapShortStorageOrder(ShortTwoDArray * target, const ShortTwoDArray * source
     {
         for (unsigned i = 0; i < nRows; ++i)
         {
-        	if (targetStorageOrder == COLUMNMAJOR)
-        		target->data[j*nRows + i] = source->data[i*nCols + j];
-        	else
-        		target->data[i*nCols + j] = source->data[j*nRows + i];
+            if (targetStorageOrder == COLUMNMAJOR)
+                target->data[j*nRows + i] = source->data[i*nCols + j];
+            else
+                target->data[i*nCols + j] = source->data[j*nRows + i];
         }
     }
-
     return 0;
 }
 
@@ -489,8 +487,12 @@ int copyShortData(ShortTwoDArray * target, const ShortTwoDArray * source, enum S
     //should this check be raise higher up the call stack also?
     if (targetStorageOrder != source->storageOrder)
     {
-        if (allocShortData(target, source->nx, source->ny, False))
-            return -1; //allocFloatData() initializes before returning
+        //assumes target initialized
+        if (!target->buffer)
+        {
+            if (allocShortData(target, source->nx, source->ny, False))
+                return -1; //allocFloatData() initializes before returning
+        }
         return swapShortStorageOrder(target, source, targetStorageOrder);
         //fall through and copy normally
     }
@@ -747,14 +749,18 @@ int copyShortHdrData(ShortHdrData * target, const ShortHdrData * src, enum Stora
 {
     if (!target || !src)
         return -1;
+
     //initShortHdrData(target);
     target->iodesc = src->iodesc;
+
+    //Since DataSection section refers to image IO, keep as source (I think?).
     copyDataSection(&target->section, &src->section);//No allocations
+
     //initHdr(&target->hdr);
     if (copyHdr(&target->hdr, &src->hdr))//This allocates
         return -1;
 
-      if (copyShortData(&target->data, &src->data, targetStorageOrder))
+    if (copyShortData(&target->data, &src->data, targetStorageOrder))
         return -1;
     return 0;
 }

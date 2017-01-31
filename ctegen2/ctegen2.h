@@ -81,4 +81,8 @@ int PutKeyInt (Hdr *, char *, int , char *);
 int PutKeyDbl (Hdr *, char *, double , char *);
 int PutKeyStr(Hdr *, char *, char *, char *);
 
+int inverse_cte_blur(const SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart);
+int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte);
+
+
 #endif

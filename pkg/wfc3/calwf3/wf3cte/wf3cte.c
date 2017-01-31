@@ -470,7 +470,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     //reuse raz
     SingleGroup * cteCorrectedImage = &raz;
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
@@ -487,6 +487,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
             Pix(raw.sci.data,i,j) += (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+            //Pix(raw.sci.data,i,j) += (Pix(cteCorrectedImage->sci.data,i,j) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
     }
     cteCorrectedImage = NULL;
     freeSingleGroup(&raz);
