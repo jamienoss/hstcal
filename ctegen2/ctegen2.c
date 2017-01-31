@@ -91,14 +91,8 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
         trlmessage(MsgText);
     }
 
-    FloatTwoDArray cteRprof;
-    FloatTwoDArray cteCprof;
-    initFloatData(&cteRprof);
-    initFloatData(&cteCprof);
-    allocFloatData(&cteRprof, cte->rprof->data.nx, cte->rprof->data.ny, False);
-    allocFloatData(&cteCprof, cte->cprof->data.nx, cte->cprof->data.ny, False);
-    swapFloatStorageOrder(&cteRprof, &cte->rprof->data, COLUMNMAJOR);
-    swapFloatStorageOrder(&cteCprof, &cte->cprof->data, COLUMNMAJOR);
+    FloatTwoDArray * cteRprof  = &cte->rprof->data;
+    FloatTwoDArray * cteCprof = &cte->cprof->data;
 
 #ifdef _OPENMP
     unsigned nThreads = omp_get_num_procs();
@@ -163,7 +157,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
             for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
             {
                 memcpy(tempModel, model, sizeof(*model)*nRows);
-                simulateColumnReadout(model, traps, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
+                simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
 
                 //Now that the updated readout has been simulated, subtract this from the model
                 //to reproduce the actual image, without the CTE trails.
@@ -184,7 +178,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
 
             //Do the last forward iteration but don't dampen... no idea why???
             memcpy(tempModel, model, sizeof(*model)*nRows);
-            simulateColumnReadout(model, traps, cte, &cteRprof, &cteCprof, nRows, cte->n_par);
+            simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
             //Now subtract the simulated readout
             for (unsigned i = 0; i < nRows; ++i)
                 model[i] = tempModel[i] - (model[i] - observed[i]);
@@ -210,8 +204,6 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
     delete((void*)&model);
     delete((void*)&traps);
 }// close scope for #pragma omp parallel
-    freeFloatData(&cteRprof);
-    freeFloatData(&cteCprof);
 
     return(status);
 }
@@ -239,7 +231,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
   the ttrap reference to the image array has to be -1 for C
   */
 
-int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const double * const traps, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows)
 {
     extern int status;
@@ -306,8 +298,8 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
             //move out of loop to separate instance?
             if (i > 0)
             {
-                if (pixf[i] < pixf[i-1])
-                    trappedFlux *= (pixf[i] / pixf[i-1]);
+                if (traps[i] < traps[i-1])
+                    trappedFlux *= (traps[i] / traps[i-1]);
             }
 
             /*RELEASE THE CHARGE*/
@@ -322,7 +314,7 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
             chargeToRemove = 0;
             if (pixel >= cte->qlevq_data[w])
             {
-                chargeToRemove =  cte->dpdew_data[w] / cte->n_par * pixf[i];  /*dpdew is 1 in file */
+                chargeToRemove =  cte->dpdew_data[w] / cte->n_par * traps[i];  /*dpdew is 1 in file */
                 if (nTransfersFromTrap < cte->cte_len)
                     extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
                 nTransfersFromTrap = 0;
@@ -335,14 +327,14 @@ int simulatePixelReadout(double * const pixelColumn, const double * const pixf, 
     return status;
 }
 
-int simulateColumnReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+int simulateColumnReadout(double * const pixelColumn, const double * const traps, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts)
 {
     extern int status;
 
     //Take each pixel down the detector
     for (unsigned shift = 1; shift <= nPixelShifts; ++shift)
-        simulatePixelReadout(pixelColumn, pixf, cte, rprof, cprof, nRows);
+        simulatePixelReadout(pixelColumn, traps, cte, rprof, cprof, nRows);
 
     return status;
 }

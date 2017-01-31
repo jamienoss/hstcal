@@ -2470,7 +2470,7 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
                 iodesc->dims[1] = getIntKw(kw);
             }
 
-            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
+            if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], False)) return -1;
             for (j = 0; j < iodesc->dims[1]; ++j) {
                 for (i = 0; i < iodesc->dims[0]; ++i) {
                     PPix(da, i, j) = val;
@@ -2498,13 +2498,34 @@ int getFloatData(IODescPtr iodesc_, FloatTwoDArray *da) {
             if (allocFloatData(da, iodesc->dims[0], iodesc->dims[1], True)) return -1;
 
             fpixel[0] = 1;
-            for (i = 0; i < iodesc->dims[1]; ++i) {
-                fpixel[1] = i + 1;
-                if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, iodesc->dims[0], 0,
-                                  (float *)&(PPix(da, 0, i)), &anynul, &status)) {
-                    ioerr(BADREAD,iodesc, status);
-                    return -1;
+            if (da->storageOrder == ROWMAJOR)
+            {
+                for (i = 0; i < iodesc->dims[1]; ++i) {
+                    fpixel[1] = i + 1;
+                    if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, iodesc->dims[0], 0,
+                            &(PPix(da, 0, i)), &anynul, &status)) {
+                        ioerr(BADREAD,iodesc, status);
+                        return -1;
+                    }
                 }
+            }
+            else
+            {
+                unsigned nColumns = iodesc->dims[0];
+                float * row = malloc(nColumns*sizeof(float));
+                assert(row);
+                for (i = 0; i < iodesc->dims[1]; ++i)
+                {
+                    fpixel[1] = i + 1;
+                    if (fits_read_pix(iodesc->ff, TFLOAT, fpixel, nColumns, 0,
+                            row, &anynul, &status)) {
+                        ioerr(BADREAD,iodesc, status);
+                        return -1;
+                    }
+                    for (unsigned j = 0; j < nColumns; ++j)
+                        PPixColumnMajor(da, i, j) = row[j];
+                }
+                free(row);
             }
         } else {
             ioerr(BADDIMS,iodesc,0);
