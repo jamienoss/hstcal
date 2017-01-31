@@ -150,13 +150,13 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, const Single
         {
             REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
             /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-            memcpy(model, observedAll, sizeof(*observedAll)*nRows);
+            memcpy(model, observedAll, nRows*sizeof(*observedAll));
 
             /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
               IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
             for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
             {
-                memcpy(tempModel, model, sizeof(*model)*nRows);
+                memcpy(tempModel, model, nRows*sizeof(*model));
                 simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
 
                 //Now that the updated readout has been simulated, subtract this from the model
@@ -892,7 +892,8 @@ int inverse_cte_blur(const SingleGroup *_rsz, SingleGroup *_rsc, SingleGroup *_f
 
                     /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
                     for (NITCTE=1; NITCTE<=cte->n_par; NITCTE++){
-                        sim_colreadout_l(pix_curr, pix_read, pix_ctef, cte);
+                        simulatePixelReadout(pix_read, pix_ctef, cte, &cte->rprof->data, &cte->cprof->data, RAZ_ROWS);
+                        //sim_colreadout_l(pix_curr, pix_read, pix_ctef, cte);
 
                         /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
                         for (j=0; j< RAZ_ROWS; j++){
@@ -1042,17 +1043,31 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
 
     /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
       PMAX SHOULD ALWAYS BE POSITIVE HERE  */
+    memcpy(pixo, pixi, RAZ_ROWS*sizeof(*pixi));
     pmax=10.;
     for(j=0; j<RAZ_ROWS; j++){
-        pixo[j] = pixi[j];
-        if (pixo[j] > pmax)
-            pmax=pixo[j];
+        pmax = pixo[j] > pmax ? pixo[j] : pmax; //check assembly (before & after op) to see if actually implemented differently
+
+        //pixo[j] = pixi[j];
+       // if (pixo[j] > pmax)
+         //   pmax=pixo[j];
     }
 
+
+    unsigned maxChargeTrapIndex = cte->cte_traps-1;
+        for (int w = maxChargeTrapIndex; w >= 0; --w)//go up or down? (if swap, change below condition)
+        {
+            if (cte->qlevq_data[w] <= pmax)//is any of this even needed or can we just directly map?
+            {
+                maxChargeTrapIndex = w;
+                break;
+            }
+        }
     /*GO THROUGH THE TRAPS ONE AT A TIME, FROM HIGHEST TO LOWEST Q,
       AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
-    for (w = cte->cte_traps-1; w>=0; w--){
-        if ( cte->qlevq_data[w] <= pmax ) {
+    for (w = maxChargeTrapIndex; w>=0; w--){
+        //if ( cte->qlevq_data[w] <= pmax )
+        {
 
             ftrap = 0.0e0;
             ttrap = cte->cte_len; /*for referencing the image at 0*/
@@ -1081,7 +1096,7 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
                     padd_2=0.0;
                     if (ttrap <cte->cte_len){
                         ttrap += 1;
-                        padd_2 = Pix(rprof->data,w,ttrap-1) *ftrap;
+                        padd_2 = PixColumnMajor(rprof->data,ttrap-1,w) *ftrap;
                     }
 
                     padd_3 = 0.0;
@@ -1089,7 +1104,7 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
                     if ( pix_1 >= cte->qlevq_data[w]){
                         prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[j];  /*dpdew is 1 in file */
                         if (ttrap < cte->cte_len)
-                            padd_3 = Pix(cprof->data,w,ttrap-1)*ftrap;
+                            padd_3 = PixColumnMajor(cprof->data,ttrap-1,w)*ftrap;
                         ttrap=0;
                         ftrap=prem_3;
                     }
