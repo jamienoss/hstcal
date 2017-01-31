@@ -38,21 +38,19 @@ typedef struct {
     char cte_ver[256]; /*version of algorithm */
 } CTEParams;
 
-int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
-        const int verbose, const double expstart);
-int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
-        const int verbose, const double expstart);
+int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte);
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, SingleGroup * trapPixelMap, CTEParams * cte);
 
-int simulatePixelReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows);
 
-int simulateColumnReadout(double * const pixelColumn, const double * const pixf, const CTEParams * const cte,
+int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts);
 
-Bool correctCROverSubtraction(double * const pix_ctef, const double * const pix_model, const double * const pix_observed,
+Bool correctCROverSubtraction(float * const traps, const double * const pix_model, const double * const pix_observed,
         const unsigned nRows, const double threshHold);
 
-int populateTrapPixelMap(SingleGroup * input, CTEParams * params);
+int populateTrapPixelMap(SingleGroup * input, CTEParams * params, const int verbose, const double expstart);
 int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads , int verbose);
 double find_dadj(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
 

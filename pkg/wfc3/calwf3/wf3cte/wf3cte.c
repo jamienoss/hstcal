@@ -463,7 +463,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     razColumnMajor = NULL;
     SingleGroup * trapPixelMap = &tempGroup1;
-    if (populateTrapPixelMap(trapPixelMap, &cte_pars))
+    if (populateTrapPixelMap(trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
     {
     	//Geez, do we not want to free everything???
         return status;
@@ -473,7 +473,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup * cteCorrectedImage = &raz;
     setStorageOrder(cteCorrectedImage, COLUMNMAJOR);
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
         return status;
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
