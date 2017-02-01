@@ -123,8 +123,6 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
         {
             observedAll[i] = PixColumnMajor(input->sci.data,i,j); //Only left in to match master implementation
             observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
-            //don't need copy of traps
-            //traps[i] =  cte_ff * PixColumnMajor(trapPixelMap->sci.data, i, j);
         }
         traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
 
@@ -184,7 +182,6 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
     delete((void*)&tempModel);
     delete((void*)&observed);
     delete((void*)&model);
-    //delete((void*)&traps);
 }// close scope for #pragma omp parallel
 
     return(status);
