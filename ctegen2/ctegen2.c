@@ -74,15 +74,8 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
     const unsigned nRows = output->sci.data.ny;
     const unsigned nColumns = output->sci.data.nx;
     const double rnAmp2 = cte->rn_amp * cte->rn_amp;
-
-    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
-      APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
-      INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
-      CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
-      OVER 3 YEARS AFTER INSTALLATION*/
-
-    FloatTwoDArray * cteRprof  = &cte->rprof->data;
-    FloatTwoDArray * cteCprof = &cte->cprof->data;
+    const FloatTwoDArray * cteRprof  = &cte->rprof->data;
+    const FloatTwoDArray * cteCprof = &cte->cprof->data;
 
 #ifdef _OPENMP
     unsigned nThreads = omp_get_num_procs();
@@ -416,6 +409,11 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
 
+    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
+          APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
+          INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
+          CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
+          OVER 3 YEARS AFTER INSTALLATION*/
     // cte scaling based on observation date
     const double cteScale =  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
     cte->scale_frac = cteScale; // save to param structure for header update
