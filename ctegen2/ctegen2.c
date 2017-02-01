@@ -468,7 +468,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
             cte_j = (j+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
-            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j * cteScale;
+            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j;// * cteScale;
         }
     }
     } // end parallel block

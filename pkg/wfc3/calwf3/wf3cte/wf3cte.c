@@ -473,7 +473,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup * cteCorrectedImage = &raz;
     setStorageOrder(cteCorrectedImage, COLUMNMAJOR);
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
+    if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
