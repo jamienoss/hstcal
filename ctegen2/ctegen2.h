@@ -77,8 +77,11 @@ int PutKeyInt (Hdr *, char *, int , char *);
 int PutKeyDbl (Hdr *, char *, double , char *);
 int PutKeyStr(Hdr *, char *, char *, char *);
 
+# define RAZ_COLS 8412
+# define RAZ_ROWS 2070
 int inverse_cte_blur(const SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart);
 int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte);
-
+int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads);
+int find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig, double *d);
 
 #endif

@@ -461,6 +461,25 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status=ERROR_RETURN);
     }
 
+    SingleGroup trapTest;
+    initSingleGroup(&trapTest);
+    allocSingleGroup(&trapTest, RAZ_COLS, RAZ_ROWS, False);
+    raz2rsz(&raz, &trapTest, cte_pars.rn_amp, max_threads);
+    unsigned count = 0;
+    for (unsigned i = 0; i < RAZ_COLS; ++i)
+    {
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+        {
+            if (Pix(trapTest.sci.data, i, j) != PixColumnMajor(smoothedImage->sci.data, j, i))
+            {
+                printf("%f != %f - %d, %d, %d\n", Pix(trapTest.sci.data, i, j), PixColumnMajor(smoothedImage->sci.data, j, i), i, j, ++count);
+            }
+        }
+    }
+    //return 0;
+    assert(!copySingleGroup(smoothedImage, &trapTest, COLUMNMAJOR));
+
+
     razColumnMajor = NULL;
     SingleGroup * trapPixelMap = &tempGroup1;
     if (populateTrapPixelMap(trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
@@ -469,12 +488,32 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return status;
     }
 
+  /*  SingleGroup trapTest;
+    initSingleGroup(&trapTest);
+    allocSingleGroup(&trapTest, RAZ_COLS, RAZ_ROWS, False);
+    rsz2rsc(&trapTest, cte_pars);
+    unsigned count = 0;
+    for (unsigned i = 0; i < RAZ_COLS; ++i)
+    {
+        for (unsigned j = 0; j < RAZ_ROWS; ++j)
+        {
+            if (Pix(trapTest.sci.data, i, j) != PixColumnMajor(trapPixelMap->sci.data, j, i))
+            {
+                printf("%f != %f - %d/n", Pix(trapTest.sci.data, i, j), PixColumnMajor(trapPixelMap->sci.data, j, i), ++count);
+            }
+        }
+    }
+    return 0;
+*/
+
     //reuse raz
     SingleGroup * cteCorrectedImage = &raz;
     setStorageOrder(cteCorrectedImage, COLUMNMAJOR);
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
+    //if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
     if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         return status;
+
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
 

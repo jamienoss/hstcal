@@ -4,6 +4,7 @@ def build(bld):
     t = bld.stlib(
         source = [
             'ctehelpers.c',
+            'wf3ctegen2.c',
             'ctegen2.c'
             ],
         target = 'ctegen2',
