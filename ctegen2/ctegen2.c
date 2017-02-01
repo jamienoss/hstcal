@@ -176,9 +176,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 
         //Update source array
         for (unsigned i = 0; i < nRows; ++i)
-        {
             PixColumnMajor(output->sci.data, i, j) = PixColumnMajor(input->dq.data, i, j) ? model[i] : 0;
-        }
     } //end loop over columns
 
 
@@ -282,7 +280,7 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
             //move out of loop to separate instance?
             if (i > 0)
             {
-                if (traps[i] < traps[i-1])
+                if ((double)traps[i] < (double)traps[i-1])
                     trappedFlux *= ((double)traps[i] / (double)traps[i-1]);
             }
 
