@@ -472,7 +472,10 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
 
 */
 
+
     extern int status;
+
+    clock_t begin = clock();
 
     int i, j, NIT; /*loop variables*/
     int imid;
@@ -513,8 +516,8 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
       AND INITIALIZE THE OTHER IMAGES*/
     for(i=0;i<RAZ_COLS;i++){
         for (j=0;j<RAZ_ROWS;j++){
-            Pix(rsz->sci.data,i,j) = Pix(raz->sci.data,i,j);
-            Pix(rsz->dq.data,i,j) = Pix(raz->dq.data,i,j);
+            Pix(rsz->sci.data,i,j) = PixColumnMajor(raz->sci.data,j,i);
+            Pix(rsz->dq.data,i,j) = PixColumnMajor(raz->dq.data,j, i);
             Pix(rnz.sci.data,i,j) = hardset;
             Pix(zadj.sci.data,i,j) = hardset;
         }
@@ -550,18 +553,17 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
 
             /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
             for(j=0; j<RAZ_ROWS; j++){
-                obs_loc[0][j] = Pix(raz->sci.data,imid-1,j);
-                obs_loc[1][j] = Pix(raz->sci.data,imid,j);
-                obs_loc[2][j] = Pix(raz->sci.data,imid+1,j);
+                obs_loc[0][j] = PixColumnMajor(raz->sci.data,j, imid-1);
+                obs_loc[1][j] = PixColumnMajor(raz->sci.data,j, imid);
+                obs_loc[2][j] = PixColumnMajor(raz->sci.data,j, imid+1);
 
                 rsz_loc[0][j] = Pix(rsz->sci.data,imid-1,j);
                 rsz_loc[1][j] = Pix(rsz->sci.data,imid,j);
                 rsz_loc[2][j] = Pix(rsz->sci.data,imid+1,j);
             }
             for (j=0; j<RAZ_ROWS; j++){
-             if(Pix(raz->dq.data,imid,j)) {
-                find_dadj_wf3(1+i-imid,j, obs_loc, rsz_loc, rnsig, &dptr);
-                Pix(zadj.sci.data,i,j) = dptr;
+             if(PixColumnMajor(raz->dq.data,j, imid)) {
+                 Pix(zadj.sci.data,i,j) = find_dadj_wf3(1+i-imid,j, obs_loc, rsz_loc, rnsig);
               }
             }
         } /*end the parallel for*/
@@ -570,9 +572,9 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
         */
         for(i=0; i<RAZ_COLS;i++){
             for(j=0; j<RAZ_ROWS; j++){
-                if (Pix(raz->dq.data,i,j)){
+                if (PixColumnMajor(raz->dq.data,j, i)){
                     Pix(rsz->sci.data,i,j) +=  (Pix(zadj.sci.data,i,j)*0.75);
-                    Pix(rnz.sci.data,i,j) = (Pix(raz->sci.data,i,j) - Pix(rsz->sci.data,i,j));
+                    Pix(rnz.sci.data,i,j) = (PixColumnMajor(raz->sci.data,j,i) - Pix(rsz->sci.data,i,j));
                 }
             }
         }
@@ -589,7 +591,7 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
             nrmsu=setdbl;
             rmsu=setdbl;
             for(i = 0;i<RAZ_COLS; i++){
-                if ( (fabs(Pix(raz->sci.data,i,j)) > 0.1) ||
+                if ( (fabs(PixColumnMajor(raz->sci.data,j,i)) > 0.1) ||
                         (fabs(Pix(rsz->sci.data,i,j)) > 0.1) ){
                     rmsu  +=  ( Pix(rnz.sci.data,i,j) * Pix(rnz.sci.data,i,j) );
                     nrmsu += 1.0;
@@ -603,16 +605,27 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
         rms = sqrt(rms/nrms);
 
         /*epsilon type comparison*/
-        if ( (rnsig-rms) < 0.00001) break; /*this exits the NIT for loop*/
+        if ( (rnsig-rms) < 0.00001){
+            printf("NIT - %d\n", NIT);
+
+            break; /*this exits the NIT for loop*/
+        }
     } /*end NIT*/
 
     freeSingleGroup(&zadj);
     freeSingleGroup(&rnz);
 
+    if (1)
+    {
+        double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
+        unsigned maxThreads = 12;
+        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i procs/threads\n",timeSpent/maxThreads,maxThreads);
+        trlmessage(MsgText);
+    }
     return (status);
 }
 
-int find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig, double *d)
+double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig)
 {
 
     /*
@@ -665,7 +678,7 @@ int find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_R
     /*COMPARE THE SURROUNDING PIXELS*/
     if (i==1 &&  RAZ_ROWS-1>=j  && j>0 ) {
 
-        dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
+     /*   dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
             obsloc[i][j]    - rszloc[i][j]  +
             obsloc[i][j+1]  - rszloc[i][j+1] +
             obsloc[i-1][j-1]- rszloc[i-1][j-1] +
@@ -673,9 +686,9 @@ int find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_R
             obsloc[i-1][j+1]- rszloc[i-1][j+1] +
             obsloc[i+1][j-1]- rszloc[i+1][j-1] +
             obsloc[i+1][j]  - rszloc[i+1][j] +
-            obsloc[i+1][j+1]- rszloc[i+1][j+1];
+            obsloc[i+1][j+1]- rszloc[i+1][j+1];*/
     }
-
+dval9 = 0.123456789123456789;
     dval9 =dval9 / 9.;
     dval9u = dval9;
 
@@ -720,10 +733,10 @@ int find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_R
       that neighbor has less of an ability to
       pull it)*/
 
-    *d = ((dval0u * w0 * 0.25f) + /* desire to keep the original pixel value */
+    return ((dval0u * w0 * 0.25f) + /* desire to keep the original pixel value */
             (dval9u*w9*0.25f) + /* desire to keep the original sum over 3x3*/
             (dmod1u*w1*0.25f) + /*desire to get closer to the pixel below*/
             (dmod2u*w2*0.25f)) ; /*desire to get closer to the pixel above*/
 
-    return(status);
+    //return(status);
 }
