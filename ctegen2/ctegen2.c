@@ -468,7 +468,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
             cte_j = (j+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
-            PixColumnMajor(trapPixelMap->sci.data,j,i) = (cte_i * cte_j);// * cteScale;
+            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j;// * cteScale;
         }
     }
     } // end parallel block
@@ -521,9 +521,9 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
       DOWN THE LINE.
       */
 
-    SingleGroup zadj;
-    initSingleGroup(&zadj);
-    allocSingleGroup(&zadj, nColumns, nRows, False);
+    SingleGroup adjustment;
+    initSingleGroup(&adjustment);
+    allocSingleGroup(&adjustment, nColumns, nRows, False);
 
     /***INITIALIZE THE LOCAL IMAGE GROUPS***/
     SingleGroup rnz;
@@ -531,12 +531,22 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     allocSingleGroup(&rnz, nColumns, nRows, False);
 
 #ifdef _OPENMP
-    #pragma omp parallel shared(input, output, readNoiseAmp, rms, nrms, zadj, rnz)
+    #pragma omp parallel shared(input, output, readNoiseAmp, rms, nrms, adjustment, rnz)
 #endif
     {
     const float * obs_loc[3];
     const float * rsz_loc[3];
+    double dobs_loc[3][RAZ_ROWS] ;
+        double drsz_loc[3][RAZ_ROWS] ;
 
+
+        /*ALL ELEMENTS TO FLAG*/
+        for(unsigned i=0;i<3;i++){
+            for (unsigned j=0; j<nRows; j++){
+                dobs_loc[i][j]=0.0;
+                drsz_loc[i][j]=0.0;
+            }
+        }
     double rmsLocal;
     double nrmsLocal;
     for(unsigned iter = 0; iter < 100; ++iter)
@@ -565,15 +575,27 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             rsz_loc[1] = rsz_loc[0] + nRows;
             rsz_loc[2] = rsz_loc[1] + nRows;
 
+            for(unsigned j=0; j<nRows; j++){
+                            dobs_loc[0][j] = PixColumnMajor(input->sci.data,j, imid-1);
+                            dobs_loc[1][j] = PixColumnMajor(input->sci.data,j, imid);
+                            dobs_loc[2][j] = PixColumnMajor(input->sci.data,j, imid+1);
+
+                            drsz_loc[0][j] = PixColumnMajor(output->sci.data,j,imid-1);
+                            drsz_loc[1][j] = PixColumnMajor(output->sci.data,j,imid);
+                            drsz_loc[2][j] = PixColumnMajor(output->sci.data,j,imid+1);
+                        }
+
             for (unsigned j = 0; j < nRows; ++j)
             {
                 if(PixColumnMajor(input->dq.data, j, imid))
-                    PixColumnMajor(zadj.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
+                    PixColumnMajor(adjustment.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
+                //PixColumnMajor(adjustment.sci.data,j,i) = find_dadj_wf3(1+i-imid, j,dobs_loc, drsz_loc, readNoiseAmp);
+
             }
         } /*end the parallel for*/ //implicit omp barrier
 
-        /*NOW GO OVER ALL THE nColumns AND nRows AGAIN TO SCALE THE PIXELS
-        */
+        //move this entire section into the above and remove need for 'adjustment' group!!!
+        //NOW GO OVER ALL THE nColumns AND nRows AGAIN TO SCALE THE PIXELS
 #ifdef _OPENMP
         #pragma omp for schedule(dynamic, 1)
 #endif
@@ -583,7 +605,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             {
                 if (PixColumnMajor(input->dq.data,j,i))
                 {
-                    PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(zadj.sci.data,j, i)*0.75);
+                    PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(adjustment.sci.data,j, i)*0.75);
                     PixColumnMajor(rnz.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
                 }
             }
@@ -605,13 +627,13 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         {
             for(unsigned i = 0; i < nRows; ++i)
             {
-                if ( PixColumnMajor(input->dq.data, i, j) &&
+                if ( /*PixColumnMajor(input->dq.data, i, j) &&*/
                      (fabs(PixColumnMajor(input->sci.data, i, j)) > 0.1 ||
                      fabs(PixColumnMajor(output->sci.data, i, j)) > 0.1))
                 {
                     double tmp = PixColumnMajor(rnz.sci.data, i, j);
                     rmsLocal  +=  tmp*tmp;
-                    nrmsLocal += 1.0;
+                    ++nrmsLocal;
                 }
             }
         }//implicit omp barrier
@@ -634,16 +656,20 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         }
 #endif
 
-        // if it is true that one breaks then it is will be true for all
+        // if it is true that one breaks then it is true for all
         /*epsilon type comparison*/
         if ( (readNoiseAmp - rms) < 0.00001)
+        {
+
+            printf("iter - %d\n", iter);
             break; // this exits loop over iter
+        }
 #ifdef _OPENMP
         #pragma omp barrier
 #endif
     } // end loop over iter
     } // close parallel block
-    freeSingleGroup(&zadj);
+    freeSingleGroup(&adjustment);
     freeSingleGroup(&rnz);
 
     if (verbose)
@@ -673,8 +699,8 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
        accommodation is made for both considerations.
        */
 
-    const double mval = *(rszloc[i] + j);
-    const double dval0  = *(obsloc[i] + j) - mval;
+    const double mval = (double)*(rszloc[i] + j);
+    const double dval0  = (double)*(obsloc[i] + j) - mval;
     double dval0u = dval0;
 
     if (dval0u > 1)
@@ -683,10 +709,10 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
         dval0u = -1;
 
     /*COMPARE THE SURROUNDING PIXELS*/
-    double dval9 = 0;
-    if (i == 1 &&  j <= nRows-1)
+    double dval9 = 0.;
+    if (i == 1 &&  j <= nRows-1 && j > 0)
     {
-        dval9 = (double)*(obsloc[i]   + j-1)   - (double)*(rszloc[i]   + j-1) +
+        /*dval9 = (double)*(obsloc[i]   + j-1)   - (double)*(rszloc[i]   + j-1) +
                 (double)*(obsloc[i]   + j)     - (double)*(rszloc[i]   + j)   +
                 (double)*(obsloc[i]   + j+1)   - (double)*(rszloc[i]   + j+1) +
                 (double)*(obsloc[i-1] + j-1)   - (double)*(rszloc[i-1] + j-1) +
@@ -694,36 +720,61 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
                 (double)*(obsloc[i-1] + j+1)   - (double)*(rszloc[i-1] + j+1) +
                 (double)*(obsloc[i+1] + j-1)   - (double)*(rszloc[i+1] + j-1) +
                 (double)*(obsloc[i+1] + j)     - (double)*(rszloc[i+1] + j)   +
-                (double)*(obsloc[i+1] + j+1)   - (double)*(rszloc[i+1] + j+1);
+                (double)*(obsloc[i+1] + j+1)   - (double)*(rszloc[i+1] + j+1);*/
+
+     /*   double d1 = *(obsloc[i]   + j-1);
+        double d2 =  *(rszloc[i]   + j-1);
+        double d3 = *(obsloc[i]   + j);
+        double d4 = *(rszloc[i]   + j);
+        double d5 = *(obsloc[i]   + j+1);
+        double d6 =  *(rszloc[i]   + j+1);
+        double d7 = *(obsloc[i-1] + j-1);
+        double d8 =  *(rszloc[i-1] + j-1);
+        double d9 = *(obsloc[i-1] + j);
+        double d10 = *(rszloc[i-1] + j);
+        double d11 = *(obsloc[i-1] + j+1);
+        double d12 =  *(rszloc[i-1] + j+1);
+        double d13 = *(obsloc[i+1] + j-1);
+        double d14 = *(rszloc[i+1] + j-1);
+        double d15 = *(obsloc[i+1] + j);
+        double d16 =  *(rszloc[i+1] + j);
+        double d17 = *(obsloc[i+1] + j+1);
+        double d18 = *(rszloc[i+1] + j+1);
+        dval9 = d1-d2+
+                d3-d4+
+                d5-d6+
+                d7-d8+
+                d9-d10+
+                d11-d12+
+                d13-d14+
+                d15-d16+
+                d17-d18;*/
+
     }
+    dval9 = 0.123456789123456789;
 
     dval9 = dval9 / 9;
     double dval9u = dval9;
 
     if (dval9u > readNoiseAmp*0.33)
         dval9u = readNoiseAmp*0.33;
-    else if (dval9u < -readNoiseAmp*0.33)
-        dval9u = -readNoiseAmp*0.33;
+    else if (dval9u < readNoiseAmp*-0.33)
+        dval9u = readNoiseAmp*-0.33;
 
-    double dmod1 = 0;
-    if (j > 0)
-        dmod1 = *(rszloc[i] + j-1) - mval;
+    const double dmod1 = j > 0 ? (double)*(rszloc[i] + j-1) - mval : 0;
+    const double dmod2 = j < nRows-1 ? (double)*(rszloc[i] + j+1) - mval : 0;
 
     double dmod1u = dmod1;
     if (dmod1u > readNoiseAmp*0.33)
         dmod1u = readNoiseAmp*0.33;
-    else if (dmod1u < -readNoiseAmp*0.33)
-        dmod1u = -readNoiseAmp*0.33;
-
-    double dmod2 = 0;
-    if (j < nRows-1)
-        dmod2 = *(rszloc[i] + j+1) - mval;
+    else if (dmod1u < readNoiseAmp*-0.33)
+        dmod1u = readNoiseAmp*-0.33;
 
     double dmod2u = dmod2;
     if (dmod2u > readNoiseAmp*0.33)
         dmod2u = readNoiseAmp*0.33;
-    else if (dmod2u < -readNoiseAmp*0.33)
-        dmod2u = -readNoiseAmp*0.33;
+    else if (dmod2u < readNoiseAmp*-0.33)
+        dmod2u = readNoiseAmp*-0.33;
 
     /*
        IF IT'S WITHIN 2 SIGMA OF THE READNOISE, THEN
@@ -731,10 +782,10 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
        THAN THAT, THEN DOWNWEIGHT THE INFLUENCE
        */
     const double readNoiseAmp2 = readNoiseAmp*readNoiseAmp;
-    const double w0 =     dval0 * dval0 / (dval0 * dval0 + 4 * readNoiseAmp2);
-    const double w9 =     dval9 * dval9 / (dval9 * dval9 + 18 * readNoiseAmp2);
-    const double w1 = 4 * readNoiseAmp2 / (dmod1 * dmod1 + 4 * readNoiseAmp2);
-    const double w2 = 4 * readNoiseAmp2 / (dmod2 * dmod2 + 4 * readNoiseAmp2);
+    const double w0 =     dval0 * dval0 / (dval0 * dval0 + 4.0 * readNoiseAmp2);
+    const double w9 =     dval9 * dval9 / (dval9 * dval9 + 18.0 * readNoiseAmp2);
+    const double w1 = 4 * readNoiseAmp2 / (dmod1 * dmod1 + 4.0 * readNoiseAmp2);
+    const double w2 = 4 * readNoiseAmp2 / (dmod2 * dmod2 + 4.0 * readNoiseAmp2);
 
     /*(note that with the last two, if a pixel
       is too discordant with its upper or lower

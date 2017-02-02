@@ -82,6 +82,6 @@ int PutKeyStr(Hdr *, char *, char *, char *);
 int inverse_cte_blur(const SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart);
 int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte);
 int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads);
-int find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig, double *d);
+double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig);
 
 #endif
