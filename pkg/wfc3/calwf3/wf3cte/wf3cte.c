@@ -461,7 +461,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status=ERROR_RETURN);
     }
 
-    SingleGroup trapTest;
+   /* SingleGroup trapTest;
     initSingleGroup(&trapTest);
     allocSingleGroup(&trapTest, RAZ_COLS, RAZ_ROWS, False);
     raz2rsz(razColumnMajor, &trapTest, cte_pars.rn_amp, max_threads);
@@ -476,9 +476,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             }
         }
     }
-    if (count) return 0;
+    if (count) return 0;*/
     //assert(!copySingleGroup(smoothedImage, &trapTest, COLUMNMAJOR));
-
 
     razColumnMajor = NULL;
     SingleGroup * trapPixelMap = &tempGroup1;
@@ -492,9 +491,9 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup * cteCorrectedImage = &raz;
     setStorageOrder(cteCorrectedImage, COLUMNMAJOR);
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    //if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
-    if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
         return status;
+    //if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
 
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
