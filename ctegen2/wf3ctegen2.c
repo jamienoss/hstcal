@@ -540,7 +540,7 @@ int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_thre
     rms=setdbl;
 
     for(NIT=1; NIT<=100; NIT++){
-        #pragma omp parallel for schedule(dynamic) \
+        #pragma omp parallel for schedule(dynamic, 1) \
         private(i,j,imid,obs_loc,rsz_loc,dptr)\
         shared(raz, rsz, rnsig,rms,nrms, zadj)
         for(i=0; i<RAZ_COLS; i++){
@@ -647,14 +647,14 @@ double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
 
     double mval=0.0;
     double    dval0, dval0u, w0;
-    double    dval9, dval9u, w9;
+    double    dval9u, w9;
     double    dmod1, dmod1u, w1;
     double    dmod2, dmod2u, w2;
 
     dval0=0.;
     dval0u=0.;
     w0=0.;
-    dval9=0.;
+    volatile double dval9=0.;
     dval9u=0.;
     w9=0.;
     dmod1=0.;
@@ -676,9 +676,9 @@ double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
     dval9 = 0.;
 
     /*COMPARE THE SURROUNDING PIXELS*/
-    if (i==1 &&  RAZ_ROWS-1>=j  && j>0 ) {
+    if (i==1 &&  RAZ_ROWS-1>j  && j>0 ) {
 
-     /*   dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
+        dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
             obsloc[i][j]    - rszloc[i][j]  +
             obsloc[i][j+1]  - rszloc[i][j+1] +
             obsloc[i-1][j-1]- rszloc[i-1][j-1] +
@@ -686,10 +686,10 @@ double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RA
             obsloc[i-1][j+1]- rszloc[i-1][j+1] +
             obsloc[i+1][j-1]- rszloc[i+1][j-1] +
             obsloc[i+1][j]  - rszloc[i+1][j] +
-            obsloc[i+1][j+1]- rszloc[i+1][j+1];*/
+            obsloc[i+1][j+1]- rszloc[i+1][j+1];
+        dval9 =dval9 / 9.;
+
     }
-dval9 = 0.123456789123456789;
-    dval9 =dval9 / 9.;
     dval9u = dval9;
 
     if (dval9u > (rnsig*0.33))

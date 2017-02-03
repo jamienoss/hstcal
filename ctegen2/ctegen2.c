@@ -497,7 +497,6 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     const unsigned nRows = input->sci.data.ny;
     const unsigned nColumns = input->sci.data.nx;
 
-
     double rms=0;
     double nrms=0;
 
@@ -536,17 +535,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     {
     const float * obs_loc[3];
     const float * rsz_loc[3];
-    double dobs_loc[3][RAZ_ROWS] ;
-        double drsz_loc[3][RAZ_ROWS] ;
 
-
-        /*ALL ELEMENTS TO FLAG*/
-        for(unsigned i=0;i<3;i++){
-            for (unsigned j=0; j<nRows; j++){
-                dobs_loc[i][j]=0.0;
-                drsz_loc[i][j]=0.0;
-            }
-        }
     double rmsLocal;
     double nrmsLocal;
     for(unsigned iter = 0; iter < 100; ++iter)
@@ -575,22 +564,10 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             rsz_loc[1] = rsz_loc[0] + nRows;
             rsz_loc[2] = rsz_loc[1] + nRows;
 
-            for(unsigned j=0; j<nRows; j++){
-                            dobs_loc[0][j] = PixColumnMajor(input->sci.data,j, imid-1);
-                            dobs_loc[1][j] = PixColumnMajor(input->sci.data,j, imid);
-                            dobs_loc[2][j] = PixColumnMajor(input->sci.data,j, imid+1);
-
-                            drsz_loc[0][j] = PixColumnMajor(output->sci.data,j,imid-1);
-                            drsz_loc[1][j] = PixColumnMajor(output->sci.data,j,imid);
-                            drsz_loc[2][j] = PixColumnMajor(output->sci.data,j,imid+1);
-                        }
-
             for (unsigned j = 0; j < nRows; ++j)
             {
                 if(PixColumnMajor(input->dq.data, j, imid))
                     PixColumnMajor(adjustment.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
-                //PixColumnMajor(adjustment.sci.data,j,i) = find_dadj_wf3(1+i-imid, j,dobs_loc, drsz_loc, readNoiseAmp);
-
             }
         } /*end the parallel for*/ //implicit omp barrier
 
@@ -622,7 +599,6 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #ifdef _OPENMP
         #pragma omp for schedule(dynamic, 1)
 #endif
-        //this is now out of mem order
         for(unsigned j = 0; j < nColumns; ++j)
         {
             for(unsigned i = 0; i < nRows; ++i)
@@ -709,51 +685,21 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
         dval0u = -1;
 
     /*COMPARE THE SURROUNDING PIXELS*/
-    double dval9 = 0.;
+    double dval9 = 0.0;
     if (i == 1 &&  j <= nRows-1 && j > 0)
     {
-        /*dval9 = (double)*(obsloc[i]   + j-1)   - (double)*(rszloc[i]   + j-1) +
+        dval9 = (double)*(obsloc[i]   + j-1)   - (double)*(rszloc[i]   + j-1) +
                 (double)*(obsloc[i]   + j)     - (double)*(rszloc[i]   + j)   +
                 (double)*(obsloc[i]   + j+1)   - (double)*(rszloc[i]   + j+1) +
                 (double)*(obsloc[i-1] + j-1)   - (double)*(rszloc[i-1] + j-1) +
                 (double)*(obsloc[i-1] + j)     - (double)*(rszloc[i-1] + j)   +
                 (double)*(obsloc[i-1] + j+1)   - (double)*(rszloc[i-1] + j+1) +
                 (double)*(obsloc[i+1] + j-1)   - (double)*(rszloc[i+1] + j-1) +
-                (double)*(obsloc[i+1] + j)     - (double)*(rszloc[i+1] + j)   +
-                (double)*(obsloc[i+1] + j+1)   - (double)*(rszloc[i+1] + j+1);*/
+                (double)*(obsloc[i+1] + j)     - (double)*(rszloc[i+1] + j)  +
+                (double)*(obsloc[i+1] + j+1)   - (double)*(rszloc[i+1] + j+1);
 
-     /*   double d1 = *(obsloc[i]   + j-1);
-        double d2 =  *(rszloc[i]   + j-1);
-        double d3 = *(obsloc[i]   + j);
-        double d4 = *(rszloc[i]   + j);
-        double d5 = *(obsloc[i]   + j+1);
-        double d6 =  *(rszloc[i]   + j+1);
-        double d7 = *(obsloc[i-1] + j-1);
-        double d8 =  *(rszloc[i-1] + j-1);
-        double d9 = *(obsloc[i-1] + j);
-        double d10 = *(rszloc[i-1] + j);
-        double d11 = *(obsloc[i-1] + j+1);
-        double d12 =  *(rszloc[i-1] + j+1);
-        double d13 = *(obsloc[i+1] + j-1);
-        double d14 = *(rszloc[i+1] + j-1);
-        double d15 = *(obsloc[i+1] + j);
-        double d16 =  *(rszloc[i+1] + j);
-        double d17 = *(obsloc[i+1] + j+1);
-        double d18 = *(rszloc[i+1] + j+1);
-        dval9 = d1-d2+
-                d3-d4+
-                d5-d6+
-                d7-d8+
-                d9-d10+
-                d11-d12+
-                d13-d14+
-                d15-d16+
-                d17-d18;*/
-
+        dval9 = dval9 / 9.0;
     }
-    dval9 = 0.123456789123456789;
-
-    dval9 = dval9 / 9;
     double dval9u = dval9;
 
     if (dval9u > readNoiseAmp*0.33)
