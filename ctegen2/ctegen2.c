@@ -689,7 +689,7 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
 
     /*COMPARE THE SURROUNDING PIXELS*/
     double dval9 = 0.0;
-    if (i == 1 &&  j <= nRows-1 && j > 0)
+    if (i == 1 &&  j < nRows-1 && j > 0)
     {
         dval9 = (double)*(obsloc[i]   + j-1)   - (double)*(rszloc[i]   + j-1) +
                 (double)*(obsloc[i]   + j)     - (double)*(rszloc[i]   + j)   +
