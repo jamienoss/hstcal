@@ -494,6 +494,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
         return status;
     //if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+      //  return status;
 
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
