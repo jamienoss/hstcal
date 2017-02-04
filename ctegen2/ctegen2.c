@@ -96,7 +96,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
     //Due to input->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
     //remove if(!hasFlux) and change schedule to 'static'
 #ifdef _OPENMP
-    unsigned chunkSize = (nColumns / nThreads)*0.1; //Have each thread take 10% of its share of the queue at a time
+    unsigned chunkSize = 1;//(nColumns / nThreads)*0.1; //Have each thread take 10% of its share of the queue at a time
 #endif
 
     //Experiment with chuckSize (ideally static would be best)
@@ -468,7 +468,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
             cte_j = (j+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
-            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j;// * cteScale;
+            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j * cteScale;
         }
     }
     } // end parallel block
@@ -520,17 +520,20 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
       DOWN THE LINE.
       */
 
+    //To get rid of this and adjust in place i.e. using only output:
+    //Don't use pointers to output for obs_loc & rsz_loc
+    //Copy columns and then just shift these copies (boundary case might be annoying)
+    //Use schedule(static) and pre (inner for loop) copy boundary columns to avoid race conditions
     SingleGroup adjustment;
     initSingleGroup(&adjustment);
     allocSingleGroup(&adjustment, nColumns, nRows, False);
 
-    /***INITIALIZE THE LOCAL IMAGE GROUPS***/
     SingleGroup rnz;
     initSingleGroup(&rnz);
     allocSingleGroup(&rnz, nColumns, nRows, False);
 
 #ifdef _OPENMP
-    #pragma omp parallel shared(input, output, readNoiseAmp, rms, nrms, adjustment, rnz)
+    #pragma omp parallel shared(input, output, readNoiseAmp, rms, nrms, rnz)
 #endif
     {
     const float * obs_loc[3];
@@ -550,9 +553,9 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             unsigned imid = i;
             /*RESET TO MIDDLE nColumns AT ENDPOINTS*/
             // This seems odd, the edge columns get accounted for twice?
-            if (imid < 1)
+            if (i == 0)
                 imid = 1;
-            else if (imid == nColumns-1) // NOTE: use of elseif breaks if nColumns = 1
+            else if (i == nColumns-1) // NOTE: use of elseif breaks if nColumns = 1
                 imid = nColumns-2;
 
             /*LOCATE THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
@@ -566,7 +569,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
             for (unsigned j = 0; j < nRows; ++j)
             {
-                if(PixColumnMajor(input->dq.data, j, imid))
+                if(PixColumnMajor(input->dq.data, j, imid))//I think imid should be i here?
                     PixColumnMajor(adjustment.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
             }
         } /*end the parallel for*/ //implicit omp barrier

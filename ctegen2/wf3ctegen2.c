@@ -100,7 +100,7 @@ int inverse_cte_blur(const SingleGroup *_rsz, SingleGroup *_rsc, SingleGroup *_f
             Pix(pixz_fff.sci.data,i,j)=hardset;
             Pix(rz.sci.data,i,j) = Pix(rsz->sci.data,i,j);
             Pix(rz.dq.data,i,j) = Pix(rsz->dq.data,i,j);
-            Pix(pixz_fff.sci.data,i,j) =  cte_ff * Pix(fff->sci.data,i,j);
+            Pix(pixz_fff.sci.data,i,j) =  Pix(fff->sci.data,i,j);//*cte_ff
         }
     }
 
