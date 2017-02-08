@@ -58,6 +58,7 @@ enum OverScanType{
     POSTSCAN
 };
 
+int putChip(char * fileName, SingleGroup * fullChip, SingleGroup * subChip, WF3Info * wf3, double const scaleFraction);
 //NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
 int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFullChip, SingleGroup * backup,
         CTEParams * ctePars, WF3Info * wf3, unsigned const nRows, unsigned const nColumns);
