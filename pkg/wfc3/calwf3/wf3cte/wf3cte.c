@@ -76,28 +76,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     extern int status;
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
-    IODescPtr ip = NULL;
-
-    SingleGroup cd; /*SCI 1, chip 2*/
-    SingleGroup ab; /*SCI 2, chip 1*/
-    SingleGroup subcd; /*subarray chip*/
-    SingleGroup subab; /*subarray chip*/
-    SingleGroup raw; /* THE RAW IMAGE IN RAZ FORMAT */
-
-    int i,j; /*loop vars*/
     int max_threads=1;
-    clock_t begin;
-    double  time_spent;
-    float hardset=0.0;
-
-    /* These are used to find subarrays with physical overscan */
-    int sci_bin[2];			/* bin size of science image */
-    int sci_corner[2];		/* science image corner location */
-    int ref_bin[2];
-    int ref_corner[2];
-    int rsize = 1;          /* reference pixel size */
-    int start=0;            /*where the subarray starts*/
-    int finish=0;           /*where the subarray ends*/
 
     /*check if this is a subarray image.
       This is necessary because the CTE routine will start with the raw images
@@ -122,7 +101,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
       apertures which do not have overscan pixels, but this gets around string
       comparisons and any future name changes or aperture additions in the future)
      */
-    begin = (double)clock();
+    clock_t begin = (double)clock();
 
     /*CONTAIN PARALLEL PROCESSING TO A SINGLE THREAD AS USER OPTION*/
 #   ifdef _OPENMP
@@ -207,11 +186,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status);
     }
 
-
-    /*SET UP THE ARRAYS WHICH WILL BE PASSED AROUND*/
-    initSingleGroup(&raw);
-    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, False);
-
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParams(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
@@ -223,6 +197,26 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         PrRefInfo ("pctetab", wf3.pctetab.name, wf3.pctetab.pedigree,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
     }
+
+    //chip 2, amp cd, ext SCI 1
+    SingleGroup cd;
+    initSingleGroup(&cd);
+    //subarray
+    SingleGroup subcd;
+    initSingleGroup(&subcd);
+
+    //chip 1, amp ab, ext SCI 2
+    SingleGroup ab;
+    initSingleGroup(&ab);
+    //subarray
+    SingleGroup subab;
+    initSingleGroup(&subab);
+
+    //THE RAW IMAGE IN RAZ FORMAT
+    SingleGroup raw;
+    initSingleGroup(&raw);
+    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, False);
+
     /* Full frame and subarrays always have group 1
        If it's a subarray, the group can be from either chip
        and will still be labled group 1 because it's the FIRST
@@ -232,20 +226,20 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
        amps cd are in chip2, sci,1
 
     */
-    Hdr scihdr; /*science header in case of subarray image to detect chip*/
-    initHdr(&scihdr);
-    if (wf3.subarray) {
+    if (wf3.subarray)
+    {
         /* OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER. */
-        ip = openInputImage (wf3.input, "SCI", 1);
+        IODescPtr ip = openInputImage (wf3.input, "SCI", 1);
         if (hstio_err()) {
             sprintf (MsgText, "Image: \"%s\" is not present", wf3.input);
             trlerror (MsgText);
             return (status = OPEN_FAILED);
         }
-        getHeader (ip, &scihdr);
-        if (ip != NULL)
+        Hdr scihdr;
+        initHdr(&scihdr);
+        getHeader(ip, &scihdr);
+        if (ip)
             closeImage (ip);
-
         /* Get CCD-specific parameters. */
         if (GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, 1, &wf3.chip)){
             freeHdr(&scihdr);
@@ -253,144 +247,33 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         }
         freeHdr(&scihdr);
 
-        if (wf3.chip == 2){ /*sci1,cd*/
-            start=0;
-            finish=0;
-            /*get CD subarray from first extension*/
-            initSingleGroup (&subcd);
-            getSingleGroup (wf3.input, 1, &subcd);
-            if (hstio_err()){
-                freeSingleGroup(&subcd);
-                return (status = OPEN_FAILED);
-            }
+        allocSingleGroup(&cd, RAZ_COLS/2, RAZ_ROWS, True); // CreateEmptyChip 0 init
+        initChipMetaData(&wf3, &cd);
+        cd.group_num = 1;
+        allocSingleGroup(&ab, RAZ_COLS/2, RAZ_ROWS, True); // CreateEmptyChip 0 init
+        initChipMetaData(&wf3, &ab);
+        ab.group_num = 2;
 
-            /*create an empty full size chip for pasting*/
-            initSingleGroup(&cd);
-            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, False); // CreateEmptyChip 0 init
-            cd.group_num=1;
-            CreateEmptyChip(&wf3, &cd);
-
-            if (GetCorner(&subcd.sci.hdr, rsize, sci_bin, sci_corner))
-                return (status);
-            if (GetCorner(&cd.sci.hdr, rsize, ref_bin, ref_corner))
-                return (status);
-
-            start = sci_corner[0] - ref_corner[0];
-            finish = start + subcd.sci.data.nx;
-            if ( start >= 25 &&  finish + 60 <= (RAZ_COLS/2) - 25){
-                sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
-                trlmessage(MsgText);
-                return(ERROR_RETURN);
-            }
-
-            /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
-              AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
-              CTE CODE VARIABLES.
-              */
-            if (CompareCTEParams(&subcd, &cte_pars))
-                return (status);
-
-            /*Put the subarray data into full frame*/
-            Sub2Full(&wf3, &subcd, &cd, 0, 1, 1);
-
-            /* now create an empty chip 1*/
-            initSingleGroup(&ab);
-            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, False); // CreateEmptyChip 0 init
-            ab.group_num=2;
-            CreateEmptyChip(&wf3, &ab);
-
-            /* SAVE A COPY OF THE RAW IMAGE BEFORE BIAS FOR LATER */
-            makeRAZ(&cd,&ab,&raw);
-
-            /* Subtract the BIAC file from the subarray before continuing
-               The bias routine will take care of cutting out the correct
-               image location for the subarray.*/
-
-            if (doCteBias(&wf3,&subcd)){
-                freeSingleGroup(&subcd);
-                return(status);
-            }
-
-            /*reset the array after bias subtraction*/
-            Sub2Full(&wf3, &subcd, &cd, 0, 1, 1);
-
-
-        } else { /*chip is 1, ab, sci2*/
-            start=0;
-            finish=0;
-            initSingleGroup(&subab);
-            getSingleGroup(wf3.input, 1, &subab);
-            if (hstio_err()){
-                freeSingleGroup(&subab);
-                return (status = OPEN_FAILED);
-            }
-
-            /*make an empty fullsize chip for pasting*/ //Redo only allocate enough for subarray and not full frame!
-            initSingleGroup(&ab);
-            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, False); // Sub2Full will 0 init
-            ab.group_num=2;
-            CreateEmptyChip(&wf3, &ab);
-
-            if ( GetCorner(&subab.sci.hdr, rsize, sci_bin, sci_corner))
-                return (status);
-
-            if ( GetCorner(&ab.sci.hdr, rsize, ref_bin, ref_corner))
-                return (status);
-
-            start = sci_corner[0] - ref_corner[0];
-            finish = start + subab.sci.data.nx + 2103;
-            finish = start + subab.sci.data.nx;
-            if ( start >= 25 &&  finish + 60 <= (RAZ_COLS/2) - 25){
-                sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
-                trlmessage(MsgText);
-                return(ERROR_RETURN);
-            }
-            /*add subarray to full frame image*/
-            Sub2Full(&wf3, &subab, &ab, 0, 1, 1);
-
-            /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
-              AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
-              CTE CODE VARIABLES.
-              */
-            if (CompareCTEParams(&subab, &cte_pars))
-                return (status);
-
-            /* now create an empty chip 2*/
-            initSingleGroup(&cd);
-            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, False); // CreateEmptyChip 0 init
-            cd.group_num=1;
-            CreateEmptyChip(&wf3, &cd);
-
-            /* SAVE A COPY OF THE RAW IMAGE FOR LATER */
-            makeRAZ(&cd,&ab,&raw);
-
-            /* Subtract the BIAC file from the subarray before continuing*/
-            subab.group_num=2;
-            if (doCteBias(&wf3,&subab)){
-                freeSingleGroup(&subab);
-                return(status);
-            }
-
-            /*reset the array after bias subtraction*/
-            Sub2Full(&wf3, &subab, &ab, 0, 1, 1);
+        if (wf3.chip == 2)
+        {
+            //cd chip => sci1
+            if (getChip(&cd, &subcd, &ab, &raw, &cte_pars, &wf3, RAZ_ROWS, RAZ_COLS))
+                return status;
         }
-
-    } else {
+        else
+        {
+            //ab chip => sci2
+            if (getChip(&ab, &subab, &cd, &raw, &cte_pars, &wf3, RAZ_ROWS, RAZ_COLS))
+                return status;
+        }
+    }
+    else
+    {
         /* Full frame image, just read in the groups
            and init the mask to use all pixels
         */
-
-        initSingleGroup (&cd);
-        getSingleGroup (wf3.input, 1, &cd);
-        if (hstio_err()){
-            return (status = OPEN_FAILED);
-        }
-
-        initSingleGroup (&ab);
-        getSingleGroup (wf3.input, 2, &ab);
-        if (hstio_err()){
-            return (status = OPEN_FAILED);
-        }
+        getSingleGroup(wf3.input, 1, &cd);
+        getSingleGroup(wf3.input, 2, &ab);
 
         /*setup the mask*/
         for (unsigned j = 0; j < ab.dq.data.ny; ++j)
@@ -410,7 +293,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeSingleGroup(&cd);
             return(status);
         }
-
         if (doCteBias(&wf3,&ab)){
             freeSingleGroup(&ab);
             return(status);
@@ -421,7 +303,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
           */
         if (CompareCTEParams(&cd, &cte_pars))
             return (status);
-
     }
 
     //CONVERT TO RAZ
@@ -575,7 +456,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     freeSingleGroup(&cd);
     freeSingleGroup(&ab);
 
-    time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
+    double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
     if (verbose){
         sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
         trlmessage(MsgText);
@@ -806,4 +687,63 @@ int initCTETrl (char *input, char *output) {
     InitTrlFile (trl_in, trl_out);
 
     return(status);
+}
+//NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
+int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFullChip, SingleGroup * backup,
+        CTEParams * ctePars, WF3Info * wf3, unsigned const nRows, unsigned const nColumns)
+{
+    // get subarray from first extension
+    getSingleGroup(wf3->input, 1, subChip);
+    // getSingleGroup will set subChip->group_num to 1 here so now correct
+    subChip->group_num = fullChip->group_num;
+    if (hstio_err()){
+        freeSingleGroup(subChip);
+        return (status = OPEN_FAILED);
+    }
+
+    // These are used to find subarrays with physical overscan
+    int sci_bin[2];         // bin size of science image
+    int sci_corner[2];      // science image corner location
+    int ref_bin[2];
+    int ref_corner[2];
+    int rsize = 1;          // reference pixel size
+    if (GetCorner(&subChip->sci.hdr, rsize, sci_bin, sci_corner))
+        return (status);
+    if (GetCorner(&subChip->sci.hdr, rsize, ref_bin, ref_corner))
+        return (status);
+    const unsigned start = sci_corner[0] - ref_corner[0]; // where the subarray starts
+    const unsigned finish = start + subChip->sci.data.nx; // where the subarray ends
+
+    if ( start >= 25 &&  finish + 60 <= (nColumns/2) - 25){
+        sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
+        trlmessage(MsgText);
+        return(ERROR_RETURN);
+    }
+
+    /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
+      AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
+      CTE CODE VARIABLES.
+      */
+    if (CompareCTEParams(subChip, ctePars))
+        return (status);
+
+    /*Put the subarray data into full frame*/
+    Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
+    /* SAVE A COPY OF THE RAW IMAGE BEFORE BIAS FOR LATER */
+    if (fullChip->group_num == 1)
+        makeRAZ(fullChip, otherFullChip, backup);
+    else
+        makeRAZ(otherFullChip, fullChip, backup);
+
+    /* Subtract the BIAC file from the subarray before continuing
+       The bias routine will take care of cutting out the correct
+       image location for the subarray.*/
+    if (doCteBias(wf3, subChip)){
+        freeSingleGroup(subChip);
+        return(status);
+    }
+    //set the array with bias subtracted data
+    Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
+
+    return 0;
 }

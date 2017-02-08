@@ -20,39 +20,46 @@ int PutKeyStr(Hdr *, char *, char *, char *);
 int PutKeyBool(Hdr *, char *, int, char *);
 int GetCorner (Hdr *, int, int *, int *);
 
+int initChipMetaData(WF3Info *wf3, SingleGroup *full)
+{
+    if (full->group_num == 1){
+          if (PutKeyDbl(&full->sci.hdr, "LTV2", 0.0, "offset in X to light start")) {
+            trlmessage("Error putting LTV1 keyword in header");
+            return (status=HEADER_PROBLEM);
+          }
+     } else {
+         if (PutKeyDbl(&full->sci.hdr, "LTV2", 19.0, "offset in X to light start")) {
+           trlmessage("Error putting LTV1 keyword in header");
+           return (status=HEADER_PROBLEM);
+         }
+     }
+      if (PutKeyDbl(&full->sci.hdr, "LTV1", 25.0, "offset in X to light start")) {
+        trlmessage("Error putting LTV1 keyword in header");
+        return (status=HEADER_PROBLEM);
+      }
+      if (PutKeyDbl(&full->sci.hdr, "LTM1_1", 1.0, "reciprocal of sampling rate in X")) {
+        trlmessage("Error putting LTV2 keyword in header");
+        return (status=HEADER_PROBLEM);
+      }
+      if (PutKeyDbl(&full->sci.hdr, "LTM2_2", 1.0, "reciprocal of sampling rate in Y")) {
+        trlmessage("Error putting LTV2 keyword in header");
+        return (status=HEADER_PROBLEM);
+      }
+      if (PutKeyStr(&full->sci.hdr, "CCDAMP", wf3->ccdamp, "CCD amplifier")){
+        trlmessage("Error updating CCDAMP keyword in image header");
+        return (status=HEADER_PROBLEM);
+      }
+
+      return status;
+}
 
 int CreateEmptyChip(WF3Info *wf3, SingleGroup *full){
   /* Create a full size, but empty group, which contains necessary meta data
      alloc and init the full data with the group and sizes you want
   */
 
-  if (full->group_num == 1){
-      if (PutKeyDbl(&full->sci.hdr, "LTV2", 0.0, "offset in X to light start")) {
-        trlmessage("Error putting LTV1 keyword in header");
-        return (status=HEADER_PROBLEM);
-      }
- } else {
-     if (PutKeyDbl(&full->sci.hdr, "LTV2", 19.0, "offset in X to light start")) {
-       trlmessage("Error putting LTV1 keyword in header");
-       return (status=HEADER_PROBLEM);
-     }
- }
-  if (PutKeyDbl(&full->sci.hdr, "LTV1", 25.0, "offset in X to light start")) {
-    trlmessage("Error putting LTV1 keyword in header");
-    return (status=HEADER_PROBLEM);
-  }
-  if (PutKeyDbl(&full->sci.hdr, "LTM1_1", 1.0, "reciprocal of sampling rate in X")) {
-    trlmessage("Error putting LTV2 keyword in header");
-    return (status=HEADER_PROBLEM);
-  }
-  if (PutKeyDbl(&full->sci.hdr, "LTM2_2", 1.0, "reciprocal of sampling rate in Y")) {
-    trlmessage("Error putting LTV2 keyword in header");
-    return (status=HEADER_PROBLEM);
-  }
-  if (PutKeyStr(&full->sci.hdr, "CCDAMP", wf3->ccdamp, "CCD amplifier")){
-    trlmessage("Error updating CCDAMP keyword in image header");
-    return (status=HEADER_PROBLEM);
-  }
+  if (initChipMetaData(wf3, full))
+      return status;
 
   /*Zero out the large arrays*/
 #ifdef _OPENMP
