@@ -510,7 +510,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
-            Pix(raw.sci.data,i,j) += (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+        {
+            Pix(raw.sci.data, i, j) += (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+            Pix(raw.dq.data,i , j) = 0;
+        }
     }
     cteCorrectedImage = NULL;
     freeSingleGroup(&raz);
