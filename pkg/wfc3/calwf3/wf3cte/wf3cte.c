@@ -315,7 +315,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup tempGroup1;
     initSingleGroup(&tempGroup1);
     allocSingleGroup(&tempGroup1, RAZ_COLS, RAZ_ROWS, False);
-    //setStorageOrder(&tempGroup1, COLUMNMAJOR);//copy does this
     SingleGroup * razColumnMajor = &tempGroup1;
     assert(!copySingleGroup(razColumnMajor, &raz, COLUMNMAJOR));
 
@@ -342,24 +341,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         return (status=ERROR_RETURN);
     }
 
-   /* SingleGroup trapTest;
-    initSingleGroup(&trapTest);
-    allocSingleGroup(&trapTest, RAZ_COLS, RAZ_ROWS, False);
-    raz2rsz(razColumnMajor, &trapTest, cte_pars.rn_amp, max_threads);
-    unsigned count = 0;
-    for (unsigned i = 0; i < RAZ_COLS; ++i)
-    {
-        for (unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
-            if (Pix(trapTest.sci.data, i, j) != PixColumnMajor(smoothedImage->sci.data, j, i))
-            {
-               printf("%f != %f - %d, %d, %d\n", Pix(trapTest.sci.data, i, j), PixColumnMajor(smoothedImage->sci.data, j, i), i, j, ++count);
-            }
-        }
-    }
-    if (count) return 0;*/
-    //assert(!copySingleGroup(smoothedImage, &trapTest, COLUMNMAJOR));
-
     razColumnMajor = NULL;
     SingleGroup * trapPixelMap = &tempGroup1;
     if (populateTrapPixelMap(trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
@@ -374,8 +355,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
     if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
         return status;
-    //if (inverse_cte_blur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
-      //  return status;
 
     trapPixelMap = NULL;
     freeSingleGroup(&tempGroup1);
@@ -411,32 +390,17 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
        SAVE THE NEW RAW FILE WITH UPDATED SCIENCE
        ARRAYS AND PRIMARY HEADER TO RAC
        */
-    if (wf3.subarray) {
-        if (wf3.chip == 2) {
-            /*** SAVE USEFUL HEADER INFORMATION ***/
-            if (cteHistory (&wf3, subcd.globalhdr))
-                return (status);
-
-            /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
-            trlmessage("PCTEFRAC saved to header");
-
-            Full2Sub(&wf3, &subcd, &cd, 0, 1, 1);
-            putSingleGroup(output, 1, &subcd,0);
-            freeSingleGroup(&subcd);
-        } else {
-
-            /*** SAVE USEFUL HEADER INFORMATION ***/
-            if (cteHistory (&wf3, subab.globalhdr))
-                return (status);
-
-            /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(subab.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
-            trlmessage("PCTEFRAC saved to header");
-
-            Full2Sub(&wf3, &subab, &ab, 0, 1, 1);
-            putSingleGroup(output, 1, &subab,0);
-            freeSingleGroup(&subab);
+    if (wf3.subarray)
+    {
+        if (wf3.chip == 2)
+        {
+            if (putChip(output, &cd, &subcd, &wf3, scaleFraction))
+                return status;
+        }
+        else
+        {
+            if (putChip(output, &ab, &subab, &wf3, scaleFraction))
+                return status;
         }
 
     } else { /*FUll FRAME*/
@@ -745,5 +709,21 @@ int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFu
     //set the array with bias subtracted data
     Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
 
-    return 0;
+    return status;
+}
+
+int putChip(char * fileName, SingleGroup * fullChip, SingleGroup * subChip, WF3Info * wf3, double const scaleFraction)
+{
+    /*** SAVE USEFUL HEADER INFORMATION ***/
+    if (cteHistory(wf3, subChip->globalhdr))
+        return status;
+
+    /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
+    PutKeyDbl(subChip->globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
+    trlmessage("PCTEFRAC saved to header");
+
+    Full2Sub(wf3, subChip, fullChip, 0, 1, 1);
+    putSingleGroup(fileName, 1, subChip,0);
+    freeSingleGroup(subChip);
+    return status;
 }
