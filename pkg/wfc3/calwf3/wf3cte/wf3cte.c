@@ -275,16 +275,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         getSingleGroup(wf3.input, 1, &cd);
         getSingleGroup(wf3.input, 2, &ab);
 
-        /*setup the mask*/
-        for (unsigned j = 0; j < ab.dq.data.ny; ++j)
-        {
-            for (unsigned i = 0; i < ab.dq.data.nx; ++i)
-            {
-                PPix(&ab.dq.data, i, j) = 1;
-                PPix(&cd.dq.data, i, j) = 1;
-            }
-        }
-
         /* SAVE A COPY OF THE RAW IMAGE FOR LATER */
         makeRAZ(&cd,&ab,&raw);
 
@@ -310,6 +300,20 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&raz);
     allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS, False);
     makeRAZ(&cd, &ab, &raz);
+
+    // setup the mask for full frame image, do  this here an for RAZ not full chips, ab & cd,
+    // so this mask isn't present in the RAW and thus not in the final image
+    if (!wf3.subarray)
+    {
+#ifdef _OPENMP
+        #pragma omp parallel for schedule(static), shared(raz)
+#endif
+        for (unsigned i = 0; i < RAZ_ROWS; ++i)
+        {
+            for (unsigned j = 0; j < RAZ_COLS; ++j)
+                Pix(raz.dq.data, j, i) = 1;
+        }
+    }
 
     //copy to column major storage
     SingleGroup tempGroup1;
@@ -370,10 +374,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
-        {
             Pix(raw.sci.data, i, j) += (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
-            Pix(raw.dq.data,i , j) = 0;
-        }
     }
     cteCorrectedImage = NULL;
     freeSingleGroup(&raz);
