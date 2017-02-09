@@ -698,7 +698,7 @@ int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFu
     int rsize = 1;          // reference pixel size
     if (GetCorner(&subChip->sci.hdr, rsize, sci_bin, sci_corner))
         return (status);
-    if (GetCorner(&subChip->sci.hdr, rsize, ref_bin, ref_corner))
+    if (GetCorner(&fullChip->sci.hdr, rsize, ref_bin, ref_corner))
         return (status);
     const unsigned start = sci_corner[0] - ref_corner[0]; // where the subarray starts
     const unsigned finish = start + subChip->sci.data.nx; // where the subarray ends
