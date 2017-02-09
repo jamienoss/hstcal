@@ -368,14 +368,38 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
     const float ccdgain = wf3.ccdgain;
+    float totalCounts = 0;
+    float totalRawCounts = 0;
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(static), shared(cteCorrectedImage, smoothedImage, raw)
+    #pragma omp parallel shared(cteCorrectedImage, smoothedImage, raw)
+#endif
+    {
+    float threadCounts = 0;
+    float threadRawCounts = 0;
+#ifdef _OPENMP
+    #pragma omp for schedule(static)
 #endif
     for (unsigned i = 0; i < RAZ_COLS; ++i)
     {
         for(unsigned j = 0; j < RAZ_ROWS; ++j)
-            Pix(raw.sci.data, i, j) += (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+        {
+            float delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+            threadCounts += delta;
+            threadRawCounts += Pix(raw.sci.data, i, j);
+            Pix(raw.sci.data, i, j) += delta;
+        }
     }
+
+#ifdef _OPENMP
+    #pragma omp critical(deltaAggregate)
+#endif
+    {
+        totalCounts += threadCounts;
+        totalRawCounts += threadRawCounts;
+    }
+    }//end omp threads
+    printf("\nTotal count difference (rac-raw) incurred from correction: %f (%f%%)\n\n", totalCounts, totalCounts/totalRawCounts*100);
+
     cteCorrectedImage = NULL;
     freeSingleGroup(&raz);
     smoothedImage = NULL;
