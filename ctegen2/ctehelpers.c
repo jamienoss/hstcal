@@ -41,6 +41,15 @@ void initCTEParams(CTEParams * pars, const unsigned _nTraps, const unsigned _nRo
     pars->scale_frac=0; /*will be updated during routine run*/
     pars->fix_rocr = 0;
 
+    pars->nRowsPerFullFrame = 0;
+    pars->nColumnsPerFullFrame = 0;
+    pars->nColumnsPerChip = 0;
+    pars->nRowsPerChip = 0;
+    pars->nColumnsPerQuad = 0;
+    pars->nRowsPerQuad = 0;
+    pars->subarrayRowOffset = 0;
+    pars->subarrayColumnOffset = 0;
+
     pars->iz_data = NULL;
     pars->wcol_data = NULL;
     pars->scale512 = NULL;

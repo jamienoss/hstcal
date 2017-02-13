@@ -78,19 +78,21 @@ int makeRAZ(const SingleGroup *cd, const SingleGroup *ab, SingleGroup *raz)
     const unsigned nThreads = omp_get_num_procs();
     #pragma omp parallel for num_threads(nThreads) shared(raz, cd, ab) schedule(static)
 #endif
-	for (unsigned j = 0; j < nRows; ++j)
+	for (unsigned i = 0; i < nRows; ++i)
 	{
-		for (unsigned i = 0; i < nColumnsPerChip; ++i)
+		for (unsigned j = 0; j < nColumnsPerChip; ++j)
 		{
-			Pix(raz->sci.data, i, j) = Pix(cd->sci.data, i, j);
-			Pix(raz->sci.data, i+nColumnsPerChip, j) = Pix(cd->sci.data, nColumnsPerChip*2-i-1, j);
-			Pix(raz->sci.data, i+2*nColumnsPerChip, j) = Pix(ab->sci.data, i, nRows-j-1);
-			Pix(raz->sci.data, i+3*nColumnsPerChip, j) = Pix(ab->sci.data, nColumnsPerChip*2-i-1, nRows-j-1);
+		    //sci data
+			Pix(raz->sci.data, j, i) = Pix(cd->sci.data, j, i);
+			Pix(raz->sci.data, j+nColumnsPerChip, i) = Pix(cd->sci.data, nColumnsPerChip*2-j-1, i);
+			Pix(raz->sci.data, j+2*nColumnsPerChip, i) = Pix(ab->sci.data, j, nRows-i-1);
+			Pix(raz->sci.data, j+3*nColumnsPerChip, i) = Pix(ab->sci.data, nColumnsPerChip*2-j-1, nRows-i-1);
 
-			Pix(raz->dq.data, i, j) = Pix(cd->dq.data, i, j);
-			Pix(raz->dq.data, i+nColumnsPerChip, j) = Pix(cd->dq.data, nColumnsPerChip*2-i-1, j);
-			Pix(raz->dq.data, i+2*nColumnsPerChip, j) = Pix(ab->dq.data, i, nRows-j-1);
-			Pix(raz->dq.data, i+3*nColumnsPerChip, j) = Pix(ab->dq.data, nColumnsPerChip*2-i-1, nRows-j-1);
+			//dq data
+			Pix(raz->dq.data, j, i) = Pix(cd->dq.data, j, i);
+			Pix(raz->dq.data, j+nColumnsPerChip, i) = Pix(cd->dq.data, nColumnsPerChip*2-j-1, i);
+			Pix(raz->dq.data, j+2*nColumnsPerChip, i) = Pix(ab->dq.data, j, nRows-i-1);
+			Pix(raz->dq.data, j+3*nColumnsPerChip, i) = Pix(ab->dq.data, nColumnsPerChip*2-j-1, nRows-i-1);
 		}
 	}
 
