@@ -48,7 +48,7 @@ int Sub2Full(WF3Info *, SingleGroup *, SingleGroup *, int, int, int );
 int Full2Sub(WF3Info *, SingleGroup *, SingleGroup *, int, int, int );
 int CreateEmptyChip(WF3Info *, SingleGroup *);
 int GetCorner (Hdr *, int, int *, int *);
-int initChipMetaData(WF3Info *wf3, SingleGroup *full);
+int initChipMetaData(WF3Info *wf3, Hdr * hdr, int groupNumber);
 
 
 /*FUNCTION SIGNATURES FOR CTE SPECIFIC CODE*/
@@ -58,10 +58,10 @@ enum OverScanType{
     POSTSCAN
 };
 
-int putChip(char * fileName, SingleGroup * fullChip, SingleGroup * subChip, WF3Info * wf3, double const scaleFraction);
-//NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
-int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFullChip, SingleGroup * backup,
-        CTEParams * ctePars, WF3Info * wf3, unsigned const nRows, unsigned const nColumns);
+int alignAmps(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3);
+int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3);
+int getCCDChip(int * value, char * fileName, char * ename, int ever);
+int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction);
 int doCteBias (WF3Info *, SingleGroup *);
 int GetCTEFlags (WF3Info *, Hdr *);
 int a2d_raz(WF3Info *);

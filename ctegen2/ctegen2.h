@@ -2,6 +2,21 @@
 #define CTEGEN2_INCL
 
 #include "hstio.h"
+typedef void (*FreeFunction)(void*);
+
+#define PTR_REGISTER_LENGTH 50
+typedef struct {
+    unsigned cursor;
+    unsigned length;
+    void * ptrs[PTR_REGISTER_LENGTH];
+    FreeFunction freeFunctions[PTR_REGISTER_LENGTH];
+} PtrRegister;
+
+void initPtrRegister(PtrRegister * reg);
+void addPtr(PtrRegister * reg, void * ptr, void * freeFunc);
+void freePtr(PtrRegister * reg, void * ptr);
+void freeAll(PtrRegister * reg);
+
 
 typedef struct {
     int noise_mit; /*read noise mitigation algorithm*/
@@ -19,6 +34,14 @@ typedef struct {
     double cte_date1; /*date of cte model pinning mjd*/
     double scale_frac; /*scaling of cte model relative to ctedate1*/
 
+    unsigned nRowsPerFullFrame;
+    unsigned nColumnsPerFullFrame;
+    unsigned nColumnsPerChip;
+    unsigned nRowsPerChip;
+    unsigned nColumnsPerQuad;
+    unsigned nRowsPerQuad;
+    unsigned subarrayRowOffset;
+    unsigned subarrayColumnOffset;
 
     FloatHdrData * rprof; // differential trail profile as image
     FloatHdrData * cprof; // cumulative trail profile as image

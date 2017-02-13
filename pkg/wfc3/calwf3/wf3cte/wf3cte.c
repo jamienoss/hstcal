@@ -77,6 +77,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
     int max_threads=1;
+    PtrRegister ptrReg;
 
     /*check if this is a subarray image.
       This is necessary because the CTE routine will start with the raw images
@@ -169,116 +170,99 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /* OPEN INPUT IMAGE IN ORDER TO READ ITS PRIMARY HEADER. */
     Hdr phdr; /*primary header for input image, all output information saved here*/
     initHdr(&phdr);
+    addPtr(&ptrReg, &phdr, &freeHdr);
     if (LoadHdr (wf3.input, &phdr) ){
         WhichError(status);
-        freeHdr (&phdr);
+        freeAll(&ptrReg);
         return (ERROR_RETURN);
     }
 
     /* GET KEYWORD VALUES FROM PRIMARY HEADER. */
     if (GetKeys (&wf3, &phdr)) {
-        freeHdr (&phdr);
+        freeAll(&ptrReg);;
         return (status);
     }
 
     if (GetCTEFlags (&wf3, &phdr)) {
-        freeHdr(&phdr);
+        freeAll(&ptrReg);
         return (status);
     }
 
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParams(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
+    addPtr(&ptrReg, &cte_pars, &freeCTEParams);
     allocateCTEParams(&cte_pars);
     if (GetCTEPars (wf3.pctetab.name, &cte_pars))
+    {
+        freeAll(&ptrReg);
         return (status);
+    }
 
     if (verbose){
         PrRefInfo ("pctetab", wf3.pctetab.name, wf3.pctetab.pedigree,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
     }
 
-    //chip 2, amp cd, ext SCI 1
-    SingleGroup cd;
-    initSingleGroup(&cd);
-    //subarray
-    SingleGroup subcd;
-    initSingleGroup(&subcd);
+    //stash sizes
+    cte_pars.nRowsPerFullFrame = RAZ_ROWS;
+    cte_pars.nColumnsPerFullFrame = RAZ_COLS;
+    cte_pars.nColumnsPerChip = cte_pars.nColumnsPerFullFrame/2;
+    cte_pars.nRowsPerChip = cte_pars.nRowsPerFullFrame;
+    cte_pars.nColumnsPerQuad = cte_pars.nColumnsPerFullFrame/4;
+    cte_pars.nRowsPerQuad = cte_pars.nRowsPerFullFrame;
 
-    //chip 1, amp ab, ext SCI 2
-    SingleGroup ab;
-    initSingleGroup(&ab);
-    //subarray
-    SingleGroup subab;
-    initSingleGroup(&subab);
+    cte_pars.nRows = cte_pars.nRowsPerFullFrame; // assume full frame for now
+    cte_pars.nColumns = cte_pars.nColumnsPerFullFrame; // assume full frame for now
 
-    //THE RAW IMAGE IN RAZ FORMAT
+    SingleGroup rowMajorImage;
+    SingleGroup * image = &rowMajorImage;
+    initSingleGroup(image);
+    addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
     SingleGroup raw;
     initSingleGroup(&raw);
-    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, False);
+    addPtr(&ptrReg, &raw, &freeSingleGroup);
+    // amps ab are in chip1, sci,2
+    //   amps cd are in chip2, sci,1
 
-    /* Full frame and subarrays always have group 1
-       If it's a subarray, the group can be from either chip
-       and will still be labled group 1 because it's the FIRST
-       and only group, so look at the ccdchip instead.
 
-       amps ab are in chip1, sci,2
-       amps cd are in chip2, sci,1
-
-    */
     if (wf3.subarray)
     {
-        /* OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER. */
-        IODescPtr ip = openInputImage (wf3.input, "SCI", 1);
-        if (hstio_err()) {
-            sprintf (MsgText, "Image: \"%s\" is not present", wf3.input);
-            trlerror (MsgText);
-            return (status = OPEN_FAILED);
-        }
-        Hdr scihdr;
-        initHdr(&scihdr);
-        getHeader(ip, &scihdr);
-        if (ip)
-            closeImage (ip);
-        /* Get CCD-specific parameters. */
-        if (GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, 1, &wf3.chip)){
-            freeHdr(&scihdr);
-            return (status);
-        }
-        freeHdr(&scihdr);
-
-        allocSingleGroup(&cd, RAZ_COLS/2, RAZ_ROWS, True); // CreateEmptyChip 0 init
-        initChipMetaData(&wf3, &cd);
-        cd.group_num = 1;
-        allocSingleGroup(&ab, RAZ_COLS/2, RAZ_ROWS, True); // CreateEmptyChip 0 init
-        initChipMetaData(&wf3, &ab);
-        ab.group_num = 2;
-
-        if (wf3.chip == 2)
+        if (getCCDChip(&wf3.chip, wf3.input, "SCI", 1) ||
+                getSubarray(image, &cte_pars, &wf3))
         {
-            //cd chip => sci1
-            if (getChip(&cd, &subcd, &ab, &raw, &cte_pars, &wf3, RAZ_ROWS, RAZ_COLS))
-                return status;
+            freeAll(&ptrReg);
+            return status;
         }
-        else
+
+        cte_pars.nRows = image->sci.data.ny;
+        cte_pars.nColumns = image->sci.data.nx;
+
+        alignAmps(image, &cte_pars, &wf3);
+
+        //stash image before bias
+        allocSingleGroup(&raw, cte_pars.nColumns, cte_pars.nRows, False);
+        copySingleGroup(&raw, image, image->sci.data.storageOrder);
+
+        //biac bias
+        if (doCteBias(&wf3, image))
         {
-            //ab chip => sci2
-            if (getChip(&ab, &subab, &cd, &raw, &cte_pars, &wf3, RAZ_ROWS, RAZ_COLS))
-                return status;
+            freeAll(&ptrReg);
+            return(status);
         }
     }
-    else
+   /* else
     {
-        /* Full frame image, just read in the groups
-           and init the mask to use all pixels
-        */
-        getSingleGroup(wf3.input, 1, &cd);
-        getSingleGroup(wf3.input, 2, &ab);
+        // Full frame image, just read in the groups
+        //   and init the mask to use all pixels
 
-        /* SAVE A COPY OF THE RAW IMAGE FOR LATER */
+        getSingleGroup(wf3.input, 1, NULL);
+        getSingleGroup(wf3.input, 2, NULL);
+
+        // SAVE A COPY OF THE RAW IMAGE FOR LATER
         makeRAZ(&cd,&ab,&raw);
 
-        /***SUBTRACT THE CTE BIAS FROM BOTH CHIPS IN PLACE***/
+        //SUBTRACT THE CTE BIAS FROM BOTH CHIPS IN PLACE
         if (doCteBias(&wf3,&cd)){
             freeSingleGroup(&cd);
             return(status);
@@ -287,16 +271,19 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeSingleGroup(&ab);
             return(status);
         }
-        /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
-          AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
-          CTE CODE VARIABLES.
-          */
+        //SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
+        //  AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
+        //  CTE CODE VARIABLES.
+
         if (CompareCTEParams(&cd, &cte_pars))
             return (status);
     }
+*/
+    const unsigned nRows = cte_pars.nRows;
+    const unsigned nColumns = cte_pars.nColumns;
 
     //CONVERT TO RAZ
-    SingleGroup raz; /* THE LARGE FORMAT COMBINATION OF CDAB*/
+   /* SingleGroup raz; // THE LARGE FORMAT COMBINATION OF CDAB
     initSingleGroup(&raz);
     allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS, False);
     makeRAZ(&cd, &ab, &raz);
@@ -314,57 +301,64 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 Pix(raz.dq.data, j, i) = 1;
         }
     }
-
+*/
     //copy to column major storage
-    SingleGroup tempGroup1;
-    initSingleGroup(&tempGroup1);
-    allocSingleGroup(&tempGroup1, RAZ_COLS, RAZ_ROWS, False);
-    SingleGroup * razColumnMajor = &tempGroup1;
-    assert(!copySingleGroup(razColumnMajor, &raz, COLUMNMAJOR));
+    SingleGroup columnMajorImage;
+    initSingleGroup(&columnMajorImage);
+    addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
+    allocSingleGroup(&columnMajorImage, RAZ_COLS, RAZ_ROWS, False);
+    assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
+    image = &columnMajorImage;
 
     //SUBTRACT BIAS AND CORRECT FOR GAIN
-    if (biasAndGainCorrect(razColumnMajor, wf3.ccdgain, wf3.subarray))
+    if (biasAndGainCorrect(image, wf3.ccdgain, wf3.subarray))
+    {
+        freeAll(&ptrReg);
         return (status);
+    }
 
     /***CALCULATE THE SMOOTH READNOISE IMAGE***/
     trlmessage("CTE: Calculating smooth readnoise image");
 
-    /* LARGE FORMAT READNOISE CORRECTED IMAGE */
-    SingleGroup tempGroup2;
-    initSingleGroup(&tempGroup2);
-    allocSingleGroup(&tempGroup2, RAZ_COLS, RAZ_ROWS, False);
-    setStorageOrder(&tempGroup2, COLUMNMAJOR);
-    SingleGroup * smoothedImage = &tempGroup2;
-
+    SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
+    setStorageOrder(smoothedImage, COLUMNMAJOR);
     /***CREATE THE NOISE MITIGATION MODEL ***/
     if (cte_pars.noise_mit == 0) {
-        if (cteSmoothImage(razColumnMajor, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+        if (cteSmoothImage(image, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+        {
+            freeAll(&ptrReg);
             return (status);
+        }
     } else {
         trlmessage("Only noise model 0 implemented!");
+        freeAll(&ptrReg);
         return (status=ERROR_RETURN);
     }
 
-    razColumnMajor = NULL;
-    SingleGroup * trapPixelMap = &tempGroup1;
-    if (populateTrapPixelMap(trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+    SingleGroup trapPixelMap;
+    initSingleGroup(&trapPixelMap);
+    addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
+    allocSingleGroup(&trapPixelMap, nColumns, nRows, False);
+    setStorageOrder(&trapPixelMap, COLUMNMAJOR);
+    if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
     {
-    	//Geez, do we not want to free everything???
+        freeAll(&ptrReg);
         return status;
     }
 
-    //reuse raz
-    SingleGroup * cteCorrectedImage = &raz;
-    setStorageOrder(cteCorrectedImage, COLUMNMAJOR);
+    SingleGroup * cteCorrectedImage = image; //reuse columnMajorImage
+    image = NULL;
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, trapPixelMap, &cte_pars))
+    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
+    {
+        freeAll(&ptrReg);
         return status;
-
-    trapPixelMap = NULL;
-    freeSingleGroup(&tempGroup1);
+    }
+    freePtr(&ptrReg, &trapPixelMap);
+    //freeSingleGroup(&trapPixelMap);
 
     const double scaleFraction = cte_pars.scale_frac;
-    freeCTEParams(&cte_pars);
+    freePtr(&ptrReg, &cte_pars);
 
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
     const float ccdgain = wf3.ccdgain;
@@ -379,9 +373,9 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 #ifdef _OPENMP
     #pragma omp for schedule(static)
 #endif
-    for (unsigned i = 0; i < RAZ_COLS; ++i)
+    for (unsigned i = 0; i < nColumns; ++i)
     {
-        for(unsigned j = 0; j < RAZ_ROWS; ++j)
+        for(unsigned j = 0; j < nRows; ++j)
         {
             float delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
             threadCounts += delta;
@@ -401,25 +395,46 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     printf("\nTotal count difference (rac-raw) incurred from correction: %f (%f%%)\n\n", totalCounts, totalCounts/totalRawCounts*100);
 
     cteCorrectedImage = NULL;
-    freeSingleGroup(&raz);
     smoothedImage = NULL;
-    freeSingleGroup(&tempGroup2);
+    freePtr(&ptrReg, &rowMajorImage);
+    freePtr(&ptrReg, &columnMajorImage);
 
+  /*  if (wf3.subarray)
+    {
+        SingleGroup * tempFullChip = NULL;
+        if (wf3.chip == 2)
+        {
+            tempFullChip = &cd;
+            tempGroup1.group_num = cd.group_num;
+        }
+        else
+        {
+            tempFullChip = &ab;
+            tempGroup1.group_num = ab.group_num;
+        }
+        Sub2Full(&wf3, &tempGroup1, tempFullChip, 0, 1, 1);
+        //maxRaz(&cd, &ab, &raw);
+    }
+    else
+        undoRAZ(&cd, &ab, &raw);
+*/
 
     /*BACK TO NORMAL FORMATTING*/
     /*Copies rzc data to cd->sci.data and ab->sci.data */
-    undoRAZ(&cd, &ab, &raw);
-    freeSingleGroup(&raw);
+    //undoRAZ(&cd, &ab, &raw);
+    //freeSingleGroup(&raw);
 
     /* COPY BACK THE SCIENCE SUBARRAYS AND
        SAVE THE NEW RAW FILE WITH UPDATED SCIENCE
        ARRAYS AND PRIMARY HEADER TO RAC
        */
-    if (wf3.subarray)
+    if (putChip(output, &raw, &wf3, scaleFraction))
+        return status;
+ /*   if (wf3.subarray)
     {
         if (wf3.chip == 2)
         {
-            if (putChip(output, &cd, &subcd, &wf3, scaleFraction))
+            if (putChip(output, &raw, &wf3, scaleFraction))
                 return status;
         }
         else
@@ -428,22 +443,22 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return status;
         }
 
-    } else { /*FUll FRAME*/
-        /*** SAVE USEFUL HEADER INFORMATION ***/
+    } else { //FUll FRAME
+        //SAVE USEFUL HEADER INFORMATION
         if (cteHistory (&wf3, cd.globalhdr))
             return (status);
 
-        /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
+        //UPDATE THE OUTPUT HEADER ONE FINAL TIME
         PutKeyDbl(cd.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
         trlmessage("PCTEFRAC saved to header");
 
         putSingleGroup(output,cd.group_num, &cd,0);
         putSingleGroup(output,ab.group_num, &ab,0);
     }
-
+*/
     /** CLEAN UP ON AISLE 3 **/
-    freeSingleGroup(&cd);
-    freeSingleGroup(&ab);
+    freeAll(&ptrReg);
+    //freeSingleGroup(&ab);
 
     double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
     if (verbose){
@@ -453,7 +468,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     PrSwitch("pctecorr", COMPLETE);
     if(wf3.printtime)
-        TimeStamp("PCTECORR Finished",wf3.rootname);
+        TimeStamp("PCTECORR Finished", wf3.rootname);
 
     return (status);
 }
@@ -678,32 +693,42 @@ int initCTETrl (char *input, char *output) {
     return(status);
 }
 //NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
-int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFullChip, SingleGroup * backup,
-        CTEParams * ctePars, WF3Info * wf3, unsigned const nRows, unsigned const nColumns)
+int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
 {
+    extern int status;
     // get subarray from first extension
-    getSingleGroup(wf3->input, 1, subChip);
-    // getSingleGroup will set subChip->group_num to 1 here so now correct
-    subChip->group_num = fullChip->group_num;
+    getSingleGroup(wf3->input, 1, image);
+    // getSingleGroup will set image->group_num to 1 here so now correct
+    image->group_num = wf3->chip == 2 ? 1 : 2;
     if (hstio_err()){
-        freeSingleGroup(subChip);
+        freeSingleGroup(image);
         return (status = OPEN_FAILED);
     }
 
-    // These are used to find subarrays with physical overscan
+  // These are used to find subarrays with physical overscan
     int sci_bin[2];         // bin size of science image
     int sci_corner[2];      // science image corner location
     int ref_bin[2];
     int ref_corner[2];
     int rsize = 1;          // reference pixel size
-    if (GetCorner(&subChip->sci.hdr, rsize, sci_bin, sci_corner))
-        return (status);
-    if (GetCorner(&fullChip->sci.hdr, rsize, ref_bin, ref_corner))
-        return (status);
-    const unsigned start = sci_corner[0] - ref_corner[0]; // where the subarray starts
-    const unsigned finish = start + subChip->sci.data.nx; // where the subarray ends
 
-    if ( start >= 25 &&  finish + 60 <= (nColumns/2) - 25){
+    if (GetCorner(&image->sci.hdr, rsize, sci_bin, sci_corner))
+        return (status);
+
+    //Create a dummy header to represent the full chip (both amps) and populate via initChipMetaData
+    {
+        Hdr fullChipHdr;
+        initChipMetaData(wf3, &fullChipHdr, image->group_num);
+        if (GetCorner (&fullChipHdr, rsize, ref_bin, ref_corner))
+            return (status);
+    }
+
+    ctePars->subarrayColumnOffset = sci_corner[0] - ref_corner[0];
+    ctePars->subarrayRowOffset = sci_corner[1] - ref_corner[1];
+    const unsigned start = ctePars->subarrayColumnOffset; //column where the subarray starts
+    const unsigned finish = start + image->sci.data.nx; //column where the subarray ends
+
+    if ( start >= 25 &&  finish + 60 <= (ctePars->nColumnsPerChip) - 25){
         sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
         trlmessage(MsgText);
         return(ERROR_RETURN);
@@ -713,42 +738,135 @@ int getChip(SingleGroup * fullChip, SingleGroup * subChip, SingleGroup * otherFu
       AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
       CTE CODE VARIABLES.
       */
-    if (CompareCTEParams(subChip, ctePars))
+    if (CompareCTEParams(image, ctePars))
         return (status);
 
     /*Put the subarray data into full frame*/
-    Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
+    Bool virtual = True;
+    //Sub2Full(wf3, subChip, fullChip, 0, 1, virtual);
+    if (virtual && ctePars->subarrayColumnOffset >= 2072)
+        ctePars->subarrayColumnOffset += 60; // image starts in B or D regions and we can just shift the starting pixel
+
     /* SAVE A COPY OF THE RAW IMAGE BEFORE BIAS FOR LATER */
-    if (fullChip->group_num == 1)
+   /* if (fullChip->group_num == 1)
         makeRAZ(fullChip, otherFullChip, backup);
     else
         makeRAZ(otherFullChip, fullChip, backup);
+*/
+
+    //save copy before doCteBias
 
     /* Subtract the BIAC file from the subarray before continuing
        The bias routine will take care of cutting out the correct
        image location for the subarray.*/
-    if (doCteBias(wf3, subChip)){
+    /*if (doCteBias(wf3, subChip)){
         freeSingleGroup(subChip);
         return(status);
     }
     //set the array with bias subtracted data
-    Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
-
+    //Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
+*/
     return status;
 }
 
-int putChip(char * fileName, SingleGroup * fullChip, SingleGroup * subChip, WF3Info * wf3, double const scaleFraction)
+int alignAmps(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
+{
+    //WARNING - assumes row major storage
+
+    //Align amps such that they are at the bottom left
+    extern int status;
+
+    unsigned columnOffset = ctePars->subarrayColumnOffset;
+    unsigned nColumns = ctePars->nColumns;
+    unsigned nRows = ctePars->nRows;
+
+    Bool isCDAmp = image->group_num == 2 ? True : False;
+
+    //If subarray only in c quad do nothing as this is already bottom left aligned
+    if (isCDAmp && columnOffset + nColumns < ctePars->nColumnsPerQuad)
+        return status;
+
+    //Find how much of subarray extends into either b or d quad and flip right to left
+    if (columnOffset + nColumns > ctePars->nColumnsPerQuad)
+    {
+        //grab a row, flip it, put it back
+        unsigned rowLength = columnOffset + nColumns - ctePars->nColumnsPerQuad;
+        unsigned quadBoundary = nColumns - rowLength;
+        float * row = NULL;
+        for (unsigned i = 0; i < nRows; ++i)
+        {
+            //find row
+            row = image->sci.data.data + i*nColumns + quadBoundary;
+            //flip right to left
+            float tempPixel;
+            for (unsigned j = 0; j < rowLength/2; ++j)
+            {
+                tempPixel = row[j];
+                row[j] = row[rowLength-j];
+                row[rowLength-j] = tempPixel;
+            }
+        }
+    }
+
+    //Only thing left is to flip ab chip upside down
+    if (!isCDAmp) // isABAmp
+    {
+        //either physically align all or propagate throughout a mechanism to work on the array upside down (flip b quad though)
+        //we'll just flip all for now
+        float * tempRow = malloc(nColumns*sizeof(*tempRow));
+        float * topRow = NULL;
+        float * bottomRow = NULL;
+        size_t rowSize = nColumns*sizeof(*tempRow);
+        for (unsigned i = 0; i < nRows/2; ++i)
+        {
+            topRow = image->sci.data.data + i*nColumns;
+            bottomRow = image->sci.data.data + (nRows-i-1)*nColumns;
+            memcpy(tempRow, topRow, rowSize);
+            memcpy(topRow, bottomRow, rowSize);
+            memcpy(bottomRow, tempRow, rowSize);
+        }
+        free(tempRow);
+    }
+}
+
+
+int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction)
 {
     /*** SAVE USEFUL HEADER INFORMATION ***/
-    if (cteHistory(wf3, subChip->globalhdr))
+    if (cteHistory(wf3, image->globalhdr))
         return status;
 
     /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-    PutKeyDbl(subChip->globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
+    PutKeyDbl(image->globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
     trlmessage("PCTEFRAC saved to header");
 
-    Full2Sub(wf3, subChip, fullChip, 0, 1, 1);
-    putSingleGroup(fileName, 1, subChip,0);
-    freeSingleGroup(subChip);
+    //Full2Sub(wf3, subChip, fullChip, 0, 1, 1);
+    putSingleGroup(fileName, 1, image, 0);
+    //freeSingleGroup(subChip);
+    return status;
+}
+
+int getCCDChip(int * value, char * fileName, char * ename, int ever)
+{
+    extern int status;
+    // OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER.
+    IODescPtr ip = openInputImage (fileName, "SCI", ever);
+    if (hstio_err()) {
+        sprintf (MsgText, "Image: \"%s\" is not present", fileName);
+        trlerror (MsgText);
+        return (status = OPEN_FAILED);
+    }
+    Hdr scihdr;
+    initHdr(&scihdr);
+    getHeader(ip, &scihdr);
+    if (ip)
+        closeImage (ip);
+    /* Get CCD-specific parameters. */
+    if (GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, ever, value)){
+        freeHdr(&scihdr);
+        return (status);
+    }
+    freeHdr(&scihdr);
+
     return status;
 }

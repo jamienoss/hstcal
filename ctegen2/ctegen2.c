@@ -18,6 +18,71 @@ extern void trlmessage (char *message);
 //#define PixColumnMajor(a,j,i) ( (a).storageOrder == ROWMAJOR ? (a).data[(j)*(a).tot_nx + (i)] : (a).data[(i)*(a).tot_ny + (j)] )
 //#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_nx + (i)] // := Pix
 
+void initPtrRegister(PtrRegister * reg)
+{
+    reg->cursor = 0;
+    reg->length = PTR_REGISTER_LENGTH;
+    for (unsigned i = 0; i < reg->length; ++i)
+    {
+        reg->ptrs[i] = NULL;
+        reg->freeFunctions[i] = NULL;
+    }
+}
+void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
+{
+    if (!reg || !ptr || !freeFunc)
+        return;
+
+    assert(reg->cursor < reg->length);
+    reg->ptrs[reg->cursor] = ptr;
+    reg->freeFunctions[reg->cursor] = freeFunc;
+    ++reg->cursor;
+}
+void freePtr(PtrRegister * reg, void * ptr)
+{
+    if (!reg || !ptr)
+        return;
+
+    int i;
+    for (i = reg->cursor; i >= 0 ; --i)
+    {
+        if (reg->ptrs[i] == ptr)
+            break;
+    }
+
+    //call function to free ptr
+    reg->freeFunctions[i](ptr);
+
+    if (i == reg->cursor)
+    {
+        reg->ptrs[i] = NULL;
+        reg->freeFunctions[i] = NULL;
+    }
+    else
+    {
+        //move last one into gap to close - not a stack so who cares
+        reg->ptrs[i] = reg->ptrs[reg->cursor];
+        reg->ptrs[reg->cursor] = NULL;
+        reg->freeFunctions[i] = reg->freeFunctions[reg->cursor];
+        reg->freeFunctions[reg->cursor] = NULL;
+    }
+    --reg->cursor;
+}
+void freeAll(PtrRegister * reg)
+{
+    if (!reg || reg->length == 0)
+        return;
+
+    for (unsigned i = 0; i < reg->cursor; ++i)
+    {
+        reg->freeFunctions[i](reg->ptrs[i]);
+        reg->ptrs[i] = NULL;
+        reg->freeFunctions[i] = NULL;
+    }
+    reg->cursor = 0;
+}
+
+
 int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
         const int verbose, const double expstart)
 {
@@ -83,8 +148,8 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 #endif
 {
     //get rid of asserts
-    double * observed    = malloc(sizeof(*observed)*nRows);
-    assert(observed);
+    double * observed    = NULL;//malloc(sizeof(*observed)*nRows);
+    //assert(observed);
     double * model       = malloc(sizeof(*model)*nRows);
     assert(model);
     double * tempModel   = malloc(sizeof(*tempModel)*nRows);
@@ -105,7 +170,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 #endif
     for (unsigned j = 0; j < nColumns; ++j)
     {
-        Bool hasFlux = False;
+        /*Bool hasFlux = False;
         for (unsigned i = 0; i < nRows; ++i)
         {
             if (PixColumnMajor(input->dq.data,i,j))
@@ -116,16 +181,18 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
         }
         if (!hasFlux)
             continue;
-
+*/
         //input->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
         //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
+        //memcpy(observedAll, input->sci.data.data+j*nRows, nRows*sizeof(*input->sci.data.data));
         for (unsigned i = 0; i < nRows; ++i)
         {
             observedAll[i] = PixColumnMajor(input->sci.data,i,j); //Only left in to match master implementation
-            observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
+            //observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
         }
-        traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
 
+        traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
+        observed = observedAll;
         unsigned NREDO = 0;
         Bool REDO;
         do
@@ -173,14 +240,15 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
         } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
 
         //Update source array
+        //can't use memcpy as arrays of diff types
         for (unsigned i = 0; i < nRows; ++i)
-            PixColumnMajor(output->sci.data, i, j) = PixColumnMajor(input->dq.data, i, j) ? model[i] : 0;
+            PixColumnMajor(output->sci.data, i, j) = model[i];//PixColumnMajor(input->dq.data, i, j) ? model[i] : 0;
     } //end loop over columns
 
 
     delete((void*)&observedAll);
     delete((void*)&tempModel);
-    delete((void*)&observed);
+    //delete((void*)&observed);
     delete((void*)&model);
 }// close scope for #pragma omp parallel
 
@@ -459,13 +527,14 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
          */
         for (unsigned j = 0; j < nRows; ++j)
         {
-            ro = j / 512.0; /*ro can be zero, it's an index*/
+            unsigned jj = cte->subarrayColumnOffset + j;
+            ro = jj / 512.0; /*ro can be zero, it's an index*/
             if (ro > 2.999)
             	ro = 2.999; // only 4 quads, 0 to 3
             else if (ro < 0)
             	ro = 0;
             io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
-            cte_j = (j+1) / 2048.0;
+            cte_j = (jj+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
             PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j * cteScale;
@@ -505,7 +574,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
       AND INITIALIZE THE OTHER IMAGES*/
     memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
-    memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
+    //memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
 
     /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
     if (readNoiseAmp < 0.1){
@@ -569,7 +638,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
             for (unsigned j = 0; j < nRows; ++j)
             {
-                if(PixColumnMajor(input->dq.data, j, imid))//I think imid should be i here?
+                //if(PixColumnMajor(input->dq.data, j, imid))//I think imid should be i here?
                     PixColumnMajor(adjustment.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
             }
         } /*end the parallel for*/ //implicit omp barrier
@@ -583,11 +652,11 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         {
             for(unsigned j = 0; j < nRows; ++j)
             {
-                if (PixColumnMajor(input->dq.data,j,i))
-                {
+                //if (PixColumnMajor(input->dq.data,j,i))
+                //{
                     PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(adjustment.sci.data,j, i)*0.75);
                     PixColumnMajor(rnz.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
-                }
+                //}
             }
         }//implicit omp barrier
 

@@ -20,37 +20,38 @@ int PutKeyStr(Hdr *, char *, char *, char *);
 int PutKeyBool(Hdr *, char *, int, char *);
 int GetCorner (Hdr *, int, int *, int *);
 
-int initChipMetaData(WF3Info *wf3, SingleGroup *full)
+int initChipMetaData(WF3Info *wf3, Hdr * hdr, int groupNumber)
 {
-    if (full->group_num == 1){
-          if (PutKeyDbl(&full->sci.hdr, "LTV2", 0.0, "offset in X to light start")) {
+    if (groupNumber == 1){
+        if (PutKeyDbl(hdr, "LTV2", 0.0, "offset in X to light start")) {
             trlmessage("Error putting LTV1 keyword in header");
             return (status=HEADER_PROBLEM);
-          }
-     } else {
-         if (PutKeyDbl(&full->sci.hdr, "LTV2", 19.0, "offset in X to light start")) {
-           trlmessage("Error putting LTV1 keyword in header");
-           return (status=HEADER_PROBLEM);
-         }
-     }
-      if (PutKeyDbl(&full->sci.hdr, "LTV1", 25.0, "offset in X to light start")) {
+        }
+    } else {
+        if (PutKeyDbl(hdr, "LTV2", 19.0, "offset in X to light start")) {
+            trlmessage("Error putting LTV1 keyword in header");
+            return (status=HEADER_PROBLEM);
+        }
+    }
+
+    if (PutKeyDbl(hdr, "LTV1", 25.0, "offset in X to light start")) {
         trlmessage("Error putting LTV1 keyword in header");
         return (status=HEADER_PROBLEM);
-      }
-      if (PutKeyDbl(&full->sci.hdr, "LTM1_1", 1.0, "reciprocal of sampling rate in X")) {
+    }
+    if (PutKeyDbl(hdr, "LTM1_1", 1.0, "reciprocal of sampling rate in X")) {
         trlmessage("Error putting LTV2 keyword in header");
         return (status=HEADER_PROBLEM);
-      }
-      if (PutKeyDbl(&full->sci.hdr, "LTM2_2", 1.0, "reciprocal of sampling rate in Y")) {
+    }
+    if (PutKeyDbl(hdr, "LTM2_2", 1.0, "reciprocal of sampling rate in Y")) {
         trlmessage("Error putting LTV2 keyword in header");
         return (status=HEADER_PROBLEM);
-      }
-      if (PutKeyStr(&full->sci.hdr, "CCDAMP", wf3->ccdamp, "CCD amplifier")){
+    }
+    if (PutKeyStr(hdr, "CCDAMP", wf3->ccdamp, "CCD amplifier")){
         trlmessage("Error updating CCDAMP keyword in image header");
         return (status=HEADER_PROBLEM);
-      }
+    }
 
-      return status;
+    return status;
 }
 
 int CreateEmptyChip(WF3Info *wf3, SingleGroup *full){
@@ -58,7 +59,7 @@ int CreateEmptyChip(WF3Info *wf3, SingleGroup *full){
      alloc and init the full data with the group and sizes you want
   */
 
-  if (initChipMetaData(wf3, full))
+  if (initChipMetaData(wf3, &full->sci.hdr, full->group_num))
       return status;
 
   /*Zero out the large arrays*/
@@ -132,8 +133,10 @@ int Sub2Full(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int real_dq, int f
       }
   }
 
-  if (virtual){
-      if (scix >= 2072){ /*image starts in B or D regions and we can just shift the starting pixel*/
+  if (virtual)
+  {
+      if (scix >= 2072)
+      { /*image starts in B or D regions and we can just shift the starting pixel*/
           sprintf(MsgText,"Subarray starts in B or D region, moved from (%d,%d) to ",scix,sciy);
           trlmessage(MsgText);
           scix += 60;
