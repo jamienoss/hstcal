@@ -2,9 +2,9 @@
 #define CTEGEN2_INCL
 
 #include "hstio.h"
-typedef void (*FreeFunction)(void*);
 
-#define PTR_REGISTER_LENGTH 50
+typedef void (*FreeFunction)(void*);
+#define PTR_REGISTER_LENGTH 10
 typedef struct {
     unsigned cursor;
     unsigned length;
@@ -16,7 +16,6 @@ void initPtrRegister(PtrRegister * reg);
 void addPtr(PtrRegister * reg, void * ptr, void * freeFunc);
 void freePtr(PtrRegister * reg, void * ptr);
 void freeAll(PtrRegister * reg);
-
 
 typedef struct {
     int noise_mit; /*read noise mitigation algorithm*/

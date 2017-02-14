@@ -53,12 +53,13 @@ int initChipMetaData(WF3Info *wf3, Hdr * hdr, int groupNumber);
 
 /*FUNCTION SIGNATURES FOR CTE SPECIFIC CODE*/
 
-enum OverScanType{
+enum OverScanType {
     PRESCAN,
     POSTSCAN
 };
 
-int alignAmps(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3);
+int alignAmps(SingleGroup * image, CTEParams * ctePars);
+int unalignAmps(SingleGroup * image, CTEParams * ctePars);
 int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3);
 int getCCDChip(int * value, char * fileName, char * ename, int ever);
 int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction);

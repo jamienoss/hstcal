@@ -591,7 +591,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
     /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
       AND INITIALIZE THE OTHER IMAGES*/
-    memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
+    copySingleGroup(output, input, input->sci.data.storageOrder);
+    //memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
     //memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
 
     /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
@@ -725,11 +726,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         // if it is true that one breaks then it is true for all
         /*epsilon type comparison*/
         if ( (readNoiseAmp - rms) < 0.00001)
-        {
-
-            printf("iter - %d\n", iter);
             break; // this exits loop over iter
-        }
 #ifdef _OPENMP
         #pragma omp barrier
 #endif
