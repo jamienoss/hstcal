@@ -823,20 +823,38 @@ void initSingleGroup(SingleGroup *x) {
         initFloatHdrData(&(x->err));
 }
 
-int allocSingleGroup(SingleGroup *x, int i, int j, Bool zeroInitialize) {
-        if (x->globalhdr == NULL) {
-            if (zeroInitialize)
-                x->globalhdr = calloc(1,sizeof(*x->globalhdr));
-            else
-                x->globalhdr = malloc(sizeof(*x->globalhdr));
+int allocSingleGroup(SingleGroup *x, int i, int j, Bool zeroInitialize)
+{
+    if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize) ||
+            allocFloatHdrData(&(x->sci),i,j, zeroInitialize)  ||
+            allocShortHdrData(&(x->dq),i,j, zeroInitialize)   ||
+            allocFloatHdrData(&(x->err),i,j, zeroInitialize))
+        return -1;
+    return 0;
+}
 
-            if (x->globalhdr == NULL) return -1;
-            initHdr(x->globalhdr);
-        }
-        if (allocFloatHdrData(&(x->sci),i,j, zeroInitialize)) return -1;
-        if (allocShortHdrData(&(x->dq),i,j, zeroInitialize)) return -1;
-        if (allocFloatHdrData(&(x->err),i,j, zeroInitialize)) return -1;
-        return 0;
+int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize)
+{
+    if (*hdr == NULL)
+    {
+        if (zeroInitialize)
+            *hdr = calloc(1,sizeof(*hdr));
+        else
+            *hdr = malloc(sizeof(*hdr));
+
+        if (*hdr == NULL)
+            return -1;
+        initHdr(*hdr);
+    }
+    return 0;
+}
+
+int allocSingleGroupSciOnly(SingleGroup *x, int i, int j, Bool zeroInitialize)
+{
+    if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize) ||
+            allocFloatHdrData(&(x->sci),i,j, zeroInitialize))
+        return -1;
+    return 0;
 }
 
 void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder)
