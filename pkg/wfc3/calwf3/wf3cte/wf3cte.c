@@ -134,6 +134,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /* CHECK WHETHER THE OUTPUT FILE ALREADY EXISTS. */
     if (FileExists (wf3.output)){
         WhichError(status);
+        freeAll(&ptrReg);
         return (ERROR_RETURN);
     }
 
@@ -150,14 +151,17 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     if (wf3.biascorr == COMPLETE){
         trlmessage("BIASCORR complete for input image, CTE can't be performed");
+        freeAll(&ptrReg);
         return(ERROR_RETURN);
     }
     if (wf3.darkcorr == COMPLETE){
         trlmessage("DARKCORR complete for input image, CTE can't be performed");
+        freeAll(&ptrReg);
         return(ERROR_RETURN);
     }
     if (wf3.blevcorr == COMPLETE){
         trlmessage("BLEVCORR complete for input image, CTE can't be performed");
+        freeAll(&ptrReg);
         return(ERROR_RETURN);
     }
 
@@ -166,7 +170,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
        WITH THOSE NAMES.
        */
     if (initCTETrl (input, output))
+    {
+        freeAll(&ptrReg);
         return (status);
+    }
 
     /* OPEN INPUT IMAGE IN ORDER TO READ ITS PRIMARY HEADER. */
     Hdr phdr; /*primary header for input image, all output information saved here*/
