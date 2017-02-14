@@ -78,6 +78,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
     int max_threads=1;
     PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
 
     /*check if this is a subarray image.
       This is necessary because the CTE routine will start with the raw images
@@ -179,7 +180,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     /* GET KEYWORD VALUES FROM PRIMARY HEADER. */
     if (GetKeys (&wf3, &phdr)) {
-        freeAll(&ptrReg);;
+        freeAll(&ptrReg);
         return (status);
     }
 
@@ -713,14 +714,20 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
     int rsize = 1;          // reference pixel size
 
     if (GetCorner(&image->sci.hdr, rsize, sci_bin, sci_corner))
+    {
+        freeSingleGroup(image);
         return (status);
+    }
 
     //Create a dummy header to represent the full chip (both amps) and populate via initChipMetaData
     {
         Hdr fullChipHdr;
         initChipMetaData(wf3, &fullChipHdr, image->group_num);
         if (GetCorner (&fullChipHdr, rsize, ref_bin, ref_corner))
+        {
+            freeSingleGroup(image);
             return (status);
+        }
     }
 
     ctePars->subarrayColumnOffset = sci_corner[0] - ref_corner[0];
@@ -731,6 +738,7 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
     if ( start >= 25 &&  finish + 60 <= (ctePars->nColumnsPerChip) - 25){
         sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
         trlmessage(MsgText);
+        freeSingleGroup(image);
         return(ERROR_RETURN);
     }
 
@@ -739,7 +747,10 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
       CTE CODE VARIABLES.
       */
     if (CompareCTEParams(image, ctePars))
+    {
+        freeSingleGroup(image);
         return (status);
+    }
 
     /*Put the subarray data into full frame*/
     Bool virtual = True;

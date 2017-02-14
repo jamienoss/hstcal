@@ -20,31 +20,40 @@ extern void trlmessage (char *message);
 
 void initPtrRegister(PtrRegister * reg)
 {
-    reg->cursor = 0;
+    reg->cursor = 0; //points to last ptr NOT next slot
     reg->length = PTR_REGISTER_LENGTH;
-    for (unsigned i = 0; i < reg->length; ++i)
+    reg->ptrs = calloc(reg->length+1, sizeof(*reg->ptrs));
+    assert(reg->ptrs);
+    reg->freeFunctions = calloc(reg->length+1, sizeof(*reg->freeFunctions));
+    if (!reg->freeFunctions)
     {
-        reg->ptrs[i] = NULL;
-        reg->freeFunctions[i] = NULL;
+        free(reg->ptrs);
+        assert(0);
     }
+    reg->ptrs[0] = reg; //this ptr
+    reg->freeFunctions[0] = &free;
 }
 void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
 {
     if (!reg || !ptr || !freeFunc)
         return;
 
-    assert(reg->cursor < reg->length);
+    if (++reg->cursor >= reg->length)
+    {
+        reg->length += 10;
+        assert(realloc(&reg->ptrs, reg->length*sizeof(*reg->ptrs)));
+        assert(realloc(reg->freeFunctions, reg->length*sizeof(*reg->freeFunctions)));
+    }
     reg->ptrs[reg->cursor] = ptr;
     reg->freeFunctions[reg->cursor] = freeFunc;
-    ++reg->cursor;
 }
 void freePtr(PtrRegister * reg, void * ptr)
 {
     if (!reg || !ptr)
         return;
 
-    int i;
-    for (i = reg->cursor; i >= 0 ; --i)
+    unsigned i;
+    for (i = reg->cursor; i > 0 ; --i)
     {
         if (reg->ptrs[i] == ptr)
             break;
@@ -73,13 +82,22 @@ void freeAll(PtrRegister * reg)
     if (!reg || reg->length == 0)
         return;
 
-    for (unsigned i = 0; i < reg->cursor; ++i)
+    for (unsigned i = 1; i < reg->cursor; ++i)
     {
-        reg->freeFunctions[i](reg->ptrs[i]);
-        reg->ptrs[i] = NULL;
-        reg->freeFunctions[i] = NULL;
+        if (reg->freeFunctions[i] && reg->ptrs[i])
+        {
+            reg->freeFunctions[i](reg->ptrs[i]);
+            reg->ptrs[i] = NULL;
+            reg->freeFunctions[i] = NULL;
+        }
     }
     reg->cursor = 0;
+    reg->length = 0;
+    // free 'itself'
+    reg->freeFunctions[0](reg->ptrs);
+    reg->ptrs[0] = NULL;
+    reg->freeFunctions[0](reg->freeFunctions);
+    reg->freeFunctions[0] = NULL;
 }
 
 
