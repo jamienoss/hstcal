@@ -74,14 +74,17 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 */
 
 	if (FindLine (x, &y, &same_size, &rx, &ry, &x0, &y0))
+	{
+	    closeSingleGroupLine (&y);
+	    freeSingleGroupLine (&y);
 		return (status);
+	}
 
 	/* Return with error if reference data not binned same as input */
 	if (rx != 1 || ry != 1) {
 		closeSingleGroupLine (&y);
 		freeSingleGroupLine (&y);
-		sprintf (MsgText,
-				"BIAC image and input are not binned to the same pixel size!");
+		sprintf (MsgText, "BIAC image and input are not binned to the same pixel size!");
 		trlerror (MsgText);
 		return (status = SIZE_MISMATCH);
 	}
@@ -110,8 +113,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 	for (i=0; i < scilines; i++) {
 	 		status = getSingleGroupLine (wf3->biac.name, i, &y);
 	 		if (status) {
-	 			sprintf(MsgText,"Could not read line %d from bias image.",
-	 					i+1);
+	 			sprintf(MsgText,"Could not read line %d from bias image.", i+1);
 	 			trlerror(MsgText);
 	 		}
 
@@ -119,6 +121,8 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 		status = sub1d(x, i, &y);
 	 		if (status) {
 	 			trlerror ("(biascorr) size mismatch.");
+	 			closeSingleGroupLine (&y);
+	 			freeSingleGroupLine (&y);
 	 			return (status);
 	 		}
 	 	}
@@ -171,8 +175,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 		 ** image.  */
 	 		status = getSingleGroupLine (wf3->biac.name, j, &y);
 	 		if (status) {
-	 			sprintf (MsgText,"Could not read line %d from biac image.",
-	 					j+1);
+	 			sprintf (MsgText,"Could not read line %d from biac image.", j+1);
 	 			trlerror(MsgText);
 	 		}
 
@@ -180,6 +183,9 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 
 		    if (trim1d (&y, x0, j, rx, avg, update, &z)) {
 				trlerror ("(ctebiascorr) reference file size mismatch.");
+				closeSingleGroupLine (&y);
+				freeSingleGroupLine (&y);
+                freeSingleGroupLine (&z);
 				return (status);
 		    }
 			if (straddle) {
@@ -188,7 +194,12 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 				status = sub1d (x, i, &z);
 			}
 			if (status)
-			return (status);
+			{
+			    closeSingleGroupLine (&y);
+			    freeSingleGroupLine (&y);
+			    freeSingleGroupLine (&z);
+			    return (status);
+			}
 	 	}
 	 	freeSingleGroupLine (&z);			/* done with z */
 	 }
