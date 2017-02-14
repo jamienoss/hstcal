@@ -9,15 +9,11 @@
 # endif
 
 #include "ctegen2.h"
-//#include "pcte.h"
-//#include "acs.h"
 
 char MsgText[256];
 extern void trlmessage (char *message);
 
-//#define PixColumnMajor(a,j,i) ( (a).storageOrder == ROWMAJOR ? (a).data[(j)*(a).tot_nx + (i)] : (a).data[(i)*(a).tot_ny + (j)] )
-//#define PixColumnMajor(a,i,j) (a).data[(j)*(a).tot_nx + (i)] // := Pix
-
+//move these elsewhere
 void initPtrRegister(PtrRegister * reg)
 {
     reg->cursor = 0; //points to last ptr NOT next slot
@@ -166,58 +162,31 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 #endif
 {
     //get rid of asserts
-    double * observed    = NULL;//malloc(sizeof(*observed)*nRows);
-    //assert(observed);
     double * model       = malloc(sizeof(*model)*nRows);
     assert(model);
     double * tempModel   = malloc(sizeof(*tempModel)*nRows);
     assert(tempModel);
-    double * observedAll = malloc(sizeof(*observedAll)*nRows);
-    assert(observedAll);
+    double * observed = malloc(sizeof(*observed)*nRows);
+    assert(observed);
     float * traps = NULL;
 
-    //Due to input->sci.data being used as a mask for subarrays, keep this as 'dynamic'. If we can ensure no empty columns then
-    //remove if(!hasFlux) and change schedule to 'static'
 #ifdef _OPENMP
-    unsigned chunkSize = 1;//(nColumns / nThreads)*0.1; //Have each thread take 10% of its share of the queue at a time
-#endif
-
-    //Experiment with chuckSize (ideally static would be best)
-#ifdef _OPENMP
-    #pragma omp for schedule (dynamic, chunkSize)
+    #pragma omp for schedule(static)
 #endif
     for (unsigned j = 0; j < nColumns; ++j)
     {
-        /*Bool hasFlux = False;
+        // Can't use memcpy as diff types
         for (unsigned i = 0; i < nRows; ++i)
-        {
-            if (PixColumnMajor(input->dq.data,i,j))
-            {
-                hasFlux = True;
-                break;
-            }
-        }
-        if (!hasFlux)
-            continue;
-*/
-        //input->dq.data is being used as a mask to differentiate the actual pixels in a sub-array, from the entire full frame.
-        //Eventually this will not be needed was will only be passed subarray and not the subarray padded to the full image size!
-        //memcpy(observedAll, input->sci.data.data+j*nRows, nRows*sizeof(*input->sci.data.data));
-        for (unsigned i = 0; i < nRows; ++i)
-        {
-            observedAll[i] = PixColumnMajor(input->sci.data,i,j); //Only left in to match master implementation
-            //observed[i] = PixColumnMajor(input->dq.data,i,j) ? observedAll[i] : 0;
-        }
+            observed[i] = PixColumnMajor(input->sci.data,i,j);
 
         traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
-        observed = observedAll;
         unsigned NREDO = 0;
         Bool REDO;
         do
         {
             REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
             /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-            memcpy(model, observedAll, nRows*sizeof(*observedAll));
+            memcpy(model, observed, nRows*sizeof(*observed));
 
             /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
               IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
@@ -257,16 +226,15 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
              //   printf("Readout cosmic ray detected, redoing computation\n");
         } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
 
-        //Update source array
-        //can't use memcpy as arrays of diff types
+        // Update source array
+        // Can't use memcpy as arrays of diff types
         for (unsigned i = 0; i < nRows; ++i)
-            PixColumnMajor(output->sci.data, i, j) = model[i];//PixColumnMajor(input->dq.data, i, j) ? model[i] : 0;
+            PixColumnMajor(output->sci.data, i, j) = model[i];
     } //end loop over columns
 
 
-    delete((void*)&observedAll);
     delete((void*)&tempModel);
-    //delete((void*)&observed);
+    delete((void*)&observed);
     delete((void*)&model);
 }// close scope for #pragma omp parallel
 
@@ -528,17 +496,16 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
     int io;
 
 #ifdef _OPENMP
-    #pragma omp for schedule(dynamic, 1)
+    #pragma omp for schedule(static)
 #endif
     for (unsigned i = 0; i < nColumns; ++i)
     {
-        //this is only my guess of what should be happening
         unsigned column = cte->iz_data[i]; /*which column to scale*/
         //should check 'column' within bounds(?)
-        trapColumnScale[0]=1;//cte->scale512[column];
-        trapColumnScale[1]=1;//cte->scale1024[column];
-        trapColumnScale[2]=1;//cte->scale1536[column];
-        trapColumnScale[3]=1;//cte->scale2048[column];
+        trapColumnScale[0] = cte->scale512[column];
+        trapColumnScale[1] = cte->scale1024[column];
+        trapColumnScale[2] = cte->scale1536[column];
+        trapColumnScale[3] = cte->scale2048[column];
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
@@ -562,7 +529,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
     return(status);
 }
 
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads, int verbose)
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampReadNoise, unsigned maxThreads, int verbose)
 {
     /*
        This routine will read in a RAZ image and will output the smoothest
@@ -589,14 +556,10 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
     clock_t begin = clock();
 
-    /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
-      AND INITIALIZE THE OTHER IMAGES*/
     copySingleGroup(output, input, input->sci.data.storageOrder);
-    //memcpy(output->sci.data.data, input->sci.data.data, nRows*nColumns*sizeof(*input->sci.data.data));
-    //memcpy(output->dq.data.data, input->dq.data.data, nRows*nColumns*sizeof(*input->dq.data.data));
 
-    /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
-    if (readNoiseAmp < 0.1){
+    //Is the readnoise diff per amp? Current method assumes not.
+    if (ampReadNoise < 0.1){
         trlmessage("rnsig < 0.1, No read-noise mitigation needed");
         return(status);
     }
@@ -621,7 +584,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     allocSingleGroup(&rnz, nColumns, nRows, False);
 
 #ifdef _OPENMP
-    #pragma omp parallel shared(input, output, readNoiseAmp, rms, nrms, rnz)
+    #pragma omp parallel shared(input, output, ampReadNoise, rms, nrms, rnz)
 #endif
     {
     const float * obs_loc[3];
@@ -634,7 +597,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
         rmsLocal = 0;
         nrmsLocal = 0;
 #ifdef _OPENMP
-        #pragma omp for schedule(dynamic, 1)
+        #pragma omp for schedule(static)
 #endif
         for(unsigned i = 0; i < nColumns; ++i)
         {
@@ -656,26 +619,19 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
             rsz_loc[2] = rsz_loc[1] + nRows;
 
             for (unsigned j = 0; j < nRows; ++j)
-            {
-                //if(PixColumnMajor(input->dq.data, j, imid))//I think imid should be i here?
-                    PixColumnMajor(adjustment.sci.data,j,i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, readNoiseAmp);
-            }
+                PixColumnMajor(adjustment.sci.data, j, i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, ampReadNoise);
         } /*end the parallel for*/ //implicit omp barrier
 
-        //move this entire section into the above and remove need for 'adjustment' group!!!
         //NOW GO OVER ALL THE nColumns AND nRows AGAIN TO SCALE THE PIXELS
 #ifdef _OPENMP
-        #pragma omp for schedule(dynamic, 1)
+        #pragma omp for schedule(static)
 #endif
         for(unsigned i = 0; i < nColumns; ++i)
         {
             for(unsigned j = 0; j < nRows; ++j)
             {
-                //if (PixColumnMajor(input->dq.data,j,i))
-                //{
-                    PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(adjustment.sci.data,j, i)*0.75);
-                    PixColumnMajor(rnz.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
-                //}
+                PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(adjustment.sci.data,j, i)*0.75);
+                PixColumnMajor(rnz.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
             }
         }//implicit omp barrier
 
@@ -688,14 +644,13 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 #endif
 
 #ifdef _OPENMP
-        #pragma omp for schedule(dynamic, 1)
+        #pragma omp for schedule(static)
 #endif
         for(unsigned j = 0; j < nColumns; ++j)
         {
             for(unsigned i = 0; i < nRows; ++i)
             {
-                if ( /*PixColumnMajor(input->dq.data, i, j) &&*/
-                     (fabs(PixColumnMajor(input->sci.data, i, j)) > 0.1 ||
+                if ( (fabs(PixColumnMajor(input->sci.data, i, j)) > 0.1 ||
                      fabs(PixColumnMajor(output->sci.data, i, j)) > 0.1))
                 {
                     double tmp = PixColumnMajor(rnz.sci.data, i, j);
@@ -725,7 +680,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
 
         // if it is true that one breaks then it is true for all
         /*epsilon type comparison*/
-        if ( (readNoiseAmp - rms) < 0.00001)
+        if ( (ampReadNoise - rms) < 0.00001)
             break; // this exits loop over iter
 #ifdef _OPENMP
         #pragma omp barrier
@@ -738,7 +693,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readN
     if (verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i procs/threads\n",timeSpent/maxThreads,maxThreads);
+        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads\n",timeSpent/maxThreads,maxThreads);
         trlmessage(MsgText);
     }
 

@@ -733,6 +733,8 @@ void freeShortHdrLine  (ShortHdrLine *);
 IShortHdrData }
 void initSingleGroup(SingleGroup *);
 int allocSingleGroup(SingleGroup *, int, int, Bool zeroInitialize);
+int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize);
+int allocSingleGroupSciOnly(SingleGroup *x, int i, int j, Bool zeroInitialize);
 void freeSingleGroup(SingleGroup *);
 void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder);
 int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder);

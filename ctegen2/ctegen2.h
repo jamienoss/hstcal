@@ -3,6 +3,7 @@
 
 #include "hstio.h"
 
+//move these elsewhere
 typedef void (*FreeFunction)(void*);
 #define PTR_REGISTER_LENGTH 10
 typedef struct {
@@ -11,7 +12,6 @@ typedef struct {
     void ** ptrs;
     FreeFunction * freeFunctions;
 } PtrRegister;
-
 void initPtrRegister(PtrRegister * reg);
 void addPtr(PtrRegister * reg, void * ptr, void * freeFunc);
 void freePtr(PtrRegister * reg, void * ptr);
