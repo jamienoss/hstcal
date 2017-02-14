@@ -8,8 +8,8 @@ typedef void (*FreeFunction)(void*);
 typedef struct {
     unsigned cursor;
     unsigned length;
-    void * ptrs[PTR_REGISTER_LENGTH];
-    FreeFunction freeFunctions[PTR_REGISTER_LENGTH];
+    void ** ptrs;
+    FreeFunction * freeFunctions;
 } PtrRegister;
 
 void initPtrRegister(PtrRegister * reg);
