@@ -55,6 +55,9 @@ typedef struct {
     //prescan & post scan
     Bool hasPrescan[2]; //whether quad has physical serial  overscan
     Bool hasPostscan[2]; //whether quad has virtual serial overscan
+    unsigned postscanWidth;
+    unsigned prescanWidth;
+    unsigned parallelOverscanWidth;
 
     //Bool indicating whether image exists in 1st and/or 2nd quad
     //0 index => A or C quad
