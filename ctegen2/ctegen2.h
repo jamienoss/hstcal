@@ -33,14 +33,33 @@ typedef struct {
     double cte_date1; /*date of cte model pinning mjd*/
     double scale_frac; /*scaling of cte model relative to ctedate1*/
 
-    unsigned nRowsPerFullFrame;
-    unsigned nColumnsPerFullFrame;
-    unsigned nColumnsPerChip;
-    unsigned nRowsPerChip;
-    unsigned nColumnsPerQuad;
-    unsigned nRowsPerQuad;
+    unsigned nRowsPerFullFrame; //includes 19 overscan
+    unsigned nColumnsPerFullFrame; //includes 100 pre & 120 post overscan
+    unsigned nColumnsPerChip; //nColumnsPerFullFrame / 2 (includes 50 pre +60 post overscan for fullframe only)
+    unsigned nRowsPerChip; //nRowsPerFullFrame
+    unsigned nColumnsPerQuad; //nColumnsPerChip / 2 (includes 25 pre + 30 post overscan for fullframe only)
+    unsigned nRowsPerQuad; //nRowsPerFullFrame
+
+    //subarray offset positions within chip
+    Bool isSubarray;
     unsigned subarrayRowOffset;
     unsigned subarrayColumnOffset;
+
+    //Actual image boundaries, i.e. excluding all overscan. Index is per quad
+    //This is in reference of an aligned chip (amps bottom left corners, e.g. C & D or A & B)
+    unsigned imageColumnsStart[2];
+    unsigned imageColumnsEnd[2];
+    unsigned imageRowsStart;
+    unsigned imageRowsEnd;
+
+    //prescan & post scan
+    Bool hasPrescan[2]; //whether quad has physical serial  overscan
+    Bool hasPostscan[2]; //whether quad has virtual serial overscan
+
+    //Bool indicating whether image exists in 1st and/or 2nd quad
+    //0 index => A or C quad
+    //1 indeax => B or D quad
+    Bool quadExists[2];
 
     FloatHdrData * rprof; // differential trail profile as image
     FloatHdrData * cprof; // cumulative trail profile as image
