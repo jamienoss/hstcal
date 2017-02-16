@@ -212,14 +212,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
     }
 
-    //stash sizes
+    //Store sizes - these are corrected for subarrays in getSubarray()
     cte_pars.nRowsPerFullFrame = RAZ_ROWS;
     cte_pars.nColumnsPerFullFrame = RAZ_COLS;
     cte_pars.nColumnsPerChip = cte_pars.nColumnsPerFullFrame/2;
     cte_pars.nRowsPerChip = cte_pars.nRowsPerFullFrame;
     cte_pars.nColumnsPerQuad = cte_pars.nColumnsPerFullFrame/4;
     cte_pars.nRowsPerQuad = cte_pars.nRowsPerFullFrame;
-
     cte_pars.nRows = cte_pars.nRowsPerFullFrame; // assume full frame for now
     cte_pars.nColumns = cte_pars.nColumnsPerFullFrame; // assume full frame for now
 
@@ -235,7 +234,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     if (wf3.subarray)
     {
-        if (getCCDChip(&wf3.chip, wf3.input, "SCI", 1) ||
+        if (getCCDChipId(&wf3.chip, wf3.input, "SCI", 1) ||
                 getSubarray(&raw, &cte_pars, &wf3))
         {
             freeAll(&ptrReg);
@@ -244,16 +243,16 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
         alignAmps(&raw, &cte_pars);
 
-        //leave raw as pre-biased image, bifurcate and use copy from here on out
+        //leave raw as pre-biased image, clone and use copy from here on out
         allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
 
         //biac bias
-       /* if (doCteBias(&wf3, image))
+        if (doCteBias(&wf3, image))
         {
             freeAll(&ptrReg);
             return(status);
-        }*/
+        }
     }
    /* else
     {
@@ -283,6 +282,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return (status);
     }
 */
+    findAlignedQuadImageBoundaries(&cte_pars);
     const unsigned nRows = cte_pars.nRows;
     const unsigned nColumns = cte_pars.nColumns;
 
@@ -439,11 +439,6 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, const Bool is
 
     extern int status;
 
-    const unsigned nColumns = image->sci.data.nx;
-    const unsigned nRows = image->sci.data.ny;
-    const unsigned columnOffset = ctePars-> subarrayColumnOffset;
-    const unsigned nColumnsPerQuad = ctePars->nColumnsPerQuad;
-
     float biasMean[2] = {0, 0};
     float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
 
@@ -457,43 +452,19 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, const Bool is
 #endif
     {
     //Image will only ever be at most 2 amps i.e. a single chip
-    //quads only split along a row
-    unsigned quadStart[2] = {0, 0};
-    unsigned quadEnd[2] = {0, 0};
-    Bool quadExists[2] = {False, False};
-    if (columnOffset < nColumnsPerQuad) // image in 1st quad
-    {
-        quadExists[0] = True;
-        quadStart[0] = 0;
-        quadEnd[0] = nColumnsPerQuad - columnOffset;
-
-        if (columnOffset + nColumns > nColumnsPerQuad) // image extends into 2nd quad
-        {
-            quadExists[1] = True;
-            quadStart[1] = quadEnd[0];
-            quadEnd[1] = nColumns;
-        }
-    }
-    else if (columnOffset > nColumnsPerQuad) //image in 2nd quad only
-    {
-        quadExists[1] = True;
-        quadStart[1] = 0;
-        quadEnd[1] = nColumns;
-    }
-
     // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
     for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
     {
         //Check if amp even present
-        if (!quadExists[nthAmp])
+        if (!ctePars->quadExists[nthAmp])
             continue;
 #ifdef _OPENMP
         #pragma omp for schedule(static)
 #endif
-        //WARNING this overwrites overscan regions!!!
-        for (unsigned i = quadStart[nthAmp]; i < quadEnd[nthAmp]; ++i)
+        //WARNING this nolonger overwrites overscan regions!!!
+        for (unsigned i = ctePars->imageColumnsStart[nthAmp]; i < ctePars->imageColumnsEnd[nthAmp]; ++i)
         {
-            for (unsigned j = 0; j < nRows; ++j)
+            for (unsigned j = 0; j < ctePars->imageRowsEnd; ++j)
             {
                 PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
                 PixColumnMajor(image->sci.data, j, i) *= ccdGain;
@@ -686,23 +657,31 @@ int initCTETrl (char *input, char *output) {
 
     return(status);
 }
+
 //NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
 int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
 {
     extern int status;
+
+    ctePars->isSubarray = wf3->subarray;
+    if (!ctePars->isSubarray)
+        return status;
+
     // get subarray from first extension
     getSingleGroup(wf3->input, 1, image);
-    // getSingleGroup will set image->group_num to 1 here so now correct
-    image->group_num = wf3->chip == 2 ? 1 : 2;
     if (hstio_err()){
         freeSingleGroup(image);
         return (status = OPEN_FAILED);
     }
+    // getSingleGroup will set image->group_num to 1 here so now correct
+    image->group_num = wf3->chip == 2 ? 1 : 2;
 
     ctePars->nRows = image->sci.data.ny;
     ctePars->nColumns = image->sci.data.nx;
+    ctePars->nColumnsPerChip -= 60;
+    ctePars->nColumnsPerQuad -= 30;
 
-  // These are used to find subarrays with physical overscan
+    // These are used to find subarrays location within a full chip (2 quads)
     int sci_bin[2];         // bin size of science image
     int sci_corner[2];      // science image corner location
     int ref_bin[2];
@@ -714,7 +693,6 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
         freeSingleGroup(image);
         return (status);
     }
-
     //Create a dummy header to represent the full chip (both amps) and populate via initChipMetaData
     {
         Hdr fullChipHdr;
@@ -728,8 +706,9 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
 
     ctePars->subarrayColumnOffset = sci_corner[0] - ref_corner[0];
     ctePars->subarrayRowOffset = sci_corner[1] - ref_corner[1];
+
     const unsigned start = ctePars->subarrayColumnOffset; //column where the subarray starts
-    const unsigned finish = start + image->sci.data.nx; //column where the subarray ends
+    const unsigned finish = start + ctePars->nColumns; //column where the subarray ends
 
     if ( start >= 25 &&  finish + 60 <= (ctePars->nColumnsPerChip) - 25){
         sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
@@ -748,31 +727,10 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
         return (status);
     }
 
-    /*Put the subarray data into full frame*/
-    Bool virtual = True;
-    //Sub2Full(wf3, subChip, fullChip, 0, 1, virtual);
-    if (virtual && ctePars->subarrayColumnOffset >= 2072)
-        ctePars->subarrayColumnOffset += 60; // image starts in B or D regions and we can just shift the starting pixel
+    //Bool virtual = True;
+    //if (virtual && ctePars->subarrayColumnOffset >= 2072)
+    //    ctePars->subarrayColumnOffset += 60; // image starts in B or D regions and we can just shift the starting pixel
 
-    /* SAVE A COPY OF THE RAW IMAGE BEFORE BIAS FOR LATER */
-   /* if (fullChip->group_num == 1)
-        makeRAZ(fullChip, otherFullChip, backup);
-    else
-        makeRAZ(otherFullChip, fullChip, backup);
-*/
-
-    //save copy before doCteBias
-
-    /* Subtract the BIAC file from the subarray before continuing
-       The bias routine will take care of cutting out the correct
-       image location for the subarray.*/
-    /*if (doCteBias(wf3, subChip)){
-        freeSingleGroup(subChip);
-        return(status);
-    }
-    //set the array with bias subtracted data
-    //Sub2Full(wf3, subChip, fullChip, 0, 1, 1);
-*/
     return status;
 }
 
@@ -847,6 +805,7 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
         }
         free(tempRow);
     }
+
     return status;
 }
 
@@ -867,7 +826,7 @@ int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const sc
     return status;
 }
 
-int getCCDChip(int * value, char * fileName, char * ename, int ever)
+int getCCDChipId(int * value, char * fileName, char * ename, int ever)
 {
     extern int status;
     // OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER.
@@ -894,7 +853,6 @@ int getCCDChip(int * value, char * fileName, char * ename, int ever)
 
 int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
 {
-    //Use for interim dev testing
     SingleGroup temp;
     initSingleGroup(&temp);
     if (image->sci.data.storageOrder == COLUMNMAJOR)
@@ -909,4 +867,89 @@ int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
     int ret = putSingleGroup(fileName, image->group_num, image, 0);
     freeSingleGroup(&temp);
     return ret;
+}
+
+void findAlignedQuadImageBoundaries(CTEParams * ctePars)
+{
+    //WARNING this assumes quads have already been aligned
+
+    ctePars->imageRowsStart = 0;
+    //Ignore last 19 rows of parallel virtual overscan, i.e. the last 19 pixels in a coulmn
+    ctePars->imageRowsEnd = ctePars->nRows <= 2051 ? ctePars->nRows : 2051;
+
+    //find image boundaries
+    const unsigned nColumns = ctePars->nColumns;
+    const unsigned columnOffset = ctePars->subarrayColumnOffset;
+    const unsigned nColumnsPerQuad = ctePars->nColumnsPerQuad;
+
+    if (ctePars->isSubarray)
+    {
+        ctePars->hasPostscan[0] = False; //always true
+        ctePars->hasPostscan[1] = False; //always true
+    }
+    else
+    {
+        ctePars->quadExists[0] = True;
+        ctePars->quadExists[1] = True;
+        ctePars->hasPrescan[0] = True;
+        ctePars->hasPrescan[1] = True;
+        ctePars->hasPostscan[0] = True;
+        ctePars->hasPostscan[1] = True;
+        ctePars->imageColumnsStart[0] = 25;
+        ctePars->imageColumnsStart[0] = nColumnsPerQuad + 25; //skip 30 pixels of previous quads virtual overscan
+        ctePars->imageColumnsEnd[0] = nColumnsPerQuad - 30;
+        ctePars->imageColumnsEnd[0] = ctePars->nColumnsPerFullFrame - 30;
+        return;
+    }
+
+    //NOTE: For subarrays nColumnsPerChip & nColumnsPerQuad do NOT include the 60 & 30 extra postscan columns
+    if (columnOffset < nColumnsPerQuad) //image starts in 1st quad A or C
+    {
+        if (columnOffset < 25)
+        {
+            ctePars->hasPrescan[0] = True;
+            ctePars->imageColumnsStart[0] = 25 - columnOffset;
+        }
+        else
+        {
+            ctePars->hasPrescan[0] = False;
+            ctePars->imageColumnsStart[0] = 0;
+        }
+
+        if (columnOffset + nColumns > nColumnsPerQuad) //image also extends into 2nd quad B or D
+        {
+            //NOTE: This code assumes that the extension into the 2nd quad does so beyond the prescan
+            //i.e. there is actually an image in the 2nd quad
+            assert(columnOffset + nColumns > nColumnsPerQuad + 25);
+
+            ctePars->quadExists[1] = True;
+            ctePars->hasPrescan[1] = True;
+            ctePars->imageColumnsEnd[0] = nColumnsPerQuad - columnOffset;
+            ctePars->imageColumnsStart[1] = ctePars->imageColumnsEnd[0] + 25;
+            ctePars->imageColumnsEnd[1] = nColumns;
+        }
+        else
+        {
+            ctePars->quadExists[1] = False;
+            ctePars->hasPrescan[1] = False;
+            ctePars->imageColumnsEnd[0] = nColumns;
+            ctePars->imageColumnsStart[1] = 0;
+            ctePars->imageColumnsEnd[1] = 0;
+        }
+   }
+   else if (columnOffset > nColumnsPerQuad) //image only exits in 2nd quad B or D
+   {
+       if (columnOffset - nColumnsPerQuad < 25)
+       {
+           ctePars->hasPrescan[0] = True;
+           ctePars->imageColumnsStart[0] = 25 - (columnOffset - nColumnsPerQuad);
+       }
+       else
+       {
+           ctePars->hasPrescan[0] = False;
+           ctePars->imageColumnsStart[0] = 0;
+       }
+   }
+   else
+       assert(0); //image is subarray but exists in neither quad???
 }
