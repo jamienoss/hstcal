@@ -23,7 +23,7 @@ void WF3Init (WF3Info *);
 int MkName (char *, char *, char *, char *, char *, int);
 int GetKeys (WF3Info *, Hdr *);
 int GetSwitch (Hdr *, char *, int *);
-int resistmean(float *, int, float, float *,float *,float *,float *);
+int resistmean(const float *, int, float, float *,float *,float *,float *);
 void TimeStamp (char *, char *);
 int  FileExists (char *);
 void PrRefInfo (char *, char *,char *, char *, char *);
@@ -53,7 +53,7 @@ int initChipMetaData(WF3Info *wf3, Hdr * hdr, int groupNumber);
 
 /*FUNCTION SIGNATURES FOR CTE SPECIFIC CODE*/
 
-enum OverScanType {
+enum OverscanType {
     PRESCAN,
     POSTSCAN
 };
@@ -66,8 +66,8 @@ int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const sc
 int doCteBias (WF3Info *, SingleGroup *);
 int GetCTEFlags (WF3Info *, Hdr *);
 int a2d_raz(WF3Info *);
-int biasAndGainCorrect(SingleGroup * raz, const float ccdGain, const Bool isSubarray);
-int findOverScanBias(SingleGroup *raz, float *mean, float *sigma, enum OverScanType overScanType);
+int correctAmpBiasAndGain(SingleGroup * raz, const float ccdGain, const Bool isSubarray, CTEParams * ctePars);
+int findOverscanBias(SingleGroup *raz, float *mean, float *sigma, enum OverscanType overScanType, CTEParams * ctePars);
 int cteHistory (WF3Info *, Hdr *);
 int free_array(float **ptr, int rows, int columns);
 int GetCTESwitch (WF3Info *, Hdr *);

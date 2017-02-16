@@ -295,7 +295,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     image = &columnMajorImage;
 
     //SUBTRACT BIAS AND CORRECT FOR GAIN
-    if (biasAndGainCorrect(image, wf3.ccdgain, wf3.subarray))
+    if (correctAmpBiasAndGain(image, wf3.ccdgain, wf3.subarray, &cte_pars))
     {
         freeAll(&ptrReg);
         return (status);
@@ -428,63 +428,75 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 /********************* SUPPORTING SUBROUTINES *****************************/
 
-int biasAndGainCorrect(SingleGroup *image, const float ccdGain, const Bool isSubarray, CTEParams * ctePars)
+int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, const Bool isSubarray, CTEParams * ctePars)
 {
+    /* Do an additional bias correction using the residual bias level measured for each amplifier from the
+     * steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
+     */
+
+    //WARNING - assumes column major storage order
+    assert(image->sci.data.storageOrder == COLUMNMAJOR);
+
     extern int status;
 
     const unsigned nColumns = image->sci.data.nx;
     const unsigned nRows = image->sci.data.ny;
-    const unsigned nColumnsPerChip = ctePars->nColumnsPerChip; /* for looping over quads  */
     const unsigned columnOffset = ctePars-> subarrayColumnOffset;
+    const unsigned nColumnsPerQuad = ctePars->nColumnsPerQuad;
 
-    float bias[4];
-    float bsig[4];
-
-    /*INIT THE ARRAYS*/
-    for (unsigned i = 0; i < 4; ++i)
-    {
-        bias[i] = 0;
-        bsig[i] = 0;
-    }
+    float biasMean[2] = {0, 0};
+    float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
 
     // Note that for user subarray the image is in only 1 quad, and only
     // has prescan bias pixels so the regions are different for full and subarrays
-    //int (*findScanBias)(SingleGroup *, float *, float * ) = isSubarray ? &findPreScanBias : &findPostScanBias;
-
-    // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
-    //(*findScanBias)(raz, bias, bsig);
-    if (isSubarray)
-        findOverScanBias(image, bias, bsig, PRESCAN);
-    else
-        findOverScanBias(image, bias, bsig, POSTSCAN);
+    enum OverscanType overscanType = isSubarray ? PRESCAN : POSTSCAN;
+    findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
 
 #ifdef _OPENMP
-    #pragma omp parallel shared(image, bias, bsig)
+    #pragma omp parallel shared(image, biasMean, biasSigma)
 #endif
     {
     //Image will only ever be at most 2 amps i.e. a single chip
     //quads only split along a row
-    unsigned quadStart[2];
-    unsigned quadEnd[2];
-    quadStart[0] = 0;
-    quadEnd[0] = ctePars->nColumnsPerQuad - columnOffset;
-    quadStart[1] = quadEnd[0] + 1;//+1???
-    quadEnd[1] = nColumns - quadEnd[0];
+    unsigned quadStart[2] = {0, 0};
+    unsigned quadEnd[2] = {0, 0};
+    Bool quadExists[2] = {False, False};
+    if (columnOffset < nColumnsPerQuad) // image in 1st quad
+    {
+        quadExists[0] = True;
+        quadStart[0] = 0;
+        quadEnd[0] = nColumnsPerQuad - columnOffset;
 
-    Bool isCDAmp = image->group_num == 1 ? True : False;
-    unsigned ampIndexPrefix = isCDAmp ? 0 : 2;
+        if (columnOffset + nColumns > nColumnsPerQuad) // image extends into 2nd quad
+        {
+            quadExists[1] = True;
+            quadStart[1] = quadEnd[0];
+            quadEnd[1] = nColumns;
+        }
+    }
+    else if (columnOffset > nColumnsPerQuad) //image in 2nd quad only
+    {
+        quadExists[1] = True;
+        quadStart[1] = 0;
+        quadEnd[1] = nColumns;
+    }
 
+    // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
     for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
     {
+        //Check if amp even present
+        if (!quadExists[nthAmp])
+            continue;
 #ifdef _OPENMP
         #pragma omp for schedule(static)
 #endif
+        //WARNING this overwrites overscan regions!!!
         for (unsigned i = quadStart[nthAmp]; i < quadEnd[nthAmp]; ++i)
         {
             for (unsigned j = 0; j < nRows; ++j)
             {
-                PixColumnMajor(image->sci.data, j, i*nRows) -= bias[ampIndexPrefix + nthAmp];
-                PixColumnMajor(image->sci.data, j, i*nRows) *= ccdGain;
+                PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
+                PixColumnMajor(image->sci.data, j, i) *= ccdGain;
             }
         }
     }
@@ -493,88 +505,116 @@ int biasAndGainCorrect(SingleGroup *image, const float ccdGain, const Bool isSub
     return(status);
 }
 
-int findOverScanBias(SingleGroup *raz, float *mean, float *sigma, enum OverScanType overScanType)
+int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overscanType, CTEParams * ctePars)
 {
-	/*calculate the post scan and bias after the biac file has been subtracted
-	  add some history information to the header
+    //WARNING - assumes column major storage order
+    assert(image->sci.data.storageOrder == COLUMNMAJOR);
 
-	  Jay gave no explanation why plist is limited to 55377 for full arrays, his
-	  subarray limitation was just 1/4 of this value
+    /*Calculate the post scan and bias after the biac file has been subtracted.
+      This calls resistmean, which does a better job clipping outlying pixels
+      that just a standard stddev clip single pass.
 
-	  the serial virtual overscan pixels are also called the trailing-edge pixels
-	  these only exist in full frame images
-	  */
-
-	/*CALCULATE THE PRE SCAN AND BIAS AFTER THE BIAC FILE HAS BEEN SUBTRACTED
-
-	  The serial physical overscan pixels are also known as the serial prescan,
-	  they are the only pixels available for subarrays. For full frame arrays
-	  the prescan is not used as part of the correction, instead the virtual
-	  overscan pixels are used and modeled in findPostScanBias.
-
-	*/
-    /** this calls resistmean, which does a better job clipping outlying pixels
-      that just a standard stddev clip single pass*/
+      The first 25 columns in a quad are serial physical overscan (prescan)
+      The last 30 columns in a quad are parallel virtual overscan and are only present in full frame quads (postscan)
+      The last 19 rows in a quad are serial
+      Actual image size = 2051 (rows) x 2048 (columns)
+     */
 
     extern int status;
-    const unsigned arraySize = 55377; // ????????
-    const unsigned nRows = raz->sci.data.ny;
-    const unsigned nColumns = raz->sci.data.nx;
-    const unsigned nColumnsPerChip = nColumns / 4;
 
-    // post-scan settings (full frame)
-    unsigned iBegin = nRows + 5;
-    unsigned iEnd = nColumnsPerChip - 1;
-    // pre-scan settings (subarray)
-    if (overScanType == PRESCAN)
+    unsigned nRows = ctePars->nRows <= 2051 ? ctePars->nRows : 2051;
+    const unsigned columnOffset = ctePars->subarrayColumnOffset;
+    const unsigned nColumns = image->sci.data.nx;
+    const unsigned nColumnsPerAmp = ctePars->nColumnsPerQuad;
+
+    unsigned overscanStart[2];
+    unsigned overscanEnd[2];
+    Bool quadExists[2] = {False, False};
+
+    if (overscanType == PRESCAN) //subarrays
     {
-        iBegin = 5;
-        iEnd = 25;
-    }
-
-    unsigned npix; /*track array size for resistant mean*/
-    float min=0;
-    float max=0;
-    const float sigreg = 7.5; /*sigma clip*/
-    float rmean;
-    float rsigma;
-    float * plist = calloc(arraySize, sizeof(*plist));    /*bias pixels to measure*/
-    assert(plist);
-
-    for (unsigned nthChip = 0; nthChip < 4; ++nthChip)
-    {  /*for each quadrant, CDAB ordered*/
-        npix = 0;
-        rmean = 0;
-        rsigma = 0;
-        for (unsigned i = iBegin; i < iEnd; ++i)
+        //Each quad must contain a portion of prescan
+        if (columnOffset < nColumnsPerAmp) //image exists in 1st quad A or C
         {
-            for (unsigned j = 0; j < 2051; ++j) //why 2051 not 2070 (prob where overscan starts)
-            { /*all rows*/
-                if (npix < arraySize )
-                {
-                    if (PixColumnMajor(raz->dq.data, j, i+(nthChip*nColumnsPerChip))) // is this needed for full frame?
-                    {
-                        plist[npix] = PixColumnMajor(raz->sci.data, j, i+nthChip*nColumnsPerChip);
-                        npix++;
-                    }
-                }
+            assert(columnOffset < 25); //assert prescan present
+            quadExists[0] = True;
+            unsigned overscanWidth = 25 - columnOffset;
+            if (columnOffset < 5)
+            {
+                overscanStart[0] = 5 - columnOffset;
+                overscanWidth -= overscanStart[0];
             }
-         }
+            else
+                overscanStart[0] = 0;
+            overscanEnd[0] = overscanStart[0] + overscanWidth;
 
-        if (npix > 0)
-            resistmean(plist, npix, sigreg, &rmean, &rsigma, &min, &max);
-
-        mean[nthChip] = rmean;
-        sigma[nthChip] = rsigma;
-        if (overScanType == PRESCAN && npix > 0)
-            printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n",npix,nthChip+1,rmean,nthChip+1,rsigma);
+            if (columnOffset + nColumns > nColumnsPerAmp) //image also extends into 2nd quad B or D
+            {
+                quadExists[1] = True;
+                overscanStart[1] = nColumnsPerAmp - columnOffset;
+                overscanEnd[1] = nColumns - overscanStart[1] > 25 ? overscanStart[1] + 25 : overscanStart[1] + nColumns - overscanStart[1];
+            }
+        }
+        else if (columnOffset > nColumnsPerAmp) //image only exits in 2nd quad B or D
+        {
+            assert(columnOffset < nColumnsPerAmp + 25); //assert prescan present
+            quadExists[1] = True;
+            unsigned overscanWidth = 25 - (columnOffset - nColumnsPerAmp);
+            if (columnOffset < nColumnsPerAmp + 5)
+            {
+                overscanStart[0] = 5 - (columnOffset - nColumnsPerAmp);
+                overscanWidth -= overscanStart[0];
+            }
+            else
+                overscanStart[0] = 0;
+            overscanEnd[0] = overscanStart[0] + overscanWidth;
+        }
+        else
+            assert(0); //image is subarray but exists in neither quad???
     }
+    else if (overscanType == POSTSCAN)//full frame
+    {
+        quadExists[0] = True;
+        quadExists[1] = True;
+        overscanStart[0] = nColumnsPerAmp - 28;//should be -30//nRows + 5; //nRows := RAZ_ROWS := 2070, virt overscan starts at column 25 (phys pre) + 2048 (image) = 2073
+        overscanEnd[0] = nColumnsPerAmp;
+        overscanStart[1] = overscanStart[0];
+        overscanEnd[1] = overscanEnd[0];
+    }
+    else
+        assert(0); //Incorrect overscanType specified - neither PRESCAN nor POSTSCAN
 
-    if (plist)
-        free(plist);
+    for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
+    {
+        if (!quadExists[nthAmp])
+            continue;
+        float rmean = 0;
+        float rsigma = 0;
+        float min = 0;
+        float max = 0;
+
+        //Find overscan columns
+        float * imageOverscanPixels = image->sci.data.data;//incomplete
+        const unsigned nOverscanPixels = (overscanEnd - overscanStart)*nRows;
+        //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
+        //not be needed and a pointer to the data could be passed directly to resistmean instead.
+        float * overscanPixels = malloc(nOverscanPixels*sizeof(*overscanPixels));
+        assert(overscanPixels);
+        memcpy(overscanPixels, imageOverscanPixels, nOverscanPixels*sizeof(*overscanPixels));
+        resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+
+        mean[nthAmp] = rmean;
+        sigma[nthAmp] = rsigma;
+        if (overscanType == PRESCAN)
+            printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
+
+        if (overscanPixels)
+            free(overscanPixels);
+    }
 
     return status;
 }
+
 int initCTETrl (char *input, char *output) {
 
     extern int status;

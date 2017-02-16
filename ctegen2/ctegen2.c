@@ -96,58 +96,13 @@ void freeAll(PtrRegister * reg)
     reg->freeFunctions[0] = NULL;
 }
 
-
-int inverseCTEBlurWithRowMajorInput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte,
-        const int verbose, const double expstart)
-{
-    clock_t t1 = clock();
-
-    const unsigned nx = rsz->sci.data.nx;
-    const unsigned ny = rsz->sci.data.ny;
-
-    //Convert all arrays to column major for efficiency.
-    SingleGroup rszColumnMajor;
-    SingleGroup rscColumnMajor;
-    SingleGroup trapPixelMapColumnMajor;
-
-    //Initialize
-    initSingleGroup(&rszColumnMajor);
-    initSingleGroup(&rscColumnMajor);
-    initSingleGroup(&trapPixelMapColumnMajor);
-
-    //Allocate
-    allocSingleGroup(&rszColumnMajor, nx, ny, False);
-    allocSingleGroup(&rscColumnMajor, nx, ny, False);
-    allocSingleGroup(&trapPixelMapColumnMajor, nx, ny, False);
-
-    //Copy
-    assert(!copySingleGroup(&rszColumnMajor, rsz, COLUMNMAJOR));
-    assert(!copySingleGroup(&rscColumnMajor, rsc, COLUMNMAJOR));
-    assert(!copySingleGroup(&trapPixelMapColumnMajor, trapPixelMap, COLUMNMAJOR));
-
-
-/*  assert(!copySingleGroup(rsz, &rszColumnMajor, ROWMAJOR));
-    assert(!copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR));
-    assert(!copySingleGroup(trapPixelMap, &trapPixelMapColumnMajor, ROWMAJOR));
-    int ret = inverseCTEBlur(rsz, rsc, trapPixelMap, cte, verbose, expstart);
-*/
-
-    int ret = inverseCTEBlur(&rszColumnMajor, &rscColumnMajor, &trapPixelMapColumnMajor, cte);
-
-    //copy data back
-    copySingleGroup(rsc, &rscColumnMajor, ROWMAJOR);
-
-    freeSingleGroup(&rszColumnMajor);
-    freeSingleGroup(&rscColumnMajor);
-    freeSingleGroup(&trapPixelMapColumnMajor);
-
-    printf("\nTime taken to swap storage order: %f (secs)\n", ((float)(clock() - t1))/CLOCKS_PER_SEC);
-    return ret;
-}
-
 int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParams * cte)
 {
-    //WARNING: This function assumes column major storage for 'rsz', 'rsc', & 'trapPixelMap'
+    //WARNING - assumes column major storage order
+    assert(trapPixelMap->sci.data.storageOrder == COLUMNMAJOR);
+    assert(input->sci.data.storageOrder == COLUMNMAJOR);
+    output->sci.data.storageOrder == COLUMNMAJOR;
+
     extern int status;
 
     const unsigned nRows = output->sci.data.ny;
@@ -453,6 +408,10 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
           double scale1536[nRows];     scaling appropriate at row 1536
           double scale2048[nRows];     scaling appropriate at row 2048
      */
+
+    //WARNING - assumes column major storage order
+    trapPixelMap->sci.data.storageOrder = COLUMNMAJOR;
+
     extern int status;
 
     const unsigned nRows = trapPixelMap->sci.data.ny;
@@ -545,6 +504,10 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampRe
        amplification.  Strategy #2 will be to not iterate when the deblurring
        is less than the readnoise.
 */
+
+    //WARNING - assumes column major storage order
+    assert(input->sci.data.storageOrder == COLUMNMAJOR);
+    output->sci.data.storageOrder = COLUMNMAJOR;
 
     extern int status;
 

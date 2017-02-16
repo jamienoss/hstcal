@@ -58,7 +58,7 @@ void rej_sky (char *sky, IODescPtr ipsci[], IODescPtr ipdq[], int nimgs,
     float  ssig, smin, smax; /* sky resistantmean values */
 
     float cr_mode (int *, int, float, float);
-    int	  resistmean (float *, int, float, float *, float *, float *, float *);
+    int	  resistmean (const float *, int, float, float *, float *, float *, float *);
 
     /* -------------------------------- begin ------------------------------- */
 
