@@ -53,7 +53,7 @@ Revision history:
 
 #define PFLAG -9999. /*for rejecting pixels in the array*/
 
-int resistmean (float *in, int npix, float sigrej, float *mean, 
+int resistmean (const float *in, int npix, float sigrej, float *mean,
 		float *sigmean, float *min, float *max) {
 
 /* Arguments:
