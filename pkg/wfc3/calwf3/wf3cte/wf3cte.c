@@ -282,7 +282,24 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return (status);
     }
 */
-    findAlignedQuadImageBoundaries(&cte_pars);
+
+    findAlignedQuadImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
+    //CTE correction not sensitive enough to work without amp bias and gain correction which require vertical overscan
+    if (cte_pars.isSubarray)
+    {
+        for (unsigned quad = 0; quad < 2; ++quad)
+        {
+            if (!cte_pars.hasPrescan[quad])
+            {
+                sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",
+                        cte_pars.subarrayColumnOffset, cte_pars.subarrayColumnOffset + cte_pars.nColumns);
+                trlmessage(MsgText);
+                freeAll(&ptrReg);
+                return(ERROR_RETURN);
+            }
+        }
+    }
+
     const unsigned nRows = cte_pars.nRows;
     const unsigned nColumns = cte_pars.nColumns;
 
@@ -294,8 +311,8 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
     image = &columnMajorImage;
 
-    //SUBTRACT BIAS AND CORRECT FOR GAIN
-    if (correctAmpBiasAndGain(image, wf3.ccdgain, wf3.subarray, &cte_pars))
+    //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
+    if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
     {
         freeAll(&ptrReg);
         return (status);
@@ -428,7 +445,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 /********************* SUPPORTING SUBROUTINES *****************************/
 
-int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, const Bool isSubarray, CTEParams * ctePars)
+int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * ctePars)
 {
     /* Do an additional bias correction using the residual bias level measured for each amplifier from the
      * steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
@@ -442,9 +459,7 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, const Bool is
     float biasMean[2] = {0, 0};
     float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
 
-    // Note that for user subarray the image is in only 1 quad, and only
-    // has prescan bias pixels so the regions are different for full and subarrays
-    enum OverscanType overscanType = isSubarray ? PRESCAN : POSTSCAN;
+    enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
 
 #ifdef _OPENMP
@@ -461,10 +476,10 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, const Bool is
 #ifdef _OPENMP
         #pragma omp for schedule(static)
 #endif
-        //WARNING this nolonger overwrites overscan regions!!!
+        //NOTE: this nolonger overwrites overscan regions!!!
         for (unsigned i = ctePars->imageColumnsStart[nthAmp]; i < ctePars->imageColumnsEnd[nthAmp]; ++i)
         {
-            for (unsigned j = 0; j < ctePars->imageRowsEnd; ++j)
+            for (unsigned j = ctePars->imageRowsStart; j < ctePars->imageRowsEnd; ++j)
             {
                 PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
                 PixColumnMajor(image->sci.data, j, i) *= ccdGain;
@@ -480,6 +495,7 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 {
     //WARNING - assumes column major storage order
     assert(image->sci.data.storageOrder == COLUMNMAJOR);
+    assert(overscanType == PRESCAN || overscanType == POSTSCAN);
 
     /*Calculate the post scan and bias after the biac file has been subtracted.
       This calls resistmean, which does a better job clipping outlying pixels
@@ -493,80 +509,41 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 
     extern int status;
 
-    unsigned nRows = ctePars->nRows <= 2051 ? ctePars->nRows : 2051;
-    const unsigned columnOffset = ctePars->subarrayColumnOffset;
-    const unsigned nColumns = image->sci.data.nx;
-    const unsigned nColumnsPerAmp = ctePars->nColumnsPerQuad;
-
-    unsigned overscanStart[2];
-    unsigned overscanEnd[2];
-    Bool quadExists[2] = {False, False};
-
-    if (overscanType == PRESCAN) //subarrays
-    {
-        //Each quad must contain a portion of prescan
-        if (columnOffset < nColumnsPerAmp) //image exists in 1st quad A or C
-        {
-            assert(columnOffset < 25); //assert prescan present
-            quadExists[0] = True;
-            unsigned overscanWidth = 25 - columnOffset;
-            if (columnOffset < 5)
-            {
-                overscanStart[0] = 5 - columnOffset;
-                overscanWidth -= overscanStart[0];
-            }
-            else
-                overscanStart[0] = 0;
-            overscanEnd[0] = overscanStart[0] + overscanWidth;
-
-            if (columnOffset + nColumns > nColumnsPerAmp) //image also extends into 2nd quad B or D
-            {
-                quadExists[1] = True;
-                overscanStart[1] = nColumnsPerAmp - columnOffset;
-                overscanEnd[1] = nColumns - overscanStart[1] > 25 ? overscanStart[1] + 25 : overscanStart[1] + nColumns - overscanStart[1];
-            }
-        }
-        else if (columnOffset > nColumnsPerAmp) //image only exits in 2nd quad B or D
-        {
-            assert(columnOffset < nColumnsPerAmp + 25); //assert prescan present
-            quadExists[1] = True;
-            unsigned overscanWidth = 25 - (columnOffset - nColumnsPerAmp);
-            if (columnOffset < nColumnsPerAmp + 5)
-            {
-                overscanStart[0] = 5 - (columnOffset - nColumnsPerAmp);
-                overscanWidth -= overscanStart[0];
-            }
-            else
-                overscanStart[0] = 0;
-            overscanEnd[0] = overscanStart[0] + overscanWidth;
-        }
-        else
-            assert(0); //image is subarray but exists in neither quad???
-    }
-    else if (overscanType == POSTSCAN)//full frame
-    {
-        quadExists[0] = True;
-        quadExists[1] = True;
-        overscanStart[0] = nColumnsPerAmp - 28;//should be -30//nRows + 5; //nRows := RAZ_ROWS := 2070, virt overscan starts at column 25 (phys pre) + 2048 (image) = 2073
-        overscanEnd[0] = nColumnsPerAmp;
-        overscanStart[1] = overscanStart[0];
-        overscanEnd[1] = overscanEnd[0];
-    }
-    else
-        assert(0); //Incorrect overscanType specified - neither PRESCAN nor POSTSCAN
-
     for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
     {
-        if (!quadExists[nthAmp])
+        if (!ctePars->quadExists[nthAmp])
             continue;
+
+        float * imageOverscanPixels = NULL;
+        unsigned nOverscanPixels = 0;
+
+        //Find overscan columns
+        if (overscanType == PRESCAN)//subarray
+        {
+            if (!ctePars->hasPrescan[nthAmp])
+                continue;
+            //Only want prescan columns 5 to 25 - not sure why???
+            int overscanStart = ctePars->imageColumnsStart[nthAmp] - ctePars->prescanWidth - 5;
+            if (overscanStart < 0)
+                overscanStart = 0;
+            nOverscanPixels = (ctePars->imageColumnsStart[nthAmp] - overscanStart)*
+                    (ctePars->imageRowsEnd - ctePars->imageRowsStart);
+            imageOverscanPixels = image->sci.data.data + overscanStart*ctePars->nRows;
+        }
+        else if (overscanType == POSTSCAN)//full frame
+        {
+            if (!ctePars->hasPostscan[nthAmp])
+                continue;
+            nOverscanPixels = (ctePars->imageColumnsEnd[nthAmp] + ctePars->postscanWidth)*
+                    (ctePars->imageRowsEnd - ctePars->imageRowsStart);
+            imageOverscanPixels = image->sci.data.data + ctePars->imageColumnsEnd[nthAmp]*ctePars->nRows;
+        }
+
         float rmean = 0;
         float rsigma = 0;
         float min = 0;
         float max = 0;
 
-        //Find overscan columns
-        float * imageOverscanPixels = image->sci.data.data;//incomplete
-        const unsigned nOverscanPixels = (overscanEnd - overscanStart)*nRows;
         //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
         //not be needed and a pointer to the data could be passed directly to resistmean instead.
         float * overscanPixels = malloc(nOverscanPixels*sizeof(*overscanPixels));
@@ -710,13 +687,6 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
     const unsigned start = ctePars->subarrayColumnOffset; //column where the subarray starts
     const unsigned finish = start + ctePars->nColumns; //column where the subarray ends
 
-    if ( start >= 25 &&  finish + 60 <= (ctePars->nColumnsPerChip) - 25){
-        sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
-        trlmessage(MsgText);
-        freeSingleGroup(image);
-        return(ERROR_RETURN);
-    }
-
     /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
       AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
       CTE CODE VARIABLES.
@@ -726,10 +696,6 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
         freeSingleGroup(image);
         return (status);
     }
-
-    //Bool virtual = True;
-    //if (virtual && ctePars->subarrayColumnOffset >= 2072)
-    //    ctePars->subarrayColumnOffset += 60; // image starts in B or D regions and we can just shift the starting pixel
 
     return status;
 }
@@ -869,13 +835,16 @@ int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
     return ret;
 }
 
-void findAlignedQuadImageBoundaries(CTEParams * ctePars)
+void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
 {
     //WARNING this assumes quads have already been aligned
 
+    ctePars->prescanWidth = prescanWidth;
+    ctePars->postscanWidth = postscanWidth;
+    ctePars->parallelOverscanWidth = parallelOverscanWidth;
     ctePars->imageRowsStart = 0;
     //Ignore last 19 rows of parallel virtual overscan, i.e. the last 19 pixels in a coulmn
-    ctePars->imageRowsEnd = ctePars->nRows <= 2051 ? ctePars->nRows : 2051;
+    ctePars->imageRowsEnd = ctePars->nRows <= ctePars->nRowsPerQuad - parallelOverscanWidth ? ctePars->nRows : ctePars->nRowsPerQuad - parallelOverscanWidth;
 
     //find image boundaries
     const unsigned nColumns = ctePars->nColumns;
@@ -895,20 +864,20 @@ void findAlignedQuadImageBoundaries(CTEParams * ctePars)
         ctePars->hasPrescan[1] = True;
         ctePars->hasPostscan[0] = True;
         ctePars->hasPostscan[1] = True;
-        ctePars->imageColumnsStart[0] = 25;
-        ctePars->imageColumnsStart[0] = nColumnsPerQuad + 25; //skip 30 pixels of previous quads virtual overscan
-        ctePars->imageColumnsEnd[0] = nColumnsPerQuad - 30;
-        ctePars->imageColumnsEnd[0] = ctePars->nColumnsPerFullFrame - 30;
+        ctePars->imageColumnsStart[0] = prescanWidth;
+        ctePars->imageColumnsStart[0] = nColumnsPerQuad + prescanWidth; //skip 30 pixels of previous quads virtual overscan
+        ctePars->imageColumnsEnd[0] = nColumnsPerQuad - postscanWidth;
+        ctePars->imageColumnsEnd[0] = ctePars->nColumnsPerFullFrame - postscanWidth;
         return;
     }
 
     //NOTE: For subarrays nColumnsPerChip & nColumnsPerQuad do NOT include the 60 & 30 extra postscan columns
     if (columnOffset < nColumnsPerQuad) //image starts in 1st quad A or C
     {
-        if (columnOffset < 25)
+        if (columnOffset < prescanWidth)
         {
             ctePars->hasPrescan[0] = True;
-            ctePars->imageColumnsStart[0] = 25 - columnOffset;
+            ctePars->imageColumnsStart[0] = prescanWidth - columnOffset;
         }
         else
         {
@@ -920,12 +889,12 @@ void findAlignedQuadImageBoundaries(CTEParams * ctePars)
         {
             //NOTE: This code assumes that the extension into the 2nd quad does so beyond the prescan
             //i.e. there is actually an image in the 2nd quad
-            assert(columnOffset + nColumns > nColumnsPerQuad + 25);
+            assert(columnOffset + nColumns > nColumnsPerQuad + prescanWidth);
 
             ctePars->quadExists[1] = True;
             ctePars->hasPrescan[1] = True;
             ctePars->imageColumnsEnd[0] = nColumnsPerQuad - columnOffset;
-            ctePars->imageColumnsStart[1] = ctePars->imageColumnsEnd[0] + 25;
+            ctePars->imageColumnsStart[1] = ctePars->imageColumnsEnd[0] + prescanWidth;
             ctePars->imageColumnsEnd[1] = nColumns;
         }
         else
@@ -939,10 +908,10 @@ void findAlignedQuadImageBoundaries(CTEParams * ctePars)
    }
    else if (columnOffset > nColumnsPerQuad) //image only exits in 2nd quad B or D
    {
-       if (columnOffset - nColumnsPerQuad < 25)
+       if (columnOffset - nColumnsPerQuad < prescanWidth)
        {
            ctePars->hasPrescan[0] = True;
-           ctePars->imageColumnsStart[0] = 25 - (columnOffset - nColumnsPerQuad);
+           ctePars->imageColumnsStart[0] = prescanWidth - (columnOffset - nColumnsPerQuad);
        }
        else
        {

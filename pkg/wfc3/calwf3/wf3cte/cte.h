@@ -60,18 +60,18 @@ enum OverscanType {
 
 int alignAmps(SingleGroup * image, CTEParams * ctePars);
 int unalignAmps(SingleGroup * image, CTEParams * ctePars);
-void findAlignedQuadImageBoundaries(CTEParams * ctePars);
+void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned prescanWidth, unsigned postscanWidth, unsigned parallelOverscanWidth);
 int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3);
 int getCCDChipId(int * value, char * fileName, char * ename, int ever);
 int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction);
-int doCteBias (WF3Info *, SingleGroup *);
-int GetCTEFlags (WF3Info *, Hdr *);
-int a2d_raz(WF3Info *);
-int correctAmpBiasAndGain(SingleGroup * raz, const float ccdGain, const Bool isSubarray, CTEParams * ctePars);
-int findOverscanBias(SingleGroup *raz, float *mean, float *sigma, enum OverscanType overScanType, CTEParams * ctePars);
-int cteHistory (WF3Info *, Hdr *);
+int doCteBias (WF3Info * wf3, SingleGroup * image);
+int GetCTEFlags (WF3Info * wf3, Hdr * hdr);
+int a2d_raz(WF3Info * wf3);
+int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * ctePars);
+int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overScanType, CTEParams * ctePars);
+int cteHistory (WF3Info * wf3, Hdr * hdr);
 int free_array(float **ptr, int rows, int columns);
-int GetCTESwitch (WF3Info *, Hdr *);
+int GetCTESwitch (WF3Info * wf3, Hdr * hdr);
 int initCTETrl (char *, char *);
 int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars);
 
