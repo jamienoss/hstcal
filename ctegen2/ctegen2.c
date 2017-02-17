@@ -461,13 +461,13 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
 #endif
     for (unsigned i = 0; i < nColumns; ++i)
     {
-        unsigned column = cte->iz_data[i]; /*which column to scale*/
+        unsigned column = cte->iz_data[cte->columnOffset + i]; /*which column to scale*/
         //should check 'column' within bounds(?)
         //this needs to account for offsets etc!!!
-        trapColumnScale[0] = 1;//cte->scale512[column];
-        trapColumnScale[1] = 1;//cte->scale1024[column];
-        trapColumnScale[2] = 1;//cte->scale1536[column];
-        trapColumnScale[3] = 1;//cte->scale2048[column];
+        trapColumnScale[0] = cte->scale512[column];
+        trapColumnScale[1] = cte->scale1024[column];
+        trapColumnScale[2] = cte->scale1536[column];
+        trapColumnScale[3] = cte->scale2048[column];
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
