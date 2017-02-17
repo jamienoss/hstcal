@@ -222,7 +222,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     cte_pars.isSubarray = wf3.subarray;
     cte_pars.refAndIamgeBinsIdenticle = True;
 
-    unsigned nChips = 1;//wf3.subarray ? 1 : 2;
+    unsigned nChips = 2;//wf3.subarray ? 1 : 2;
     for(unsigned chip = 1; chip <= nChips; ++chip)
     {
     //This is used for the final output
@@ -358,7 +358,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     freePtr(&ptrReg, &trapPixelMap);
 
     const double scaleFraction = cte_pars.scale_frac;
-    freePtr(&ptrReg, &cte_pars);
+    //freePtr(&ptrReg, &cte_pars);
 
     // CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT
     const float ccdgain = wf3.ccdgain;
@@ -427,13 +427,16 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         trlmessage("PCTEFRAC saved to header");
     }
     freePtr(&ptrReg, &raw);
-    }//end of chip for loop
 
     double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
     if (verbose){
         sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
         trlmessage(MsgText);
     }
+
+    }//end of chip for loop
+
+
 
     PrSwitch("pctecorr", COMPLETE);
     if (wf3.printtime)
