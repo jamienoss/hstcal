@@ -34,6 +34,8 @@ void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
     if (!reg || !ptr || !freeFunc)
         return;
 
+    //check ptr isn't already registered?
+
     if (++reg->cursor >= reg->length)
     {
         reg->length += 10;
@@ -461,17 +463,18 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
     {
         unsigned column = cte->iz_data[i]; /*which column to scale*/
         //should check 'column' within bounds(?)
-        trapColumnScale[0] = cte->scale512[column];
-        trapColumnScale[1] = cte->scale1024[column];
-        trapColumnScale[2] = cte->scale1536[column];
-        trapColumnScale[3] = cte->scale2048[column];
+        //this needs to account for offsets etc!!!
+        trapColumnScale[0] = 1;//cte->scale512[column];
+        trapColumnScale[1] = 1;//cte->scale1024[column];
+        trapColumnScale[2] = 1;//cte->scale1536[column];
+        trapColumnScale[3] = 1;//cte->scale2048[column];
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
          */
         for (unsigned j = 0; j < nRows; ++j)
         {
-            unsigned jj = cte->subarrayColumnOffset + j;
+            unsigned jj = cte->columnOffset + j;
             ro = jj / 512.0; /*ro can be zero, it's an index*/
             if (ro > 2.999)
             	ro = 2.999; // only 4 quads, 0 to 3

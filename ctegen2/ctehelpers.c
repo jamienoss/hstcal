@@ -47,8 +47,24 @@ void initCTEParams(CTEParams * pars, const unsigned _nTraps, const unsigned _nRo
     pars->nRowsPerChip = 0;
     pars->nColumnsPerQuad = 0;
     pars->nRowsPerQuad = 0;
-    pars->subarrayRowOffset = 0;
-    pars->subarrayColumnOffset = 0;
+    pars->isSubarray = False;
+    pars->refAndIamgeBinsIdenticle = True;
+    pars->rowOffset = 0;
+    pars->columnOffset = 0;
+    pars->imageRowsStart = 0;
+    pars->imageRowsEnd = 0;
+    pars->postscanWidth = 0;
+    pars->prescanWidth = 0;
+    pars->parallelOverscanWidth = 0;
+
+    for (unsigned i = 0; i < 2; ++i)
+    {
+        pars->imageColumnsStart[i] = 0;
+        pars->imageColumnsEnd[i] = 0;
+        pars->hasPrescan[i] = False;
+        pars->hasPostscan[i] = False;
+        pars->quadExists[i] = False;
+    }
 
     pars->iz_data = NULL;
     pars->wcol_data = NULL;

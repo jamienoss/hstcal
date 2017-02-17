@@ -42,11 +42,12 @@ typedef struct {
 
     //subarray offset positions within chip
     Bool isSubarray;
-    unsigned subarrayRowOffset;
-    unsigned subarrayColumnOffset;
+    Bool refAndIamgeBinsIdenticle;
+    unsigned rowOffset;
+    unsigned columnOffset;
 
     //Actual image boundaries, i.e. excluding all overscan. Index is per quad
-    //This is in reference of an aligned chip (amps bottom left corners, e.g. C & D or A & B)
+    //This is in reference to an aligned chip (amps bottom left corners, e.g. C & D or A & B)
     unsigned imageColumnsStart[2];
     unsigned imageColumnsEnd[2];
     unsigned imageRowsStart;

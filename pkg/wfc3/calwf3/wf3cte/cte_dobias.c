@@ -1,11 +1,64 @@
 # include <stdio.h>
 # include <string.h>
+# include <assert.h>
 
 # include "hstio.h"
 # include "wf3.h"
 # include "wf3info.h"
 # include "wf3err.h"
 # include "cte.h"
+
+int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool verbose)
+{
+    //WARNING - assumes row major storage
+    assert(image->sci.data.storageOrder == ROWMAJOR);
+
+    extern int status;
+
+    sprintf(MsgText,"CTE: Subtracting BIACFILE: %s for imset %d", filename, image->group_num);
+    trlmessage(MsgText);
+
+    if (!ctePars->refAndIamgeBinsIdenticle)
+    {
+       sprintf (MsgText, "BIAC image and input are not binned to the same pixel size!");
+       trlerror (MsgText);
+       return (status = SIZE_MISMATCH);
+    }
+
+    if (verbose)
+    {
+        sprintf(MsgText,"Image has starting location of %d,%d in the reference image", ctePars->columnOffset, ctePars->rowOffset);
+        trlmessage(MsgText);
+    }
+
+    SingleGroupLine biacLine;
+    initSingleGroupLine(&biacLine);
+    openSingleGroupLine (filename, image->group_num, &biacLine);
+    if (hstio_err())
+        return (status = OPEN_FAILED);
+
+    for (unsigned i = ctePars->imageRowsStart; i < ctePars->imageRowsEnd; ++i)
+    {
+        status = getSingleGroupLine(filename, i, &biacLine);
+        if (status)
+        {
+            sprintf(MsgText,"Could not read line %d from bias image.", i+1);
+            trlerror(MsgText);
+            closeSingleGroupLine(&biacLine);
+            freeSingleGroupLine(&biacLine);
+            return status;
+        }
+        for (unsigned amp = 0; amp < 2; ++amp)
+        {
+            for (unsigned j = ctePars->imageColumnsStart[amp]; j < ctePars->imageColumnsEnd[amp]; ++j)
+                Pix(image->sci.data, j, i) -= biacLine.sci.line[ctePars->columnOffset + j];
+        }
+    }
+
+    closeSingleGroupLine(&biacLine);
+    freeSingleGroupLine(&biacLine);
+    return status;
+}
 
 
 /* This routine subtracts the special BIACFILE image from x (in-place).
@@ -21,7 +74,7 @@
  */
 int sub1dreform (SingleGroup *, int, int, SingleGroupLine *);
 
-int doCteBias (WF3Info *wf3, SingleGroup *x) {
+int doCteBias (WF3Info *wf3, SingleGroup *image) {
 
 	/* arguments:
 	   WF3Info *wf3     i: calibration switches, etc
@@ -30,7 +83,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 
 	extern int status;
 
-	SingleGroupLine y, z;	/* y and z are scratch space */
+	SingleGroupLine biacLine, z;	/* y and z are scratch space */
 	int rx, ry;		/* for binning biac image down to size of x */
 	int x0, y0;		/* offsets of sci image */
 	int same_size;		/* true if no binning of ref image required */
@@ -38,20 +91,20 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	int scilines; 		/* number of lines in science image */
 	int i, j;
 	int update;
-	int dimx, dimy;
+	int nColumns, nRows;
 	int straddle=0;
 	int overstart=0;
 	int offsetx=0;
 	int offsety=0;
 
-	dimx = x->sci.data.nx;
-	dimy = x->sci.data.ny;
+	nColumns = image->sci.data.nx;
+	nRows = image->sci.data.ny;
 
-	sprintf(MsgText,"CTE: Subtracting BIACFILE: %s for imset %d",wf3->biac.name, x->group_num);
+	sprintf(MsgText,"CTE: Subtracting BIACFILE: %s for imset %d",wf3->biac.name, image->group_num);
 	trlmessage(MsgText);
 
-	initSingleGroupLine (&y);
-	scilines = x->sci.data.ny;
+	initSingleGroupLine (&biacLine);
+	scilines = image->sci.data.ny;
 
 
 	/* Initialize local variables */
@@ -62,7 +115,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	same_size = 1;
 
 	/* Get the first line of biac image data. */
-	openSingleGroupLine (wf3->biac.name, x->group_num, &y);
+	openSingleGroupLine (wf3->biac.name, image->group_num, &biacLine);
 	if (hstio_err())
 		return (status = OPEN_FAILED);
 
@@ -73,17 +126,17 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	   the biac image.
 	 */
 
-	if (FindLine (x, &y, &same_size, &rx, &ry, &x0, &y0))
+	if (FindLine (image, &biacLine, &same_size, &rx, &ry, &x0, &y0))
 	{
-	    closeSingleGroupLine (&y);
-	    freeSingleGroupLine (&y);
+	    closeSingleGroupLine (&biacLine);
+	    freeSingleGroupLine (&biacLine);
 		return (status);
 	}
 
 	/* Return with error if reference data not binned same as input */
 	if (rx != 1 || ry != 1) {
-		closeSingleGroupLine (&y);
-		freeSingleGroupLine (&y);
+		closeSingleGroupLine (&biacLine);
+		freeSingleGroupLine (&biacLine);
 		sprintf (MsgText, "BIAC image and input are not binned to the same pixel size!");
 		trlerror (MsgText);
 		return (status = SIZE_MISMATCH);
@@ -107,27 +160,28 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	    same size as the reference image, since reading subarrays
 	    of a binned chip is not supported in current flight software.
 	  */
-	 if (same_size) {
-
+	 if (same_size){
+	     printf("biac file same size as image\n");
 	 	/* Loop over all the lines in the science image */
 	 	for (i=0; i < scilines; i++) {
-	 		status = getSingleGroupLine (wf3->biac.name, i, &y);
+	 		status = getSingleGroupLine (wf3->biac.name, i, &biacLine);
 	 		if (status) {
 	 			sprintf(MsgText,"Could not read line %d from bias image.", i+1);
 	 			trlerror(MsgText);
 	 		}
 
 	 		/* No trimming required. */
-	 		status = sub1d(x, i, &y);
+	 		status = sub1d(image, i, &biacLine);
 	 		if (status) {
 	 			trlerror ("(biascorr) size mismatch.");
-	 			closeSingleGroupLine (&y);
-	 			freeSingleGroupLine (&y);
+	 			closeSingleGroupLine (&biacLine);
+	 			freeSingleGroupLine (&biacLine);
 	 			return (status);
 	 		}
 	 	}
-
+	 	//return
 	 } else {
+         printf("biac file NOT same size as image\n");
 
 		 if (x0 >= 2072){ /*image starts in B or D regions and we can just shift the starting pixel*/
 		 	if (wf3->verbose){
@@ -141,7 +195,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 		 	}
 		 } else { /*the subarray starts somewhere in A or C and might straddle the virtual overscan region */
 
-		 	if ( (x0 + dimx) >= 2072){
+		 	if ( (x0 + nColumns) >= 2072){
 		 		straddle=1;
 		 		overstart=2073-x0;
 		 	}
@@ -163,9 +217,9 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 	 */
 		initSingleGroupLine (&z);
  	    if (straddle){
- 	    	allocSingleGroupLine (&z, x->sci.data.nx+60);
+ 	    	allocSingleGroupLine (&z, image->sci.data.nx+60);
  	    } else {
- 	        allocSingleGroupLine (&z, x->sci.data.nx);
+ 	        allocSingleGroupLine (&z, image->sci.data.nx);
  	    }
 
 	 	for (i=0, j=y0; i < scilines; i++,j++) {
@@ -173,7 +227,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 		/* We are working with a sub-array and need to apply the
 	 		 ** proper section from the reference image to the science
 	 		 ** image.  */
-	 		status = getSingleGroupLine (wf3->biac.name, j, &y);
+	 		status = getSingleGroupLine (wf3->biac.name, j, &biacLine);
 	 		if (status) {
 	 			sprintf (MsgText,"Could not read line %d from biac image.", j+1);
 	 			trlerror(MsgText);
@@ -181,22 +235,22 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 
 	 		update = NO;
 
-		    if (trim1d (&y, x0, j, rx, avg, update, &z)) {
+		    if (trim1d (&biacLine, x0, j, rx, avg, update, &z)) {
 				trlerror ("(ctebiascorr) reference file size mismatch.");
-				closeSingleGroupLine (&y);
-				freeSingleGroupLine (&y);
+				closeSingleGroupLine (&biacLine);
+				freeSingleGroupLine (&biacLine);
                 freeSingleGroupLine (&z);
 				return (status);
 		    }
 			if (straddle) {
-				status = sub1dreform (x, i, overstart,&z);
+				status = sub1dreform (image, i, overstart,&z);
 			} else {
-				status = sub1d (x, i, &z);
+				status = sub1d (image, i, &z);
 			}
 			if (status)
 			{
-			    closeSingleGroupLine (&y);
-			    freeSingleGroupLine (&y);
+			    closeSingleGroupLine (&biacLine);
+			    freeSingleGroupLine (&biacLine);
 			    freeSingleGroupLine (&z);
 			    return (status);
 			}
@@ -204,8 +258,8 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	 	freeSingleGroupLine (&z);			/* done with z */
 	 }
 
-	 closeSingleGroupLine (&y);
-	 freeSingleGroupLine (&y);
+	 closeSingleGroupLine (&biacLine);
+	 freeSingleGroupLine (&biacLine);
 
 	if(wf3->printtime){
 		TimeStamp("Finished subtracting BIAC file: ",wf3->rootname);
