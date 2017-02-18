@@ -103,7 +103,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
     //WARNING - assumes column major storage order
     assert(trapPixelMap->sci.data.storageOrder == COLUMNMAJOR);
     assert(input->sci.data.storageOrder == COLUMNMAJOR);
-    output->sci.data.storageOrder == COLUMNMAJOR;
+    output->sci.data.storageOrder = COLUMNMAJOR;
 
     extern int status;
 
@@ -459,6 +459,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
 #ifdef _OPENMP
     #pragma omp for schedule(static)
 #endif
+    //this should only act on image pixels!!! Change loop boundaries
     for (unsigned i = 0; i < nColumns; ++i)
     {
         unsigned column = cte->iz_data[cte->columnOffset + i]; /*which column to scale*/

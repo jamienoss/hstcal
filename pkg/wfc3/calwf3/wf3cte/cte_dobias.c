@@ -37,7 +37,13 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
     if (hstio_err())
         return (status = OPEN_FAILED);
 
-    for (unsigned i = ctePars->imageRowsStart; i < ctePars->imageRowsEnd; ++i)
+    //used to vary for dev purposes
+    unsigned rowsStart = 0;//ctePars->imageRowsStart;
+    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {0, ctePars->nColumnsPerQuad};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {ctePars->nColumnsPerQuad, image->sci.data.nx};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+
+    for (unsigned i = rowsStart; i < rowsEnd; ++i)
     {
         status = getSingleGroupLine(filename, i, &biacLine);
         if (status)
@@ -50,7 +56,7 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
         }
         for (unsigned amp = 0; amp < 2; ++amp)
         {
-            for (unsigned j = ctePars->imageColumnsStart[amp]; j < ctePars->imageColumnsEnd[amp]; ++j)
+            for (unsigned j = columnsStart[amp]; j < columnsEnd[amp]; ++j)
                 Pix(image->sci.data, j, i) -= biacLine.sci.line[ctePars->columnOffset + j];
         }
     }
