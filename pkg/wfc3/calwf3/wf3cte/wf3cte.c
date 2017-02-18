@@ -222,221 +222,212 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     cte_pars.isSubarray = wf3.subarray;
     cte_pars.refAndIamgeBinsIdenticle = True;
 
-    unsigned nChips = 2;//wf3.subarray ? 1 : 2;
+    unsigned nChips = wf3.subarray ? 1 : 2;
     for(unsigned chip = 1; chip <= nChips; ++chip)
     {
-    //This is used for the final output
-    SingleGroup raw;
-    initSingleGroup(&raw);
-    addPtr(&ptrReg, &raw, &freeSingleGroup);
+        //This is used for the final output
+        SingleGroup raw;
+        initSingleGroup(&raw);
+        addPtr(&ptrReg, &raw, &freeSingleGroup);
 
-    SingleGroup rowMajorImage;
-    initSingleGroup(&rowMajorImage);
-    addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
-    SingleGroup * image = &rowMajorImage;
+        SingleGroup rowMajorImage;
+        initSingleGroup(&rowMajorImage);
+        addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
+        SingleGroup * image = &rowMajorImage;
 
-
-    if (wf3.subarray)
-    {
-        if (getCCDChipId(&wf3.chip, wf3.input, "SCI", 1) ||
-                getSubarray(&raw, &cte_pars, &wf3))
+        //Load image into 'raw' on chip at a time
+        if (wf3.subarray)
         {
-            freeAll(&ptrReg);
-            return status;
-        }
-    }
-    else
-    {
-        cte_pars.columnOffset = 0;
-        cte_pars.rowOffset = 0;
-        getSingleGroup(wf3.input, chip, &raw);
-        if (hstio_err())
-        {
-            freeAll(&ptrReg);
-            return (status = OPEN_FAILED);
-        }
-    }
-
-    cte_pars.nRows = raw.sci.data.ny;
-    cte_pars.nColumns = raw.sci.data.nx;
-    findAlignedQuadsImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
-
-    alignAmps(&raw, &cte_pars);
-    //Subtract these now - not before
-    if (wf3.subarray)
-    {
-        cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
-        cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
-    }
-    //leave raw as pre-biased image, clone and use copy from here on out
-    allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
-    copySingleGroup(image, &raw, raw.sci.data.storageOrder);
-
-    //biac bias subtraction
-    if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
-    //if (doCteBias(&wf3, image))
-    {
-        freeAll(&ptrReg);
-        return(status);
-    }
-
-
-    //CTE correction not sensitive enough to work without amp bias and gain correction which require vertical overscan
-    if (cte_pars.isSubarray)
-    {
-        for (unsigned quad = 0; quad < 2; ++quad)
-        {
-            if (cte_pars.quadExists[quad] && !cte_pars.hasPrescan[quad])
+            if (getCCDChipId(&wf3.chip, wf3.input, "SCI", 1) ||
+                    getSubarray(&raw, &cte_pars, &wf3))
             {
-                sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",
-                        cte_pars.columnOffset, cte_pars.columnOffset + cte_pars.nColumns);
-                trlmessage(MsgText);
                 freeAll(&ptrReg);
-                return(ERROR_RETURN);
+                return status;
             }
         }
-    }
+        else
+        {
+            cte_pars.columnOffset = 0;
+            cte_pars.rowOffset = 0;
+            getSingleGroup(wf3.input, chip, &raw);
+            if (hstio_err())
+            {
+                freeAll(&ptrReg);
+                return (status = OPEN_FAILED);
+            }
+        }
 
-    const unsigned nRows = cte_pars.nRows;
-    const unsigned nColumns = cte_pars.nColumns;
+        cte_pars.nRows = raw.sci.data.ny;
+        cte_pars.nColumns = raw.sci.data.nx;
+        findAlignedQuadsImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
 
-    //copy to column major storage
-    SingleGroup columnMajorImage;
-    initSingleGroup(&columnMajorImage);
-    addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-    allocSingleGroupSciOnly(&columnMajorImage, nColumns, nRows, False);
-    assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
-    image = &columnMajorImage;
+        alignAmps(&raw, &cte_pars);
+        //Subtract these now - not before
+        if (wf3.subarray)
+        {
+            cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
+            cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
+        }
+        //leave raw as pre-biased image, clone and use copy from here on out
+        allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
+        copySingleGroup(image, &raw, raw.sci.data.storageOrder);
 
-    //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-    if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
-    {
-        freeAll(&ptrReg);
-        return (status);
-    }
+        //biac bias subtraction
+        if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
+        //if (doCteBias(&wf3, image))
+        {
+            freeAll(&ptrReg);
+            return(status);
+        }
 
-    /***CALCULATE THE SMOOTH READNOISE IMAGE***/
-    trlmessage("CTE: Calculating smooth readnoise image");
+        //CTE correction not sensitive enough to work without amp bias and gain correction
+        //which require vertical overscan
+        if (cte_pars.isSubarray)
+        {
+            for (unsigned quad = 0; quad < 2; ++quad)
+            {
+                if (cte_pars.quadExists[quad] && !cte_pars.hasPrescan[quad])
+                {
+                    sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",
+                            cte_pars.columnOffset, cte_pars.columnOffset + cte_pars.nColumns);
+                    trlmessage(MsgText);
+                    freeAll(&ptrReg);
+                    return(ERROR_RETURN);
+                }
+            }
+        }
 
-    SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
-    setStorageOrder(smoothedImage, COLUMNMAJOR);
-    /***CREATE THE NOISE MITIGATION MODEL ***/
-    if (cte_pars.noise_mit == 0)
-    {
-        if (cteSmoothImage(image, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+        //c++ ref would be good here
+        const unsigned nRows = cte_pars.nRows;
+        const unsigned nColumns = cte_pars.nColumns;
+
+        //copy to column major storage
+        SingleGroup columnMajorImage;
+        initSingleGroup(&columnMajorImage);
+        addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
+        allocSingleGroupSciOnly(&columnMajorImage, nColumns, nRows, False);
+        assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
+        image = &columnMajorImage;
+
+        //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
+        if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
         {
             freeAll(&ptrReg);
             return (status);
         }
-    }
-    else
-    {
-        trlmessage("Only noise model 0 implemented!");
-        freeAll(&ptrReg);
-        return (status=ERROR_RETURN);
-    }
 
-    SingleGroup trapPixelMap;
-    initSingleGroup(&trapPixelMap);
-    addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
-    allocSingleGroupSciOnly(&trapPixelMap, nColumns, nRows, False);
-    setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-    if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
-    {
-        freeAll(&ptrReg);
-        return status;
-    }
+        /***CALCULATE THE SMOOTH READNOISE IMAGE***/
+        trlmessage("CTE: Calculating smooth readnoise image");
 
-    SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
-    image = NULL;
-    // MAIN CORRECTION LOOP IN HERE
-    if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
-    {
-        freeAll(&ptrReg);
-        return status;
-    }
-    freePtr(&ptrReg, &trapPixelMap);
-
-    const double scaleFraction = cte_pars.scale_frac;
-    //freePtr(&ptrReg, &cte_pars);
-
-    // CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT
-    const float ccdgain = wf3.ccdgain;
-    float totalCounts = 0;
-    float totalRawCounts = 0;
-#ifdef _OPENMP
-    #pragma omp parallel shared(cteCorrectedImage, smoothedImage, raw)
-#endif
-    {
-    float threadCounts = 0;
-    float threadRawCounts = 0;
-    float delta;
-#ifdef _OPENMP
-    #pragma omp for schedule(static)
-#endif
-    for (unsigned i = 0; i < nColumns; ++i)
-    {
-        for(unsigned j = 0; j < nRows; ++j)
+        SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
+        setStorageOrder(smoothedImage, COLUMNMAJOR);
+        /***CREATE THE NOISE MITIGATION MODEL ***/
+        if (cte_pars.noise_mit == 0)
         {
-            delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
-            threadCounts += delta;
-            threadRawCounts += Pix(raw.sci.data, i, j);
-            Pix(raw.sci.data, i, j) += delta;
+            if (cteSmoothImage(image, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+            {
+                freeAll(&ptrReg);
+                return (status);
+            }
         }
-    }
+        else
+        {
+            trlmessage("Only noise model 0 implemented!");
+            freeAll(&ptrReg);
+            return (status=ERROR_RETURN);
+        }
 
-#ifdef _OPENMP
-    #pragma omp critical(deltaAggregate)
-#endif
-    {
-        totalCounts += threadCounts;
-        totalRawCounts += threadRawCounts;
-    }
-    }//end omp threads
-    printf("\nTotal count difference (rac-raw) incurred from correction: %f (%f%%)\n\n", totalCounts, totalCounts/totalRawCounts*100);
-
-    cteCorrectedImage = NULL;
-    smoothedImage = NULL;
-    freePtr(&ptrReg, &rowMajorImage);
-    freePtr(&ptrReg, &columnMajorImage);
-
-    /* COPY BACK THE SCIENCE SUBARRAYS AND
-       SAVE THE NEW RAW FILE WITH UPDATED SCIENCE
-       ARRAYS AND PRIMARY HEADER TO RAC
-       */
-    if (outputImage(output, &raw, &cte_pars))//needs to pop status
-    {
-        freeAll(&ptrReg);
-        return status;
-    }
-   /*
-        putSingleGroup(output,cd.group_num, &cd,0);
-        putSingleGroup(output,ab.group_num, &ab,0);
-    }
-*/
-    /*** SAVE USEFUL HEADER INFORMATION ***/
-    if (chip == 2)
-    {
-        if (cteHistory(&wf3, raw.globalhdr))
+        SingleGroup trapPixelMap;
+        initSingleGroup(&trapPixelMap);
+        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
+        allocSingleGroupSciOnly(&trapPixelMap, nColumns, nRows, False);
+        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
+        if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
         {
             freeAll(&ptrReg);
             return status;
         }
-        /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-        PutKeyDbl(raw.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
-        trlmessage("PCTEFRAC saved to header");
-    }
-    freePtr(&ptrReg, &raw);
 
-    double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
-    if (verbose){
-        sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
-        trlmessage(MsgText);
-    }
+        SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
+        image = NULL;
+        // MAIN CORRECTION LOOP IN HERE
+        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
+        {
+            freeAll(&ptrReg);
+            return status;
+        }
+        freePtr(&ptrReg, &trapPixelMap);
 
-    }//end of chip for loop
+        const double scaleFraction = cte_pars.scale_frac;
+        //freePtr(&ptrReg, &cte_pars);
 
+        // CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT
+        const float ccdgain = wf3.ccdgain;
+        float totalCounts = 0;
+        float totalRawCounts = 0;
+    #ifdef _OPENMP
+        #pragma omp parallel shared(cteCorrectedImage, smoothedImage, raw)
+    #endif
+        {
+        float threadCounts = 0;
+        float threadRawCounts = 0;
+        float delta;
+    #ifdef _OPENMP
+        #pragma omp for schedule(static)
+    #endif
+        for (unsigned i = 0; i < nColumns; ++i)
+        {
+            for(unsigned j = 0; j < nRows; ++j)
+            {
+                delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+                threadCounts += delta;
+                threadRawCounts += Pix(raw.sci.data, i, j);
+                Pix(raw.sci.data, i, j) += delta;
+            }
+        }
 
+    #ifdef _OPENMP
+        #pragma omp critical(deltaAggregate)
+    #endif
+        {
+            totalCounts += threadCounts;
+            totalRawCounts += threadRawCounts;
+        }
+        }//end omp threads
+        printf("\nTotal count difference (rac-raw) incurred from correction: %f (%f%%)\n\n", totalCounts, totalCounts/totalRawCounts*100);
+
+        cteCorrectedImage = NULL;
+        smoothedImage = NULL;
+        freePtr(&ptrReg, &rowMajorImage);
+        freePtr(&ptrReg, &columnMajorImage);
+
+        if (outputImage(output, &raw, &cte_pars))//needs to pop status
+        {
+            freeAll(&ptrReg);
+            return status;
+        }
+
+        // SAVE USEFUL HEADER INFORMATION
+        if (chip == 2)
+        {
+            if (cteHistory(&wf3, raw.globalhdr))
+            {
+                freeAll(&ptrReg);
+                return status;
+            }
+            /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
+            PutKeyDbl(raw.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
+            trlmessage("PCTEFRAC saved to header");
+        }
+        freePtr(&ptrReg, &raw);
+
+        double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
+        if (verbose){
+            sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
+            trlmessage(MsgText);
+        }
+
+        }//end of chip for loop
 
     PrSwitch("pctecorr", COMPLETE);
     if (wf3.printtime)
@@ -466,6 +457,12 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * c
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
 
+    //used to vary for dev purposes
+    unsigned rowsStart = 0;//ctePars->imageRowsStart;
+    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {0, ctePars->nColumnsPerQuad};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {ctePars->nColumnsPerQuad, image->sci.data.nx};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+
 #ifdef _OPENMP
     #pragma omp parallel shared(image, biasMean, biasSigma)
 #endif
@@ -481,9 +478,9 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * c
         #pragma omp for schedule(static)
 #endif
         //NOTE: this nolonger overwrites overscan regions!!!
-        for (unsigned i = ctePars->imageColumnsStart[nthAmp]; i < ctePars->imageColumnsEnd[nthAmp]; ++i)
+        for (unsigned i = columnsStart[nthAmp]; i < columnsEnd[nthAmp]; ++i)
         {
-            for (unsigned j = ctePars->imageRowsStart; j < ctePars->imageRowsEnd; ++j)
+            for (unsigned j = rowsStart; j < rowsEnd; ++j)
             {
                 PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
                 PixColumnMajor(image->sci.data, j, i) *= ccdGain;
@@ -520,6 +517,7 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 
         float * imageOverscanPixels = NULL;
         unsigned nOverscanPixels = 0;
+        unsigned overscanWidth = 0;
 
         //Find overscan columns
         if (overscanType == PRESCAN)//subarray
@@ -530,16 +528,18 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
             int overscanStart = ctePars->imageColumnsStart[nthAmp] - ctePars->prescanWidth - 5;
             if (overscanStart < 0)
                 overscanStart = 0;
-            nOverscanPixels = (ctePars->imageColumnsStart[nthAmp] - overscanStart)*ctePars->nRows;
-                    //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
+            overscanWidth = ctePars->imageColumnsStart[nthAmp] - overscanStart;
+            nOverscanPixels = overscanWidth*ctePars->nRows;
+                                //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
             imageOverscanPixels = image->sci.data.data + overscanStart*ctePars->nRows;
         }
         else if (overscanType == POSTSCAN)//full frame
         {
             if (!ctePars->hasPostscan[nthAmp])
                 continue;
-            nOverscanPixels = ctePars->postscanWidth*ctePars->nRows;
-                    //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
+            overscanWidth = ctePars->postscanWidth;
+            nOverscanPixels = overscanWidth*ctePars->nRows;
+                               //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
             imageOverscanPixels = image->sci.data.data + ctePars->imageColumnsEnd[nthAmp]*ctePars->nRows;
         }
 
@@ -548,15 +548,54 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         float min = 0;
         float max = 0;
 
+        unsigned nRows = 2051;//ctePars->nRows;
         //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
         //not be needed and a pointer to the data could be passed directly to resistmean instead.
         float * overscanPixels = malloc(nOverscanPixels*sizeof(*overscanPixels));
         assert(overscanPixels);
-        memcpy(overscanPixels, imageOverscanPixels, nOverscanPixels*sizeof(*overscanPixels));
-        resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+        for (unsigned column = 0; column < overscanWidth; ++column)
+        {
+            //memcpy(overscanPixels, imageOverscanPixels, nOverscanPixels*sizeof(*overscanPixels));
+            memcpy(overscanPixels + column*nRows, imageOverscanPixels + column*ctePars->nRows, nRows*sizeof(*overscanPixels));
+        }
 
-        mean[nthAmp] = rmean;
-        sigma[nthAmp] = rsigma;
+        if (overscanType == POSTSCAN)
+        {
+            unsigned npix = 0;
+            unsigned arrsize = 55377;
+            float plist[arrsize];
+
+            for (unsigned i=ctePars->nRowsPerFullFrame +5; i < ctePars->nColumnsPerQuad; i++){ /*quad area for post scan bias pixels*/
+                for (unsigned j=0; j<2051; j++){
+                    if (npix < arrsize){
+                            plist[npix] = PixColumnMajor(image->sci.data,j, i+nthAmp*ctePars->nColumnsPerQuad);
+                            npix++;
+                    }
+                }
+            }
+            float * plistSub = NULL;
+            if (npix > 0 ){
+                plistSub = (float *) calloc(npix, sizeof(float));
+                if (plistSub == NULL){
+                    trlerror("out of memory for resistmean entrance in findPostScanBias.");
+                    free(plistSub);
+                    return (ERROR_RETURN);
+                }
+                for(unsigned i=0; i<npix; i++){
+                    plistSub[i]=plist[i];
+                }
+
+                resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+                mean[nthAmp] = rmean;
+                sigma[nthAmp] = rsigma;
+            }
+        }
+
+
+        //resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+
+        //mean[nthAmp] = rmean;
+        //sigma[nthAmp] = rsigma;
         if (overscanType == PRESCAN)
             printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
 
@@ -819,6 +858,8 @@ int getCCDChipId(int * value, char * fileName, char * ename, int ever)
 
 int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
 {
+    extern int status;
+
     SingleGroup temp;
     initSingleGroup(&temp);
     if (image->sci.data.storageOrder == COLUMNMAJOR)
@@ -830,9 +871,9 @@ int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
 
     unalignAmps(image, ctePars);
 
-    int ret = putSingleGroup(fileName, image->group_num, image, 0);
+    status = putSingleGroup(fileName, image->group_num, image, 0);
     freeSingleGroup(&temp);
-    return ret;
+    return status;
 }
 
 void findAlignedQuadsImageBoundaries(CTEParams * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
