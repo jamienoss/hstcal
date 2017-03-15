@@ -235,7 +235,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
         SingleGroup * image = &rowMajorImage;
 
-        //Load image into 'raw' on chip at a time
+        //Load image into 'raw' one chip at a time
         if (wf3.subarray)
         {
             if (getCCDChipId(&wf3.chip, wf3.input, "SCI", 1) ||
@@ -443,7 +443,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * ctePars)
 {
     /* Do an additional bias correction using the residual bias level measured for each amplifier from the
-     * steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
+     * steadiest pixels in the horizontal overscan and subtracted from the pixels for that amplifier.
      */
 
     //WARNING - assumes column major storage order
@@ -456,6 +456,8 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * c
 
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
+
+    printf("biasMean = %f & %f\n", biasMean[0], biasMean[1]);
 
     //used to vary for dev purposes
     unsigned rowsStart = 0;//ctePars->imageRowsStart;
