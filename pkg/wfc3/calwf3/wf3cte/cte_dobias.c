@@ -56,6 +56,9 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
         }
         for (unsigned amp = 0; amp < 2; ++amp)
         {
+
+            //WARNING need to account for err & dq. Just use sub1d
+
             for (unsigned j = columnsStart[amp]; j < columnsEnd[amp]; ++j)
                 Pix(image->sci.data, j, i) -= biacLine.sci.line[ctePars->columnOffset + j];
         }

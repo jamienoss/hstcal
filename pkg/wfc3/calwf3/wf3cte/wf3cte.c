@@ -261,16 +261,17 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         cte_pars.nColumns = raw.sci.data.nx;
         findAlignedQuadsImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
 
-        alignAmps(&raw, &cte_pars);
+      /*  alignAmps(&raw, &cte_pars);//think needs to happen after biac subtraction
         //Subtract these now - not before
         if (wf3.subarray)
         {
             cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
             cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
-        }
+        }*/
         //leave raw as pre-biased image, clone and use copy from here on out
         allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
+        alignAmps(&raw, &cte_pars);
 
         //biac bias subtraction
         if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
@@ -278,6 +279,14 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         {
             freeAll(&ptrReg);
             return(status);
+        }
+
+        alignAmps(&raw, &cte_pars);
+        //Subtract these now - not before alignAmps()
+        if (wf3.subarray)
+        {
+            cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
+            cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
         }
 
         //CTE correction not sensitive enough to work without amp bias and gain correction
@@ -567,11 +576,12 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
             unsigned arrsize = 55377;
             float plist[arrsize];
 
-            for (unsigned i=ctePars->nRowsPerFullFrame +5; i < ctePars->nColumnsPerQuad; i++){ /*quad area for post scan bias pixels*/
+            for (unsigned i=2075; i < ctePars->nColumnsPerQuad; i++){ /*quad area for post scan bias pixels*/
                 for (unsigned j=0; j<2051; j++){
-                    if (npix < arrsize){
-                            plist[npix] = PixColumnMajor(image->sci.data,j, i+nthAmp*ctePars->nColumnsPerQuad);
-                            npix++;
+                    if (npix < arrsize)
+                    {
+                        plist[npix] = PixColumnMajor(image->sci.data, j, i+nthAmp*ctePars->nColumnsPerQuad);
+                        npix++;
                     }
                 }
             }
@@ -587,19 +597,21 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
                     plistSub[i]=plist[i];
                 }
 
-                resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+                resistmean(plistSub, npix, 7.5, &rmean, &rsigma, &min, &max);
                 mean[nthAmp] = rmean;
                 sigma[nthAmp] = rsigma;
+                free(plistSub);
+                plistSub = NULL;
             }
         }
+        else
+        {
+            resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+            mean[nthAmp] = rmean;
+            sigma[nthAmp] = rsigma;
 
-
-        //resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
-
-        //mean[nthAmp] = rmean;
-        //sigma[nthAmp] = rsigma;
-        if (overscanType == PRESCAN)
             printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
+        }
 
         if (overscanPixels)
             free(overscanPixels);
@@ -760,11 +772,13 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
 
     Bool isCDAmp = image->group_num == 1 ? True : False;
 
-    if (isCDAmp)
-        printf("subarray from CD amp\n");
-    else
-        printf("subarray from AB amp\n");
-
+    if (ctePars->isSubarray)
+    {
+        if (isCDAmp)
+            printf("subarray from CD amp\n");
+        else
+            printf("subarray from AB amp\n");
+    }
 
     //If subarray only in c quad do nothing as this is already bottom left aligned
     if (isCDAmp && columnOffset + nColumns < ctePars->nColumnsPerQuad)
@@ -773,7 +787,8 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
     //Find how much of subarray extends into either b or d quad and flip right to left
     if (columnOffset + nColumns > ctePars->nColumnsPerQuad)
     {
-        printf("subarray extends into amps B or D\n");
+        if (ctePars->isSubarray)
+            printf("subarray extends into amps B or D\n");
         //grab a row, flip it, put it back
         unsigned rowLength = columnOffset + nColumns - ctePars->nColumnsPerQuad;
         unsigned quadBoundary = nColumns - rowLength;
