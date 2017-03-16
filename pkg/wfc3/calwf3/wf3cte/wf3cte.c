@@ -433,7 +433,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         makeRAZ(&cd,&ab,&raw);
 
         /***SUBTRACT THE CTE BIAS FROM BOTH CHIPS IN PLACE***/
-        if (doCteBias(&wf3,&cd)){
+     /*   if (doCteBias(&wf3,&cd)){
             freeSingleGroup(&cd);
             return(status);
         }
@@ -442,6 +442,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeSingleGroup(&ab);
             return(status);
         }
+        */
         /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
           AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
           CTE CODE VARIABLES.
@@ -629,9 +630,9 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
-                    if(Pix(raz->dq.data,i+k*subcol,j))
-                        Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
-                        Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                   // if(Pix(raz->dq.data,i+k*subcol,j))
+                     //   Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
+                     //   Pix(raz->sci.data,i+k*subcol,j) *= gain;
                 }
             }
         }
@@ -640,8 +641,8 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
-                    Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
-                    Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                   // Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
+                   // Pix(raz->sci.data,i+k*subcol,j) *= gain;
                 }
             }
         }
@@ -852,6 +853,7 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
         }
     }
 
+    return status;
 
     /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
     if (rnsig < 0.1){
