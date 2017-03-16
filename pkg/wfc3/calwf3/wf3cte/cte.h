@@ -60,7 +60,7 @@ enum OverscanType {
 
 int alignAmps(SingleGroup * image, CTEParams * ctePars);
 int unalignAmps(SingleGroup * image, CTEParams * ctePars);
-void findAlignedQuadsImageBoundaries(CTEParams * ctePars, unsigned prescanWidth, unsigned postscanWidth, unsigned parallelOverscanWidth);
+void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned prescanWidth, unsigned postscanWidth, unsigned parallelOverscanWidth);
 int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3);
 int getCCDChipId(int * value, char * fileName, char * ename, int ever);
 int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction);

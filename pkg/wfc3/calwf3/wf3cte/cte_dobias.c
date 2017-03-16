@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <string.h>
 # include <assert.h>
+# include <math.h>
 
 # include "hstio.h"
 # include "wf3.h"
@@ -57,10 +58,19 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
         for (unsigned amp = 0; amp < 2; ++amp)
         {
 
-            //WARNING need to account for err & dq. Just use sub1d
+            //WARNING need to account for err & dq. Just use sub1d?
 
             for (unsigned j = columnsStart[amp]; j < columnsEnd[amp]; ++j)
+            {
+                //image
                 Pix(image->sci.data, j, i) -= biacLine.sci.line[ctePars->columnOffset + j];
+                //err
+                float biacErrLine = biacLine.err.line[ctePars->columnOffset + j];
+                float imageErrLine = Pix(image->err.data, j, i);
+                Pix(image->err.data, j, i) = sqrt(imageErrLine * imageErrLine + biacErrLine * biacErrLine);
+                //dq
+                Pix(image->dq.data, j, i) = Pix(image->dq.data, j, i) | biacLine.dq.line[ctePars->columnOffset + j];
+            }
         }
     }
 
