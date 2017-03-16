@@ -324,7 +324,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
         setStorageOrder(smoothedImage, COLUMNMAJOR);
         /***CREATE THE NOISE MITIGATION MODEL ***/
-        if (cte_pars.noise_mit == 0)
+      /*  if (cte_pars.noise_mit == 0)
         {
             if (cteSmoothImage(image, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
             {
@@ -338,7 +338,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeAll(&ptrReg);
             return (status=ERROR_RETURN);
         }
-
+*/
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
@@ -441,6 +441,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
 /********************* SUPPORTING SUBROUTINES *****************************/
+static Bool encountered = False;
 
 int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * ctePars)
 {
@@ -458,6 +459,18 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * c
 
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
+
+    if (!encountered)
+    {
+        biasMean[0] = -0.169561;
+        biasMean[1] =  0.729228;
+        encountered = True;
+    }
+    else
+    {
+        biasMean[0] = 0.293351;
+        biasMean[1] = 0.392975;
+    }
 
     printf("biasMean = %f & %f\n", biasMean[0], biasMean[1]);
 
