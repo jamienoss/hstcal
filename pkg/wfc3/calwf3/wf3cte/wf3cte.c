@@ -259,7 +259,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
         cte_pars.nRows = raw.sci.data.ny;
         cte_pars.nColumns = raw.sci.data.nx;
-        findAlignedQuadsImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
+        findAlignedQuadImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
 
         //leave raw as pre-biased image, clone and use copy from here on out
         allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
@@ -312,17 +312,19 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         image = &columnMajorImage;
 
         //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-        if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
+      /*  if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
         {
             freeAll(&ptrReg);
             return (status);
         }
-
+*/
         /***CALCULATE THE SMOOTH READNOISE IMAGE***/
         trlmessage("CTE: Calculating smooth readnoise image");
-
         SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
         setStorageOrder(smoothedImage, COLUMNMAJOR);
+
+        //WARNING TEST CODE ONLY
+        copySingleGroup(smoothedImage, image, COLUMNMAJOR);
         /***CREATE THE NOISE MITIGATION MODEL ***/
       /*  if (cte_pars.noise_mit == 0)
         {
@@ -899,7 +901,7 @@ int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
     return status;
 }
 
-void findAlignedQuadsImageBoundaries(CTEParams * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
+void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
 {
     //WARNING this assumes quads have already been aligned
 
@@ -907,7 +909,7 @@ void findAlignedQuadsImageBoundaries(CTEParams * ctePars, unsigned const prescan
     ctePars->postscanWidth = postscanWidth;
     ctePars->parallelOverscanWidth = parallelOverscanWidth;
     ctePars->imageRowsStart = 0;
-    //Ignore last 19 rows of parallel virtual overscan, i.e. the last 19 pixels in a coulmn
+    //Ignore last 19 rows of parallel virtual overscan, i.e. the last 19 pixels in a column
     ctePars->imageRowsEnd = ctePars->nRows <= ctePars->nRowsPerQuad - parallelOverscanWidth ? ctePars->nRows : ctePars->nRowsPerQuad - parallelOverscanWidth;
 
     //find image boundaries
