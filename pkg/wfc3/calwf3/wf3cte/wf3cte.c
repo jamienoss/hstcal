@@ -261,13 +261,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         cte_pars.nColumns = raw.sci.data.nx;
         findAlignedQuadsImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
 
-      /*  alignAmps(&raw, &cte_pars);//think needs to happen after biac subtraction
-        //Subtract these now - not before
-        if (wf3.subarray)
-        {
-            cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
-            cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
-        }*/
         //leave raw as pre-biased image, clone and use copy from here on out
         allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
@@ -281,7 +274,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return(status);
         }
 
-        alignAmps(&raw, &cte_pars);
+        alignAmps(image, &cte_pars);
         //Subtract these now - not before alignAmps()
         if (wf3.subarray)
         {
