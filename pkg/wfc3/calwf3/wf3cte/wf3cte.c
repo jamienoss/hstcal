@@ -619,7 +619,7 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
     /*REFORMAT TO RAZ*/
     makeRAZ(cd,ab,raz);
-
+    return status;
 
     /*SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
       Note that for user subarray the image is in only 1 quad, and only
@@ -630,9 +630,9 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
-                   // if(Pix(raz->dq.data,i+k*subcol,j))
-                     //   Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
-                     //   Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                    if(Pix(raz->dq.data,i+k*subcol,j))
+                        Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
+                        Pix(raz->sci.data,i+k*subcol,j) *= gain;
                 }
             }
         }
@@ -641,8 +641,8 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
-                   // Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
-                   // Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                    Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
+                    Pix(raz->sci.data,i+k*subcol,j) *= gain;
                 }
             }
         }
