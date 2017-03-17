@@ -267,13 +267,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         alignAmps(&raw, &cte_pars);
 
         //biac bias subtraction
-        if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
+      /*  if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
         //if (doCteBias(&wf3, image))
         {
             freeAll(&ptrReg);
             return(status);
         }
-
+*/
         alignAmps(image, &cte_pars);
         //Subtract these now - not before alignAmps()
         if (wf3.subarray)
