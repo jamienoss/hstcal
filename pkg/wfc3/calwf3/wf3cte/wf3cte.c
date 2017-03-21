@@ -421,6 +421,12 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         freePtr(&ptrReg, &rowMajorImage);
         freePtr(&ptrReg, &columnMajorImage);
 
+        //Put back this alteration before calling alignAmps again (in outputImage())
+        if (wf3.subarray)
+        {
+            cte_pars.nColumnsPerChip += 2*cte_pars.postscanWidth;
+            cte_pars.nColumnsPerQuad += cte_pars.postscanWidth;
+        }
         if (outputImage(output, &raw, &cte_pars))//needs to pop status
         {
             freeAll(&ptrReg);
@@ -825,8 +831,8 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
             for (unsigned j = 0; j < rowLength/2; ++j)
             {
                 tempPixel = row[j];
-                row[j] = row[rowLength-j];
-                row[rowLength-j] = tempPixel;
+                row[j] = row[rowLength-1-j];
+                row[rowLength-1-j] = tempPixel;
             }
         }
     }
@@ -835,11 +841,13 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
     if (!isCDAmp) // isABAmp
     {
         //either physically align all or propagate throughout a mechanism to work on the array upside down (flip b quad though)
-        //we'll just flip all for now
-        float * tempRow = malloc(nColumns*sizeof(*tempRow));
+        //we'll just flip all for now. See if there's info in the header specifying amp location rel to pix in file,
+        //i.e. a way to know whether the chip is 'upside down'. Could then reverse cte corr trail walk direction
+        float * tempRow = NULL;
+        size_t rowSize = nColumns*sizeof(*tempRow);
+        tempRow = malloc(rowSize);
         float * topRow = NULL;
         float * bottomRow = NULL;
-        size_t rowSize = nColumns*sizeof(*tempRow);
         for (unsigned i = 0; i < nRows/2; ++i)
         {
             topRow = image->sci.data.data + i*nColumns;
