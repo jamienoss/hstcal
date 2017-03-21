@@ -264,7 +264,9 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         //leave raw as pre-biased image, clone and use copy from here on out
         allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
+        //align raw image for later comparison with aligned corrected image
         alignAmps(&raw, &cte_pars);
+
 
         //biac bias subtraction
       /*  if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
@@ -352,16 +354,30 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             return status;
         }
 
+
+
+        //putSingleGroup("/Users/jamie/dev/test/fullframe/trapmap.fits", 0, &trapPixelMap, 0);
+        //assert(0);
+
         SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
         image = NULL;
+        copySingleGroup(cteCorrectedImage, smoothedImage, COLUMNMAJOR);
+
+        /*for (unsigned i = 0; i < nColumns; ++i)
+                {
+                    for(unsigned j = 0; j < nRows; ++j)
+                    {
+                        PixColumnMajor(cteCorrectedImage->sci.data,j,i) = PixColumnMajor(smoothedImage->sci.data,j,i);
+                    }
+                }*/
         // MAIN CORRECTION LOOP IN HERE
-        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
+      /*  if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
         {
             freeAll(&ptrReg);
             return status;
         }
         freePtr(&ptrReg, &trapPixelMap);
-
+*/
         const double scaleFraction = cte_pars.scale_frac;
         //freePtr(&ptrReg, &cte_pars);
 
@@ -779,7 +795,6 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
     unsigned nRows = ctePars->nRows;
 
     Bool isCDAmp = image->group_num == 1 ? True : False;
-
     if (ctePars->isSubarray)
     {
         if (isCDAmp)
