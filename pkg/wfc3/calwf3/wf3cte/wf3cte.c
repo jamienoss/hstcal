@@ -15,6 +15,7 @@
 # include <stdlib.h>
 # include <stdio.h>
 # include <float.h>
+# include <assert.h>
 
 # ifdef _OPENMP
 #  include <omp.h>
@@ -1138,8 +1139,16 @@ int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, CTEParams *cte) {
       double scale2048[RAZ_ROWS];     scaling appropriate at row 2048
       */
 
+
     /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
-    inverse_cte_blur(rsz, rsc, &pixz_fff, cte, wf3->verbose,wf3->expstart);
+   // inverse_cte_blur(rsz, rsc, &pixz_fff, cte, wf3->verbose,wf3->expstart);
+    for (unsigned i = 0; i < RAZ_ROWS; ++i)
+                    {
+                        for(unsigned j = 0; j < RAZ_COLS; ++j)
+                        {
+                            Pix(rsc->sci.data,j,i) = Pix(rsz->sci.data,j,i);
+                        }
+                    }
     freeSingleGroup(&pixz_fff);
     return(status);
 }
