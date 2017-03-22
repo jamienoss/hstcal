@@ -270,19 +270,11 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
         //biac bias subtraction
         if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
-        //if (doCteBias(&wf3, image))
         {
             freeAll(&ptrReg);
             return(status);
         }
-
         alignAmps(image, &cte_pars);
-        //Subtract these now - not before alignAmps()
-        if (wf3.subarray)
-        {
-            cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
-            cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
-        }
 
         //CTE correction not sensitive enough to work without amp bias and gain correction
         //which require vertical overscan
@@ -314,11 +306,17 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         image = &columnMajorImage;
 
         //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-   /*     if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
+        if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
         {
             freeAll(&ptrReg);
             return (status);
         }
+        /*//Subtract these now - not before alignAmps()
+                if (wf3.subarray)
+                {
+                    cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
+                    cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
+                }
 */
         /***CALCULATE THE SMOOTH READNOISE IMAGE***/
         trlmessage("CTE: Calculating smooth readnoise image");
@@ -359,11 +357,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeAll(&ptrReg);
             return status;
         }
-
-
-
-        //putSingleGroup("/Users/jamie/dev/test/fullframe/trapmap.fits", 0, &trapPixelMap, 0);
-        //assert(0);
 
         SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
         image = NULL;
@@ -427,12 +420,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         freePtr(&ptrReg, &rowMajorImage);
         freePtr(&ptrReg, &columnMajorImage);
 
-        //Put back this alteration before calling alignAmps again (in outputImage())
+     /*   //Put back this alteration before calling alignAmps again (in outputImage())
         if (wf3.subarray)
         {
             cte_pars.nColumnsPerChip += 2*cte_pars.postscanWidth;
             cte_pars.nColumnsPerQuad += cte_pars.postscanWidth;
         }
+        */
         if (outputImage(output, &raw, &cte_pars))//needs to pop status
         {
             freeAll(&ptrReg);
@@ -490,25 +484,33 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
 
-    if (!encountered)
+    //biasMean[0] = -1.658413;
+    //biasMean[1] = -1.658413;
+
+   if (!encountered)
     {
-        biasMean[0] = 100000;//-0.169561;
-        biasMean[1] = 10000;// 0.729228;
+        biasMean[0] = -0.169561;
+        biasMean[1] =  0.729228;
         encountered = True;
     }
     else
     {
-        biasMean[0] = 10000;//0.293351;
-        biasMean[1] = 10000;//0.392975;
+        biasMean[0] = 0.293351;
+        biasMean[1] = 0.392975;
     }
 
     printf("biasMean = %f & %f\n", biasMean[0], biasMean[1]);
 
     //used to vary for dev purposes
-    unsigned rowsStart = 0;//ctePars->imageRowsStart;
-    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
-    unsigned columnsStart[2] = {0, ctePars->nColumnsPerQuad};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
-    unsigned columnsEnd[2] = {ctePars->nColumnsPerQuad, image->sci.data.nx};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+    unsigned rowsStart = ctePars->imageRowsStart;
+    unsigned rowsEnd = ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+
+    printf("dims %d, %d\n", rowsStart, rowsEnd);
+    printf("dims %d, %d\n", columnsStart[0], columnsStart[1]);
+    printf("dims %d, %d\n", columnsEnd[0], columnsEnd[1]);
+
 
 #ifdef _OPENMP
     #pragma omp parallel shared(image, biasMean, biasSigma)
@@ -529,8 +531,8 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
         {
             for (unsigned j = rowsStart; j < rowsEnd; ++j)
             {
-                PixColumnMajor(image->sci.data, j, i) = biasMean[nthAmp];
-               // PixColumnMajor(image->sci.data, j, i) *= ccdGain;
+                PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
+                PixColumnMajor(image->sci.data, j, i) *= ccdGain;
             }
         }
     }
@@ -816,11 +818,11 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
     }
 
     //If subarray only in c quad do nothing as this is already bottom left aligned
-    if (isCDAmp && columnOffset + nColumns < ctePars->nColumnsPerQuad)
+    if (isCDAmp && !ctePars->quadExists[1])//columnOffset + nColumns < ctePars->nColumnsPerQuad)
         return status;
 
     //Find how much of subarray extends into either b or d quad and flip right to left
-    if (columnOffset + nColumns > ctePars->nColumnsPerQuad)
+    if (ctePars->quadExists[1])//  &columnOffset + nColumns > ctePars->nColumnsPerQuad)
     {
         if (ctePars->isSubarray)
             printf("subarray extends into amps B or D\n");
@@ -969,6 +971,7 @@ void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned const prescanW
     //NOTE: For subarrays nColumnsPerChip & nColumnsPerQuad do NOT include the 60 & 30 extra postscan columns
     if (columnOffset < nColumnsPerQuad) //image starts in 1st quad A or C
     {
+        ctePars->quadExists[0] = True;
         if (columnOffset < prescanWidth)
         {
             ctePars->hasPrescan[0] = True;
