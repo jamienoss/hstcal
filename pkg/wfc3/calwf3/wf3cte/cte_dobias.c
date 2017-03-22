@@ -39,10 +39,10 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
         return (status = OPEN_FAILED);
 
     //used to vary for dev purposes
-    unsigned rowsStart = 0;//ctePars->imageRowsStart;
-    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
-    unsigned columnsStart[2] = {0, ctePars->nColumnsPerQuad};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
-    unsigned columnsEnd[2] = {ctePars->nColumnsPerQuad, image->sci.data.nx};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+    unsigned rowsStart = ctePars->imageRowsStart;
+    unsigned rowsEnd = ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
     for (unsigned i = rowsStart; i < rowsEnd; ++i)
     {
@@ -57,9 +57,6 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
         }
         for (unsigned amp = 0; amp < 2; ++amp)
         {
-
-            //WARNING need to account for err & dq. Just use sub1d?
-
             for (unsigned j = columnsStart[amp]; j < columnsEnd[amp]; ++j)
             {
                 //image
