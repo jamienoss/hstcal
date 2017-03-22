@@ -30,6 +30,10 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 
 	extern int status;
 
+	//return status;
+
+
+
 	SingleGroupLine y, z;	/* y and z are scratch space */
 	int rx, ry;		/* for binning biac image down to size of x */
 	int x0, y0;		/* offsets of sci image */

@@ -434,7 +434,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         makeRAZ(&cd,&ab,&raw);
 
         /***SUBTRACT THE CTE BIAS FROM BOTH CHIPS IN PLACE***/
-     /*   if (doCteBias(&wf3,&cd)){
+        if (doCteBias(&wf3,&cd)){
             freeSingleGroup(&cd);
             return(status);
         }
@@ -443,7 +443,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeSingleGroup(&ab);
             return(status);
         }
-        */
+
         /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
           AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
           CTE CODE VARIABLES.
@@ -480,7 +480,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     for (i=0;i<RAZ_COLS;i++){
         for(j=0; j<RAZ_ROWS; j++){
            Pix(chg.sci.data,i,j) = (Pix(rsc.sci.data,i,j) - Pix(rsz.sci.data,i,j))/wf3.ccdgain;
-           Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + Pix(chg.sci.data,i,j);
+           Pix(rzc.sci.data,i,j) =  Pix(rsc.sci.data,i,j)/wf3.ccdgain;//Pix(raw.sci.data,i,j) + Pix(chg.sci.data,i,j);
         }
     }
 
@@ -620,7 +620,7 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
     /*REFORMAT TO RAZ*/
     makeRAZ(cd,ab,raz);
-    return status;
+    //return status;
 
     /*SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
       Note that for user subarray the image is in only 1 quad, and only
@@ -628,17 +628,23 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
     */
     if (wf3->subarray){
         findPreScanBias(raz, bias_pre, bsig_pre);
+        printf("biasMean = %f, %f, %f, %f\n", bias_pre[0], bias_pre[1], bias_pre[2], bias_pre[3]);
+
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
                     if(Pix(raz->dq.data,i+k*subcol,j))
+                    {
                         Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
                         Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                    }
                 }
             }
         }
     } else {
         findPostScanBias(raz, bias_post, bsig_post);
+        printf("biasMean = %f, %f, %f, %f\n", bias_post[0], bias_post[1], bias_post[2], bias_post[3]);
+
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
@@ -648,6 +654,7 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
             }
         }
     }
+
 
     return(status);
 }
