@@ -269,13 +269,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
         //biac bias subtraction
-      /*  if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
+        if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
         //if (doCteBias(&wf3, image))
         {
             freeAll(&ptrReg);
             return(status);
         }
-*/
+
         alignAmps(image, &cte_pars);
         //Subtract these now - not before alignAmps()
         if (wf3.subarray)
@@ -314,7 +314,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         image = &columnMajorImage;
 
         //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-      /*  if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
+   /*     if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
         {
             freeAll(&ptrReg);
             return (status);
@@ -325,8 +325,14 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
         setStorageOrder(smoothedImage, COLUMNMAJOR);
 
+
+
+
         //WARNING TEST CODE ONLY
         copySingleGroup(smoothedImage, image, COLUMNMAJOR);
+
+
+
         /***CREATE THE NOISE MITIGATION MODEL ***/
       /*  if (cte_pars.noise_mit == 0)
         {
@@ -361,15 +367,15 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
         SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
         image = NULL;
+
+
+
+        //TESTcode only
         copySingleGroup(cteCorrectedImage, smoothedImage, COLUMNMAJOR);
 
-        /*for (unsigned i = 0; i < nColumns; ++i)
-                {
-                    for(unsigned j = 0; j < nRows; ++j)
-                    {
-                        PixColumnMajor(cteCorrectedImage->sci.data,j,i) = PixColumnMajor(smoothedImage->sci.data,j,i);
-                    }
-                }*/
+
+
+
         // MAIN CORRECTION LOOP IN HERE
       /*  if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
         {
@@ -399,10 +405,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         {
             for(unsigned j = 0; j < nRows; ++j)
             {
-                delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+                delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i))/ccdgain;// - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
                 threadCounts += delta;
                 threadRawCounts += Pix(raw.sci.data, i, j);
-                Pix(raw.sci.data, i, j) += delta;
+                Pix(raw.sci.data, i, j) = delta;//+= delta;
             }
         }
 
@@ -467,7 +473,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 /********************* SUPPORTING SUBROUTINES *****************************/
 static Bool encountered = False;
 
-int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * ctePars)
+int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * ctePars)
 {
     /* Do an additional bias correction using the residual bias level measured for each amplifier from the
      * steadiest pixels in the horizontal overscan and subtracted from the pixels for that amplifier.
@@ -486,14 +492,14 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * c
 
     if (!encountered)
     {
-        biasMean[0] = -0.169561;
-        biasMean[1] =  0.729228;
+        biasMean[0] = 100000;//-0.169561;
+        biasMean[1] = 10000;// 0.729228;
         encountered = True;
     }
     else
     {
-        biasMean[0] = 0.293351;
-        biasMean[1] = 0.392975;
+        biasMean[0] = 10000;//0.293351;
+        biasMean[1] = 10000;//0.392975;
     }
 
     printf("biasMean = %f & %f\n", biasMean[0], biasMean[1]);
@@ -523,8 +529,8 @@ int correctAmpBiasAndGain(SingleGroup *image, const float ccdGain, CTEParams * c
         {
             for (unsigned j = rowsStart; j < rowsEnd; ++j)
             {
-                PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
-                PixColumnMajor(image->sci.data, j, i) *= ccdGain;
+                PixColumnMajor(image->sci.data, j, i) = biasMean[nthAmp];
+               // PixColumnMajor(image->sci.data, j, i) *= ccdGain;
             }
         }
     }
