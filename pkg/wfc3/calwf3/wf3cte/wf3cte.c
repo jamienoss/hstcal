@@ -720,6 +720,7 @@ int findPostScanBias(SingleGroup *raz, float *mean, float *sigma){
             resistmean(plistSub, npix, sigreg, &rmean, &rsigma, &min, &max);
             free(plistSub);
         }
+
         mean[k]= rmean;
         sigma[k] = rsigma;
     }
@@ -792,6 +793,8 @@ int findPreScanBias(SingleGroup *raz, float *mean, float *sigma){
         if(npix>0)
             printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n",npix,k+1,rmean,k+1,rsigma);
     }
+    printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", npix, k+1, rmean, k+1, rsigma);
+           printf("min: %f, max: %f\n", min, max);
     return status;
 }
 
@@ -861,7 +864,7 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
         }
     }
 
-    return status;
+   // return status;
 
     /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
     if (rnsig < 0.1){
