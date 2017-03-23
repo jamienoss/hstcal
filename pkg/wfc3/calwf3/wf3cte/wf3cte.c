@@ -267,13 +267,11 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         alignAmps(&raw, &cte_pars);
 
         //biac bias subtraction
-        //if (doNewCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
         if (doCteBias(&wf3, image))
         {
             freeAll(&ptrReg);
             return(status);
         }
-
         alignAmps(image, &cte_pars);
 
         //CTE correction not sensitive enough to work without amp bias and gain correction
@@ -466,8 +464,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
 /********************* SUPPORTING SUBROUTINES *****************************/
-static Bool encountered = False;
-
 int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * ctePars)
 {
     /* Do an additional bias correction using the residual bias level measured for each amplifier from the
@@ -483,35 +479,14 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
 
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
-    findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
-
-    //biasMean[0] = -1.658413;
-    //biasMean[1] = -1.658413;
-
- /*  if (!encountered)
-    {
-        biasMean[0] = -0.169561;
-        biasMean[1] =  0.729228;
-        encountered = True;
-    }
-    else
-    {
-        biasMean[0] = 0.293351;
-        biasMean[1] = 0.392975;
-    }
-*/
-    printf("biasMean = %f & %f\n", biasMean[0], biasMean[1]);
+    unsigned nOverscanColumnsToIgnore = ctePars->isSubarray ? 5 : 3;
+    findOverscanBias(image, biasMean, biasSigma, overscanType, nOverscanColumnsToIgnore, ctePars);
 
     //used to vary for dev purposes
     unsigned rowsStart = ctePars->imageRowsStart;
     unsigned rowsEnd = ctePars->imageRowsEnd;
     unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
     unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
-
-    printf("dims %d, %d\n", rowsStart, rowsEnd);
-    printf("dims %d, %d\n", columnsStart[0], columnsStart[1]);
-    printf("dims %d, %d\n", columnsEnd[0], columnsEnd[1]);
-
 
 #ifdef _OPENMP
     #pragma omp parallel shared(image, biasMean, biasSigma)
@@ -542,7 +517,7 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     return(status);
 }
 
-int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overscanType, CTEParams * ctePars)
+int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overscanType, unsigned nOverscanColumnsToIgnore, CTEParams * ctePars)
 {
     //WARNING - assumes column major storage order
     assert(image->sci.data.storageOrder == COLUMNMAJOR);
@@ -568,12 +543,10 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         unsigned nOverscanPixels = 0;
         unsigned overscanWidth = 0;
         unsigned nOverscanRows = ctePars->imageRowsEnd;
-        //unsigned nOverscanRows = ctePars->nRows-19;
 
         //Find overscan columns
         if (overscanType == PRESCAN)//subarray
         {
-            unsigned nOverscanColumnsToIgnore = 5;
             if (!ctePars->hasPrescan[nthAmp])
                 continue;
             unsigned overscanStart = ctePars->columnOffset < nOverscanColumnsToIgnore ? nOverscanColumnsToIgnore - ctePars->columnOffset : 0;
@@ -583,7 +556,6 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         }
         else if (overscanType == POSTSCAN)//full frame
         {
-            unsigned nOverscanColumnsToIgnore = 3;
             if (!ctePars->hasPostscan[nthAmp])
                 continue;
             overscanWidth = ctePars->postscanWidth - nOverscanColumnsToIgnore;
@@ -612,53 +584,6 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         sigma[nthAmp] = rsigma;
 
         printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
-
-        printf("min: %f, max: %f\n", min, max);
-     /*   if (overscanType == POSTSCAN)
-        {
-            unsigned npix = 0;
-            unsigned arrsize = 55377;
-            float plist[arrsize];
-
-            for (unsigned i=2075; i < ctePars->nColumnsPerQuad; i++){ //quad area for post scan bias pixels
-                for (unsigned j=0; j<2051; j++){
-                    if (npix < arrsize)
-                    {
-                        plist[npix] = PixColumnMajor(image->sci.data, j, i+nthAmp*ctePars->nColumnsPerQuad);
-                        npix++;
-                    }
-                }
-            }
-            float * plistSub = NULL;
-            if (npix > 0 ){
-                plistSub = (float *) calloc(npix, sizeof(float));
-                if (plistSub == NULL){
-                    trlerror("out of memory for resistmean entrance in findPostScanBias.");
-                    free(plistSub);
-                    return (ERROR_RETURN);
-                }
-                for(unsigned i=0; i<npix; i++){
-                    plistSub[i]=plist[i];
-                }
-
-                resistmean(plistSub, npix, 7.5, &rmean, &rsigma, &min, &max);
-                mean[nthAmp] = rmean;
-                sigma[nthAmp] = rsigma;
-                free(plistSub);
-                plistSub = NULL;
-            }
-        }
-        else
-        {
-            resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
-            mean[nthAmp] = rmean;
-            sigma[nthAmp] = rsigma;
-
-            printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
-        }
-        */
-
-
 
         if (overscanPixels)
             free(overscanPixels);
