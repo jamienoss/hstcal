@@ -492,7 +492,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
     return(status);
 }
 
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampReadNoise, unsigned maxThreads, int verbose)
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * ctePars, double ampReadNoise, unsigned maxThreads, int verbose)
 {
     /*
        This routine will read in a RAZ image and will output the smoothest
@@ -546,9 +546,9 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampRe
     initSingleGroup(&adjustment);
     allocSingleGroup(&adjustment, nColumns, nRows, False);
 
-    SingleGroup rnz;
-    initSingleGroup(&rnz);
-    allocSingleGroup(&rnz, nColumns, nRows, False);
+    SingleGroup readNoise;
+    initSingleGroup(&readNoise);
+    allocSingleGroup(&readNoise, nColumns, nRows, False);
 
 #ifdef _OPENMP
     #pragma omp parallel shared(input, output, ampReadNoise, rms, nrms, rnz)
@@ -598,7 +598,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampRe
             for(unsigned j = 0; j < nRows; ++j)
             {
                 PixColumnMajor(output->sci.data,j,i) += (PixColumnMajor(adjustment.sci.data,j, i)*0.75);
-                PixColumnMajor(rnz.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
+                PixColumnMajor(readNoise.sci.data,j,i) = (PixColumnMajor(input->sci.data,j,i) - PixColumnMajor(output->sci.data,j,i));
             }
         }//implicit omp barrier
 
@@ -620,7 +620,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampRe
                 if ( (fabs(PixColumnMajor(input->sci.data, i, j)) > 0.1 ||
                      fabs(PixColumnMajor(output->sci.data, i, j)) > 0.1))
                 {
-                    double tmp = PixColumnMajor(rnz.sci.data, i, j);
+                    double tmp = PixColumnMajor(readNoise.sci.data, i, j);
                     rmsLocal  +=  tmp*tmp;
                     ++nrmsLocal;
                 }
@@ -655,7 +655,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double ampRe
     } // end loop over iter
     } // close parallel block
     freeSingleGroup(&adjustment);
-    freeSingleGroup(&rnz);
+    freeSingleGroup(&readNoise);
 
     if (verbose)
     {

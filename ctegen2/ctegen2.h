@@ -96,7 +96,7 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
         const unsigned nRows, const double threshHold);
 
 int populateTrapPixelMap(SingleGroup * input, CTEParams * params, const int verbose, const double expstart);
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, double readNoiseAmp, unsigned maxThreads , int verbose);
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * ctePars, double readNoiseAmp, unsigned maxThreads , int verbose);
 double find_dadj(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
 
 //helpers

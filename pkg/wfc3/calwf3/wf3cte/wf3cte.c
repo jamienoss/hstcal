@@ -326,14 +326,14 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
         //WARNING TEST CODE ONLY
-        copySingleGroup(smoothedImage, image, COLUMNMAJOR);
+       // copySingleGroup(smoothedImage, image, COLUMNMAJOR);
 
 
 
         /***CREATE THE NOISE MITIGATION MODEL ***/
-      /*  if (cte_pars.noise_mit == 0)
+        if (cte_pars.noise_mit == 0)
         {
-            if (cteSmoothImage(image, smoothedImage, cte_pars.rn_amp, max_threads, wf3.verbose))
+            if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, max_threads, wf3.verbose))
             {
                 freeAll(&ptrReg);
                 return (status);
@@ -345,7 +345,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeAll(&ptrReg);
             return (status=ERROR_RETURN);
         }
-*/
+
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
@@ -483,10 +483,10 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     findOverscanBias(image, biasMean, biasSigma, overscanType, nOverscanColumnsToIgnore, ctePars);
 
     //used to vary for dev purposes
-    unsigned rowsStart = ctePars->imageRowsStart;
-    unsigned rowsEnd = ctePars->imageRowsEnd;
-    unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
-    unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+    unsigned rowsStart = 0;//ctePars->imageRowsStart;
+    unsigned rowsEnd = 2070;//ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {0, 2103};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {2103, 2103*2};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
 #ifdef _OPENMP
     #pragma omp parallel shared(image, biasMean, biasSigma)
