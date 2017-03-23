@@ -230,11 +230,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         initSingleGroup(&raw);
         addPtr(&ptrReg, &raw, &freeSingleGroup);
 
-        SingleGroup rowMajorImage;
-        initSingleGroup(&rowMajorImage);
-        addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
-        SingleGroup * image = &rowMajorImage;
-
         //Load image into 'raw' one chip at a time
         if (wf3.subarray)
         {
@@ -262,18 +257,23 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         findAlignedQuadImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
 
         //leave raw as pre-biased image, clone and use copy from here on out
-        allocSingleGroupSciOnly(&raw, cte_pars.nColumns, cte_pars.nRows, False);
+        SingleGroup rowMajorImage;
+        initSingleGroup(&rowMajorImage);
+        addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
+        allocSingleGroupSciOnly(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, False);
+        SingleGroup * image = &rowMajorImage;
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
         //align raw image for later comparison with aligned corrected image
         alignAmps(&raw, &cte_pars);
 
-
         //biac bias subtraction
-        if (doCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
+        //if (doNewCTEBias(image, wf3.biac.name, &cte_pars, wf3.verbose))
+        if (doCteBias(&wf3, image))
         {
             freeAll(&ptrReg);
             return(status);
         }
+
         alignAmps(image, &cte_pars);
 
         //CTE correction not sensitive enough to work without amp bias and gain correction
@@ -311,6 +311,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             freeAll(&ptrReg);
             return (status);
         }
+
         /*//Subtract these now - not before alignAmps()
                 if (wf3.subarray)
                 {
@@ -484,10 +485,10 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
 
-    //biasMean[0] = -1.658413;
-    //biasMean[1] = -1.658413;
+    biasMean[0] = -1.658413;
+    biasMean[1] = -1.658413;
 
-   if (!encountered)
+ /*  if (!encountered)
     {
         biasMean[0] = -0.169561;
         biasMean[1] =  0.729228;
@@ -498,7 +499,7 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
         biasMean[0] = 0.293351;
         biasMean[1] = 0.392975;
     }
-
+*/
     printf("biasMean = %f & %f\n", biasMean[0], biasMean[1]);
 
     //used to vary for dev purposes
@@ -821,7 +822,7 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
     if (isCDAmp && !ctePars->quadExists[1])//columnOffset + nColumns < ctePars->nColumnsPerQuad)
         return status;
 
-    //Find how much of subarray extends into either b or d quad and flip right to left
+    //Find if subarray extends into either b or d quad and flip right to left
     if (ctePars->quadExists[1])//  &columnOffset + nColumns > ctePars->nColumnsPerQuad)
     {
         if (ctePars->isSubarray)
@@ -859,7 +860,7 @@ int alignAmps(SingleGroup * image, CTEParams * ctePars)
         for (unsigned i = 0; i < nRows/2; ++i)
         {
             topRow = image->sci.data.data + i*nColumns;
-            bottomRow = image->sci.data.data + (nRows-i-1)*nColumns;
+            bottomRow = image->sci.data.data + (nRows-1-i)*nColumns;
             memcpy(tempRow, topRow, rowSize);
             memcpy(topRow, bottomRow, rowSize);
             memcpy(bottomRow, tempRow, rowSize);
