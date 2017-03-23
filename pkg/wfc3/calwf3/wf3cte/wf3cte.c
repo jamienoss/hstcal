@@ -546,7 +546,6 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 {
     //WARNING - assumes column major storage order
     assert(image->sci.data.storageOrder == COLUMNMAJOR);
-    assert(overscanType == PRESCAN || overscanType == POSTSCAN);
 
     /*Calculate the post scan and bias after the biac file has been subtracted.
       This calls resistmean, which does a better job clipping outlying pixels
@@ -568,32 +567,31 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         float * imageOverscanPixels = NULL;
         unsigned nOverscanPixels = 0;
         unsigned overscanWidth = 0;
-        unsigned nOverscanRows = ctePars->nRows-19;
+        unsigned nOverscanRows = ctePars->imageRowsEnd;
+        //unsigned nOverscanRows = ctePars->nRows-19;
 
         //Find overscan columns
         if (overscanType == PRESCAN)//subarray
         {
+            unsigned nOverscanColumnsToIgnore = 5;
             if (!ctePars->hasPrescan[nthAmp])
                 continue;
-            //Only want prescan columns 5 to 25 - not sure why???
-            int overscanStart = 3;//ctePars->imageColumnsStart[nthAmp] - ctePars->prescanWidth + 5;
-            if (overscanStart < 0)
-                overscanStart = 0;
+            unsigned overscanStart = ctePars->columnOffset < nOverscanColumnsToIgnore ? nOverscanColumnsToIgnore - ctePars->columnOffset : 0;
             overscanWidth = ctePars->imageColumnsStart[nthAmp] - overscanStart;
             nOverscanPixels = overscanWidth*nOverscanRows;
-                                //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
             imageOverscanPixels = image->sci.data.data + overscanStart*ctePars->nRows;
         }
         else if (overscanType == POSTSCAN)//full frame
         {
-            unsigned nColumnsToIgnore = 3;
+            unsigned nOverscanColumnsToIgnore = 3;
             if (!ctePars->hasPostscan[nthAmp])
                 continue;
-            overscanWidth = ctePars->postscanWidth - nColumnsToIgnore;
+            overscanWidth = ctePars->postscanWidth - nOverscanColumnsToIgnore;
             nOverscanPixels = overscanWidth*nOverscanRows;
-                               //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
-            imageOverscanPixels = image->sci.data.data + (ctePars->imageColumnsEnd[nthAmp] + nColumnsToIgnore-1)*ctePars->nRows;
+            imageOverscanPixels = image->sci.data.data + (ctePars->imageColumnsEnd[nthAmp] + nOverscanColumnsToIgnore-1)*ctePars->nRows;
         }
+        else
+            assert(0);
 
         //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
         //not be needed and a pointer to the data could be passed directly to resistmean instead.
