@@ -901,20 +901,29 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
     //initHdr(target->globalhdr);
     copyHdr(target->globalhdr, source->globalhdr); //This allocates
 
-    if (copyFloatHdrData(&target->sci, &source->sci, targetStorageOrder))
+    if (source->sci.data.data)
     {
-        initSingleGroup(target);
-        return -1;
+        if (copyFloatHdrData(&target->sci, &source->sci, targetStorageOrder))
+        {
+            initSingleGroup(target);
+            return -1;
+        }
     }
-    if (copyFloatHdrData(&target->err, &source->err, targetStorageOrder))
+    if (source->err.data.data)
     {
-        initSingleGroup(target);
-        return -1;
+        if (copyFloatHdrData(&target->err, &source->err, targetStorageOrder))
+        {
+            initSingleGroup(target);
+            return -1;
+        }
     }
-    if (copyShortHdrData(&target->dq, &source->dq, targetStorageOrder))
+    if (source->dq.data.data)
     {
-        initSingleGroup(target);
-        return -1;
+        if (copyShortHdrData(&target->dq, &source->dq, targetStorageOrder))
+        {
+            initSingleGroup(target);
+            return -1;
+        }
     }
     return 0;
 }

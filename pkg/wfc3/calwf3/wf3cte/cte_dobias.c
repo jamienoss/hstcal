@@ -9,7 +9,7 @@
 # include "wf3err.h"
 # include "cte.h"
 
-int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool verbose)
+int doNewCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool verbose)
 {
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);
@@ -39,8 +39,8 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
         return (status = OPEN_FAILED);
 
     //used to vary for dev purposes
-    unsigned rowsStart = ctePars->imageRowsStart;
-    unsigned rowsEnd = ctePars->imageRowsEnd;
+    unsigned rowsStart = 0;//ctePars->imageRowsStart;
+    unsigned rowsEnd = ctePars->nRows;//ctePars->imageRowsEnd;
     unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
     unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
@@ -90,196 +90,188 @@ int doCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool v
  */
 int sub1dreform (SingleGroup *, int, int, SingleGroupLine *);
 
-int doCteBias (WF3Info *wf3, SingleGroup *image) {
+int doCteBias(WF3Info *wf3, SingleGroup *x) {
 
-	/* arguments:
-	   WF3Info *wf3     i: calibration switches, etc
-	   SingleGroup *x	io: image to be calibrated; written to in-place
-	 */
+    /* arguments:
+       WF3Info *wf3     i: calibration switches, etc
+       SingleGroup *x   io: image to be calibrated; written to in-place
+     */
 
-	extern int status;
+    extern int status;
 
-	SingleGroupLine biacLine, z;	/* y and z are scratch space */
-	int rx, ry;		/* for binning biac image down to size of x */
-	int x0, y0;		/* offsets of sci image */
-	int same_size;		/* true if no binning of ref image required */
-	int avg = 0;		/* bin2d should sum within each bin */
-	int scilines; 		/* number of lines in science image */
-	int i, j;
-	int update;
-	int nColumns, nRows;
-	int straddle=0;
-	int overstart=0;
-	int offsetx=0;
-	int offsety=0;
-
-	nColumns = image->sci.data.nx;
-	nRows = image->sci.data.ny;
-
-	sprintf(MsgText,"CTE: Subtracting BIACFILE: %s for imset %d",wf3->biac.name, image->group_num);
-	trlmessage(MsgText);
-
-	initSingleGroupLine (&biacLine);
-	scilines = image->sci.data.ny;
+    //return status;
 
 
-	/* Initialize local variables */
-	rx = 1;
-	ry = 1;
-	x0 = 0;
-	y0 = 0;
-	same_size = 1;
 
-	/* Get the first line of biac image data. */
-	openSingleGroupLine (wf3->biac.name, image->group_num, &biacLine);
-	if (hstio_err())
-		return (status = OPEN_FAILED);
+    SingleGroupLine y, z;   /* y and z are scratch space */
+    int rx, ry;     /* for binning biac image down to size of x */
+    int x0, y0;     /* offsets of sci image */
+    int same_size;      /* true if no binning of ref image required */
+    int avg = 0;        /* bin2d should sum within each bin */
+    int scilines;       /* number of lines in science image */
+    int i, j;
+    int update;
+    int dimx, dimy;
+    int straddle=0;
+    int overstart=0;
+    int offsetx=0;
+    int offsety=0;
 
-	/*
-	   Reference image should already be selected to have the
-	   same binning factor as the science image.  All we need to
-	   make sure of is whether the science array is a sub-array of
-	   the biac image.
-	 */
+    dimx = x->sci.data.nx;
+    dimy = x->sci.data.ny;
 
-	if (FindLine (image, &biacLine, &same_size, &rx, &ry, &x0, &y0))
-	{
-	    closeSingleGroupLine (&biacLine);
-	    freeSingleGroupLine (&biacLine);
-		return (status);
-	}
+    sprintf(MsgText,"CTE: Subtracting BIACFILE: %s for imset %d",wf3->biac.name, x->group_num);
+    trlmessage(MsgText);
 
-	/* Return with error if reference data not binned same as input */
-	if (rx != 1 || ry != 1) {
-		closeSingleGroupLine (&biacLine);
-		freeSingleGroupLine (&biacLine);
-		sprintf (MsgText, "BIAC image and input are not binned to the same pixel size!");
-		trlerror (MsgText);
-		return (status = SIZE_MISMATCH);
-	}
+    initSingleGroupLine (&y);
+    scilines = x->sci.data.ny;
 
-	/* Subtract the biasc image from x. */
 
-	/* If the science image is binned, it will be assumed to have
-	   same size as the reference image, since reading subarrays
-	   of a binned chip is not supported in current flight software.
-	 */
+    /* Initialize local variables */
+    rx = 1;
+    ry = 1;
+    x0 = 0;
+    y0 = 0;
+    same_size = 1;
 
-	 if (wf3->verbose){
- 		sprintf(MsgText,"Image has starting location of %d,%d in the reference image",x0,y0);
- 		trlmessage(MsgText);
- 	}
+    /* Get the first line of biac image data. */
+    openSingleGroupLine (wf3->biac.name, x->group_num, &y);
+    if (hstio_err())
+        return (status = OPEN_FAILED);
 
-	 /* Subtract the bias image from x. */
+    /*
+       Reference image should already be selected to have the
+       same binning factor as the science image.  All we need to
+       make sure of is whether the science array is a sub-array of
+       the biac image.
+     */
 
-	 /* If the science image is binned, it will be assumed to have
-	    same size as the reference image, since reading subarrays
-	    of a binned chip is not supported in current flight software.
-	  */
-	 if (same_size){
-	     printf("biac file same size as image\n");
-	 	/* Loop over all the lines in the science image */
-	 	for (i=0; i < scilines; i++) {
-	 		status = getSingleGroupLine (wf3->biac.name, i, &biacLine);
-	 		if (status) {
-	 			sprintf(MsgText,"Could not read line %d from bias image.", i+1);
-	 			trlerror(MsgText);
-	 		}
+    if (FindLine (x, &y, &same_size, &rx, &ry, &x0, &y0))
+        return (status);
 
-	 		/* No trimming required. */
-	 		status = sub1d(image, i, &biacLine);
-	 		if (status) {
-	 			trlerror ("(biascorr) size mismatch.");
-	 			closeSingleGroupLine (&biacLine);
-	 			freeSingleGroupLine (&biacLine);
-	 			return (status);
-	 		}
-	 	}
-	 	//return
-	 } else {
-         printf("biac file NOT same size as image\n");
+    /* Return with error if reference data not binned same as input */
+    if (rx != 1 || ry != 1) {
+        closeSingleGroupLine (&y);
+        freeSingleGroupLine (&y);
+        sprintf (MsgText,
+                "BIAC image and input are not binned to the same pixel size!");
+        trlerror (MsgText);
+        return (status = SIZE_MISMATCH);
+    }
 
-		 if (x0 >= 2072){ /*image starts in B or D regions and we can just shift the starting pixel*/
-		 	if (wf3->verbose){
-		 		sprintf(MsgText,"Subarray starts in B or D region, moved from (%d,%d) to ",x0,y0);
-		 		trlmessage(MsgText);
-		 	}
-		 		x0 += 60;
-		 	if (wf3->verbose){
-		 		sprintf(MsgText,"(%d,%d) to avoid virtual overscan in reference",x0,y0);
-		 		trlmessage(MsgText);
-		 	}
-		 } else { /*the subarray starts somewhere in A or C and might straddle the virtual overscan region */
+    /* Subtract the biasc image from x. */
 
-		 	if ( (x0 + nColumns) >= 2072){
-		 		straddle=1;
-		 		overstart=2073-x0;
-		 	}
+    /* If the science image is binned, it will be assumed to have
+       same size as the reference image, since reading subarrays
+       of a binned chip is not supported in current flight software.
+     */
 
-		 }
+     if (wf3->verbose){
+        sprintf(MsgText,"Image has starting location of %d,%d in the reference image",x0,y0);
+        trlmessage(MsgText);
+    }
 
-		 if (wf3->verbose){
-	 	    sprintf(MsgText,"ccdamp=%s, straddle=%d, offset=(%d,%d),ampx,ampy=(%d,%d),x0,y0=(%d,%d)",wf3->ccdamp,straddle,offsetx,offsety,wf3->ampx,wf3->ampy,x0,y0);
-	         trlmessage(MsgText);
-	     }
+     /* Subtract the bias image from x. */
 
-	 	/* Loop over all the lines in the science array, and
-	 	 ** match them to the appropriate line in the reference image. */
-	 	/*
-	 	   i - index for line in science image
-	 	   j - index for line in reference image
-	 	   y0 - line in reference image corresponding to
-	 	   line in input image
-	 	 */
-		initSingleGroupLine (&z);
- 	    if (straddle){
- 	    	allocSingleGroupLine (&z, image->sci.data.nx+60);
- 	    } else {
- 	        allocSingleGroupLine (&z, image->sci.data.nx);
- 	    }
+     /* If the science image is binned, it will be assumed to have
+        same size as the reference image, since reading subarrays
+        of a binned chip is not supported in current flight software.
+      */
+     if (same_size) {
 
-	 	for (i=0, j=y0; i < scilines; i++,j++) {
+        /* Loop over all the lines in the science image */
+        for (i=0; i < scilines; i++) {
+            status = getSingleGroupLine (wf3->biac.name, i, &y);
+            if (status) {
+                sprintf(MsgText,"Could not read line %d from bias image.",
+                        i+1);
+                trlerror(MsgText);
+            }
 
-	 		/* We are working with a sub-array and need to apply the
-	 		 ** proper section from the reference image to the science
-	 		 ** image.  */
-	 		status = getSingleGroupLine (wf3->biac.name, j, &biacLine);
-	 		if (status) {
-	 			sprintf (MsgText,"Could not read line %d from biac image.", j+1);
-	 			trlerror(MsgText);
-	 		}
+            /* No trimming required. */
+            status = sub1d(x, i, &y);
+            if (status) {
+                trlerror ("(biascorr) size mismatch.");
+                return (status);
+            }
+        }
 
-	 		update = NO;
+     } else {
 
-		    if (trim1d (&biacLine, x0, j, rx, avg, update, &z)) {
-				trlerror ("(ctebiascorr) reference file size mismatch.");
-				closeSingleGroupLine (&biacLine);
-				freeSingleGroupLine (&biacLine);
-                freeSingleGroupLine (&z);
-				return (status);
-		    }
-			if (straddle) {
-				status = sub1dreform (image, i, overstart,&z);
-			} else {
-				status = sub1d (image, i, &z);
-			}
-			if (status)
-			{
-			    closeSingleGroupLine (&biacLine);
-			    freeSingleGroupLine (&biacLine);
-			    freeSingleGroupLine (&z);
-			    return (status);
-			}
-	 	}
-	 	freeSingleGroupLine (&z);			/* done with z */
-	 }
+         if (x0 >= 2072){ /*image starts in B or D regions and we can just shift the starting pixel*/
+            if (wf3->verbose){
+                sprintf(MsgText,"Subarray starts in B or D region, moved from (%d,%d) to ",x0,y0);
+                trlmessage(MsgText);
+            }
+                x0 += 60;
+            if (wf3->verbose){
+                sprintf(MsgText,"(%d,%d) to avoid virtual overscan in reference",x0,y0);
+                trlmessage(MsgText);
+            }
+         } else { /*the subarray starts somewhere in A or C and might straddle the virtual overscan region */
 
-	 closeSingleGroupLine (&biacLine);
-	 freeSingleGroupLine (&biacLine);
+            if ( (x0 + dimx) >= 2072){
+                straddle=1;
+                overstart=2073-x0;
+            }
 
-	if(wf3->printtime){
-		TimeStamp("Finished subtracting BIAC file: ",wf3->rootname);
-	}
+         }
 
-	return (status);
+         if (wf3->verbose){
+            sprintf(MsgText,"ccdamp=%s, straddle=%d, offset=(%d,%d),ampx,ampy=(%d,%d),x0,y0=(%d,%d)",wf3->ccdamp,straddle,offsetx,offsety,wf3->ampx,wf3->ampy,x0,y0);
+             trlmessage(MsgText);
+         }
+
+        /* Loop over all the lines in the science array, and
+         ** match them to the appropriate line in the reference image. */
+        /*
+           i - index for line in science image
+           j - index for line in reference image
+           y0 - line in reference image corresponding to
+           line in input image
+         */
+        initSingleGroupLine (&z);
+        if (straddle){
+            allocSingleGroupLine (&z, x->sci.data.nx+60);
+        } else {
+            allocSingleGroupLine (&z, x->sci.data.nx);
+        }
+
+        for (i=0, j=y0; i < scilines; i++,j++) {
+
+            /* We are working with a sub-array and need to apply the
+             ** proper section from the reference image to the science
+             ** image.  */
+            status = getSingleGroupLine (wf3->biac.name, j, &y);
+            if (status) {
+                sprintf (MsgText,"Could not read line %d from biac image.",
+                        j+1);
+                trlerror(MsgText);
+            }
+
+            update = NO;
+
+            if (trim1d (&y, x0, j, rx, avg, update, &z)) {
+                trlerror ("(ctebiascorr) reference file size mismatch.");
+                return (status);
+            }
+            if (straddle) {
+                status = sub1dreform (x, i, overstart,&z);
+            } else {
+                status = sub1d (x, i, &z);
+            }
+            if (status)
+            return (status);
+        }
+        freeSingleGroupLine (&z);           /* done with z */
+     }
+
+     closeSingleGroupLine (&y);
+     freeSingleGroupLine (&y);
+
+    if(wf3->printtime){
+        TimeStamp("Finished subtracting BIAC file: ",wf3->rootname);
+    }
+
+    return (status);
 }

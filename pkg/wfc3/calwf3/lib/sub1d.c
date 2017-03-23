@@ -3,7 +3,7 @@
 # include "hstio.h"
 # include "wf3err.h"	/* SIZE_MISMATCH */
 # include "wf3.h"
-
+# include "assert.h"
 
 /* Subtract the second SingleGroupLine from the first, leaving the
    result in the first.
@@ -28,37 +28,51 @@ int line		 i: line of input data to subtract 1-d data from
 SingleGroupLine *b	 i: second input data
 */
 
-	extern int status;
+    extern int status;
 
-	int i;
-	float da, db;		/* errors for a and b */
-	short dqa, dqb, dqab;	/* data quality for a, b, combined */
-	int dimx;
+    assert(a);
+    assert(b);
 
-	if (a->sci.data.nx != b->sci.tot_nx)
-	    return (status = SIZE_MISMATCH);
+    if (a->sci.data.nx != b->sci.tot_nx)
+        return (status = SIZE_MISMATCH);
 
-	/* science, error, and DQ data */
-	dimx = a->sci.data.nx;
-	for (i = 0;  i < dimx;  i++) {
+    /* science, error, and DQ data */
+    unsigned dimx = a->sci.data.nx;
 
-    	     /* science array */
-	     Pix(a->sci.data, i, line) =
-			Pix (a->sci.data, i, line) - b->sci.line[i];
+    /* science array */
+    if (a->sci.data.data)
+    {
+        for (unsigned i = 0;  i < dimx;  ++i)
+        {
+            Pix(a->sci.data, i, line) =
+                    Pix (a->sci.data, i, line) - b->sci.line[i];
+        }
+    }
 
-    	     /* error array */
-	     da = Pix (a->err.data, i, line);
-	     db = b->err.line[i];
-	     Pix (a->err.data, i, line) = sqrt (da * da + db * db);
+    /* error array */
+    if (a->err.data.data)
+    {
+        for (unsigned i = 0;  i < dimx;  ++i)
+        {
+            float da = Pix (a->err.data, i, line);
+            float db = b->err.line[i];
+            Pix (a->err.data, i, line) = sqrt (da * da + db * db);
+        }
+    }
 
-    	     /* data quality */
-	     dqa = DQPix (a->dq.data, i, line);
-	     dqb = b->dq.line[i];
-	     dqab = dqa | dqb;
-	     DQSetPix (a->dq.data, i, line, dqab);
-	}
+    /* data quality */
+    if (a->dq.data.data)
+    {
+        for (unsigned i = 0;  i < dimx;  ++i)
+        {
+             short dqa = DQPix (a->dq.data, i, line);
+             short dqb = b->dq.line[i];
+             short dqab = dqa | dqb;
+             DQSetPix (a->dq.data, i, line, dqab);
+        }
+    }
 
-	return (status);
+    return (status);
 }
 
 int sub1dreform (SingleGroup *a, int line, int overstart, SingleGroupLine *b) {
@@ -82,39 +96,51 @@ strip is removed from the data so that they are the same size before the subtrac
 In this case the size of *a does NOT match the size of *b
 */
 
-	extern int status;
+    extern int status;
 
-	int i,j;
-	float da, db;		/* errors for a and b */
-	short dqa, dqb, dqab;	/* data quality for a, b, combined */
-    int sizea;
-    int sizeb;
-    
-    sizea=a->sci.data.nx;
-    sizeb=b->sci.tot_nx;    
-    
+    assert(a);
+    assert(b);
 
-	/* science, error, and DQ data */
-	for (i=0,j=0;  i < sizea;  i++,j++) {
-        if (i == overstart){
-            j+=60;
-         }
-    	     /* science array */
-	     Pix(a->sci.data, i, line) =
-			Pix (a->sci.data, i, line) - b->sci.line[j];
+    unsigned sizea=a->sci.data.nx;
 
-    	     /* error array */
-	     da = Pix (a->err.data, i, line);
-	     db = b->err.line[j];
-	     Pix (a->err.data, i, line) = sqrt (da * da + db * db);
+    /* science array */
+    if (a->sci.data.data)
+    {
+        for (unsigned i=0, j=0;  i < sizea;  ++i, ++j)
+        {
+            if (i == overstart)
+                j += 60;
+            Pix(a->sci.data, i, line) = Pix (a->sci.data, i, line) - b->sci.line[j];
+        }
+    }
 
-    	     /* data quality */
-	     dqa = DQPix (a->dq.data, i, line);
-	     dqb = b->dq.line[j];
-	     dqab = dqa | dqb;
-	     DQSetPix (a->dq.data, i, line, dqab);
-	}
+    /* error array */
+    if (a->err.data.data)
+    {
+        for (unsigned i=0, j=0;  i < sizea;  ++i, ++j)
+        {
+            if (i == overstart)
+                j += 60;
+             float da = Pix (a->err.data, i, line);
+             float db = b->err.line[j];
+             Pix (a->err.data, i, line) = sqrt (da * da + db * db);
+        }
+    }
 
-	return (status);
+    /* data quality */
+    if (a->dq.data.data)
+    {
+        for (unsigned i=0, j=0;  i < sizea;  ++i, ++j)
+        {
+            if (i == overstart)
+                j += 60;
+             short dqa = DQPix (a->dq.data, i, line);
+             short dqb = b->dq.line[j];
+             short dqab = dqa | dqb;
+             DQSetPix (a->dq.data, i, line, dqab);
+        }
+    }
+
+    return (status);
 }
 
