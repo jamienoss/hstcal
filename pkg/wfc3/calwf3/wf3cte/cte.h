@@ -69,7 +69,7 @@ int doCteBias (WF3Info * wf3, SingleGroup * image);
 int GetCTEFlags (WF3Info * wf3, Hdr * hdr);
 int a2d_raz(WF3Info * wf3);
 int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * ctePars);
-int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overScanType, CTEParams * ctePars);
+int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overScanType, unsigned nOverscanColumnsToIgnore, CTEParams * ctePars);
 int cteHistory (WF3Info * wf3, Hdr * hdr);
 int free_array(float **ptr, int rows, int columns);
 int GetCTESwitch (WF3Info * wf3, Hdr * hdr);
