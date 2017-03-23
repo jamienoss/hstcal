@@ -485,8 +485,8 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
     findOverscanBias(image, biasMean, biasSigma, overscanType, ctePars);
 
-    biasMean[0] = -1.658413;
-    biasMean[1] = -1.658413;
+    //biasMean[0] = -1.658413;
+    //biasMean[1] = -1.658413;
 
  /*  if (!encountered)
     {
@@ -568,6 +568,7 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         float * imageOverscanPixels = NULL;
         unsigned nOverscanPixels = 0;
         unsigned overscanWidth = 0;
+        unsigned nOverscanRows = ctePars->nRows-19;
 
         //Find overscan columns
         if (overscanType == PRESCAN)//subarray
@@ -575,30 +576,25 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
             if (!ctePars->hasPrescan[nthAmp])
                 continue;
             //Only want prescan columns 5 to 25 - not sure why???
-            int overscanStart = ctePars->imageColumnsStart[nthAmp] - ctePars->prescanWidth - 5;
+            int overscanStart = 3;//ctePars->imageColumnsStart[nthAmp] - ctePars->prescanWidth + 5;
             if (overscanStart < 0)
                 overscanStart = 0;
             overscanWidth = ctePars->imageColumnsStart[nthAmp] - overscanStart;
-            nOverscanPixels = overscanWidth*ctePars->nRows;
+            nOverscanPixels = overscanWidth*nOverscanRows;
                                 //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
             imageOverscanPixels = image->sci.data.data + overscanStart*ctePars->nRows;
         }
         else if (overscanType == POSTSCAN)//full frame
         {
+            unsigned nColumnsToIgnore = 3;
             if (!ctePars->hasPostscan[nthAmp])
                 continue;
-            overscanWidth = ctePars->postscanWidth;
-            nOverscanPixels = overscanWidth*ctePars->nRows;
+            overscanWidth = ctePars->postscanWidth - nColumnsToIgnore;
+            nOverscanPixels = overscanWidth*nOverscanRows;
                                //(ctePars->imageRowsEnd - ctePars->imageRowsStart);
-            imageOverscanPixels = image->sci.data.data + ctePars->imageColumnsEnd[nthAmp]*ctePars->nRows;
+            imageOverscanPixels = image->sci.data.data + (ctePars->imageColumnsEnd[nthAmp] + nColumnsToIgnore-1)*ctePars->nRows;
         }
 
-        float rmean = 0;
-        float rsigma = 0;
-        float min = 0;
-        float max = 0;
-
-        unsigned nRows = 2051;//ctePars->nRows;
         //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
         //not be needed and a pointer to the data could be passed directly to resistmean instead.
         float * overscanPixels = malloc(nOverscanPixels*sizeof(*overscanPixels));
@@ -606,16 +602,27 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         for (unsigned column = 0; column < overscanWidth; ++column)
         {
             //memcpy(overscanPixels, imageOverscanPixels, nOverscanPixels*sizeof(*overscanPixels));
-            memcpy(overscanPixels + column*nRows, imageOverscanPixels + column*ctePars->nRows, nRows*sizeof(*overscanPixels));
+            memcpy(overscanPixels + column*nOverscanRows, imageOverscanPixels + column*ctePars->nRows, nOverscanRows*sizeof(*overscanPixels));
         }
 
-        if (overscanType == POSTSCAN)
+        float rmean = 0;
+        float rsigma = 0;
+        float min = 0;
+        float max = 0;
+        resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
+        mean[nthAmp] = rmean;
+        sigma[nthAmp] = rsigma;
+
+        printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
+
+        printf("min: %f, max: %f\n", min, max);
+     /*   if (overscanType == POSTSCAN)
         {
             unsigned npix = 0;
             unsigned arrsize = 55377;
             float plist[arrsize];
 
-            for (unsigned i=2075; i < ctePars->nColumnsPerQuad; i++){ /*quad area for post scan bias pixels*/
+            for (unsigned i=2075; i < ctePars->nColumnsPerQuad; i++){ //quad area for post scan bias pixels
                 for (unsigned j=0; j<2051; j++){
                     if (npix < arrsize)
                     {
@@ -651,6 +658,9 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 
             printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
         }
+        */
+
+
 
         if (overscanPixels)
             free(overscanPixels);
