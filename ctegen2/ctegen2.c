@@ -518,8 +518,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
     const unsigned nRows = input->sci.data.ny;
     const unsigned nColumns = input->sci.data.nx;
 
-    double rms=0;
-    double nrms=0;
+    double rmsGlobal=0;
+    double nrmsGlobal=0;
 
     clock_t begin = clock();
 
@@ -551,7 +551,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
     allocSingleGroup(&readNoise, nColumns, nRows, False);
 
 #ifdef _OPENMP
-    #pragma omp parallel shared(input, output, ampReadNoise, rms, nrms, rnz)
+    #pragma omp parallel shared(input, output, ampReadNoise, rmsGlobal, nrmsGlobal, readNoise)
 #endif
     {
     const float * obs_loc[3];
@@ -605,8 +605,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
 #ifdef _OPENMP
         #pragma omp single
         {
-            rms=0;
-            nrms=0;
+            rmsGlobal=0;
+            nrmsGlobal=0;
         }
 #endif
 
@@ -631,8 +631,8 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
         #pragma omp critical (aggregate)
 #endif
         {
-            rms  += rmsLocal;
-            nrms += nrmsLocal;
+            rmsGlobal  += rmsLocal;
+            nrmsGlobal += nrmsLocal;
         }
 #ifdef _OPENMP
         #pragma omp barrier
@@ -641,14 +641,17 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
 #ifdef _OPENMP
         #pragma omp single
         {
-            rms = sqrt(rms/nrms);
+            rmsGlobal = sqrt(rmsGlobal/nrmsGlobal);
         }
 #endif
 
         // if it is true that one breaks then it is true for all
         /*epsilon type comparison*/
-        if ( (ampReadNoise - rms) < 0.00001)
+        //WARNING: remove fabs at some point! Rethink what this even means when computed over the entire image
+        //instead of per amp-quad
+        if ( fabs(ampReadNoise - rmsGlobal) < 0.00001)
             break; // this exits loop over iter
+
 #ifdef _OPENMP
         #pragma omp barrier
 #endif
@@ -663,6 +666,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
         sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads\n",timeSpent/maxThreads,maxThreads);
         trlmessage(MsgText);
     }
+    printf("smoothing: %f\n", ampReadNoise - rmsGlobal);
 
     return (status);
 }
@@ -709,27 +713,27 @@ double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const
 
         dval9 = dval9 / 9.0;
     }
+    const double readNoiseAmpFraction = 0.33;
     double dval9u = dval9;
-
-    if (dval9u > readNoiseAmp*0.33)
-        dval9u = readNoiseAmp*0.33;
-    else if (dval9u < readNoiseAmp*-0.33)
-        dval9u = readNoiseAmp*-0.33;
+    if (dval9u > readNoiseAmp*readNoiseAmpFraction)
+        dval9u = readNoiseAmp*readNoiseAmpFraction;
+    else if (dval9u < readNoiseAmp*-readNoiseAmpFraction)
+        dval9u = readNoiseAmp*-readNoiseAmpFraction;
 
     const double dmod1 = j > 0 ? (double)*(rszloc[i] + j-1) - mval : 0;
     const double dmod2 = j < nRows-1 ? (double)*(rszloc[i] + j+1) - mval : 0;
 
     double dmod1u = dmod1;
-    if (dmod1u > readNoiseAmp*0.33)
-        dmod1u = readNoiseAmp*0.33;
-    else if (dmod1u < readNoiseAmp*-0.33)
-        dmod1u = readNoiseAmp*-0.33;
+    if (dmod1u > readNoiseAmp*readNoiseAmpFraction)
+        dmod1u = readNoiseAmp*readNoiseAmpFraction;
+    else if (dmod1u < readNoiseAmp*-readNoiseAmpFraction)
+        dmod1u = readNoiseAmp*-readNoiseAmpFraction;
 
     double dmod2u = dmod2;
-    if (dmod2u > readNoiseAmp*0.33)
-        dmod2u = readNoiseAmp*0.33;
-    else if (dmod2u < readNoiseAmp*-0.33)
-        dmod2u = readNoiseAmp*-0.33;
+    if (dmod2u > readNoiseAmp*readNoiseAmpFraction)
+        dmod2u = readNoiseAmp*readNoiseAmpFraction;
+    else if (dmod2u < readNoiseAmp*-readNoiseAmpFraction)
+        dmod2u = readNoiseAmp*-readNoiseAmpFraction;
 
     /*
        IF IT'S WITHIN 2 SIGMA OF THE READNOISE, THEN

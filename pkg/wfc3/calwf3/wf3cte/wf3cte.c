@@ -333,6 +333,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         /***CREATE THE NOISE MITIGATION MODEL ***/
         if (cte_pars.noise_mit == 0)
         {
+            //printf("smooth clipping level: %f\n",cte_pars.rn_amp);
             if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, max_threads, wf3.verbose))
             {
                 freeAll(&ptrReg);
@@ -484,7 +485,7 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
 
     //used to vary for dev purposes
     unsigned rowsStart = 0;//ctePars->imageRowsStart;
-    unsigned rowsEnd = 2070;//ctePars->imageRowsEnd;
+    unsigned rowsEnd = image->sci.data.ny;//2070;//ctePars->imageRowsEnd;
     unsigned columnsStart[2] = {0, 2103};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
     unsigned columnsEnd[2] = {2103, 2103*2};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
