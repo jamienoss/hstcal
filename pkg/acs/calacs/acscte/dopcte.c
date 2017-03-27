@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include <assert.h>
 
 #include "hstio.h"
 
@@ -11,38 +10,25 @@
 #include "acserr.h"
 
 #include "pcte.h"
-#include "../../../../ctegen2/ctegen2.h"
-//#include "ctegen2.h"
+
 
 static int get_amp_array_size(const ACSInfo *acs, SingleGroup *x,
                               const int amp, char *amploc, char *ccdamp,
                               int *xsize, int *ysize, int *xbeg,
                               int *xend, int *ybeg, int *yend);
-
 static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                           const int amp,
                           const int arr1, const int arr2,
                           const int xbeg, const int ybeg,
                           double amp_sci_array[arr1*arr2],
-                          double amp_err_array[arr1*arr2],
-                          const Bool targetColumnMajor);
-
+                          double amp_err_array[arr1*arr2]);
 static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
                             const int amp,
                             const int arr1, const int arr2,
                             const int xbeg, const int ybeg,
                             double amp_sci_array[arr1*arr2],
-                            double amp_err_array[arr1*arr2],
-                            const Bool sourceColumnMajor);
+                            double amp_err_array[arr1*arr2]);
 
-static int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup *im,
-                          const int amp,
-                          const int arr1, const int arr2,
-                          const int xbeg, const int ybeg,
-                          double amp_sci_array[arr1*arr2],
-                          double amp_err_array[arr1*arr2],
-                          const Bool targetColumnMajor,
-                          const Bool toSingleGroup);
 
 /* Perform a pixel based CTE correction on the SCI data extension of ACS CCD
    data. Parameters of the CTE characterization are read from the PCTE reference
@@ -75,12 +61,18 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
     double dpde_l[NUM_LEV];
 
     /* structure to hold CTE parameters from file */
-    ACSCTEParams pars;
+    CTEParams pars;
+
+    /* temporary variable used during final error calculation */
+    double temp_err;
+
+    /* iteration variable */
+    int i, k, m;
 
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */
     int numamps;               /* number of amps on chip */
     int amp;                   /* index amp A:0, B:1, etc. */
-    char * amploc = NULL;      /* pointer to amp character in AMPSORDER */
+    char * amploc;             /* pointer to amp character in AMPSORDER */
     int amp_arr1, amp_arr2;    /* int for C array dimension sizes */
     int amp_xsize, amp_ysize;  /* int for amp array size (x/y in CCD coords) */
     int amp_xbeg, amp_xend;    /* int for beg and end of amp arrays on chip */
@@ -89,15 +81,15 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
     /* make arrays to hold data amp by amp.
        these can be large arrays so it's best to declare them as pointers and
        get the space for the ararys using malloc */
-    double * amp_sci_arr = NULL; /* original sci data */
-    double * amp_err_arr = NULL; /* original err data */
-    double * amp_sig_arr = NULL; /* decomposed signal */
-    double * amp_nse_arr = NULL; /* decomposed readout error */
-    double * amp_cor_arr = NULL; /* cte corrected data */
+    double * amp_sci_arr; /* original sci data */
+    double * amp_err_arr; /* original err data */
+    double * amp_sig_arr; /* decomposed signal */
+    double * amp_nse_arr; /* decomposed readout error */
+    double * amp_cor_arr; /* cte corrected data */
 
     /* in this algorithm each pixel has it's own CTE scaling,
        so we need an array for that. */
-    double * cte_frac_arr = NULL;
+    double * cte_frac_arr;
 
     /* functions from calacs/lib */
     void parseWFCamps (char *acsamps, int chip, char *ccdamp);
@@ -162,13 +154,13 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
 
     /* loop over amps on this chip and do CTE correction */
     numamps = strlen(ccdamp);
-    for (unsigned ampIterator = 0; ampIterator < numamps; ++ampIterator) {
+    for (i = 0; i < numamps; i++) {
         sprintf(MsgText, "(pctecorr) Performing CTE correction for amp %c",
-                ccdamp[ampIterator]);
+                ccdamp[i]);
         trlmessage(MsgText);
 
         /* get the amp letter and number where A:0, B:1, etc. */
-        amploc = strchr(AMPSORDER, ccdamp[ampIterator]);
+        amploc = strchr(AMPSORDER, ccdamp[i]);
         amp = *amploc - AMPSORDER[0];
 
         /* get amp array size */
@@ -181,20 +173,18 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         amp_arr1 = amp_ysize;
         amp_arr2 = amp_xsize;
 
-        //NOTE TO SELF - remove asserts here
         /* allocate space to hold this amp's data in its various forms */
-        //Check whether amps can have different array sizes, if not move these out of amp iterator
-        assert(amp_sci_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
-        assert(amp_err_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
-        assert(amp_sig_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
-        assert(amp_nse_arr = (double *) calloc((size_t)(amp_arr1*amp_arr2), sizeof(double))); //malloc(amp_arr1 * amp_arr2 * sizeof(double)));
-        assert(amp_cor_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
-        assert(cte_frac_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double)));
+        amp_sci_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
+        amp_err_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
+        amp_sig_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
+        amp_nse_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
+        amp_cor_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
+        cte_frac_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
 
         /* read data from the SingleGroup into an array containing data from
            just one amp */
         if (make_amp_array(acs, x, amp, amp_arr1, amp_arr2, amp_xbeg, amp_ybeg,
-                           amp_sci_arr, amp_err_arr, True/*store column major*/)) {
+                           amp_sci_arr, amp_err_arr)) {
             return (status);
         }
 
@@ -205,22 +195,11 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
 
            offsety (LTV2) always 0 for fullframe and -1 for 2K subarray.
         */
-        //loop over columns
-        for (unsigned j = 0; j < amp_arr2; ++j)
-        {
-            //loop over rows
-            for (unsigned i = 0; i < amp_arr1; ++i)
-            {
-                /*
+        for (k = 0; k < amp_arr1; k++) {
+            for (m = 0; m < amp_arr2; m++) {
                 cte_frac_arr[k*amp_arr2 + m] = pars.cte_frac *
                     pars.col_scale[m*NAMPS + amp] *
                     ((double) k - acs->offsety) / CTE_REF_ROW;
-                 */
-                //cte_frac_arr[k*amp_arr2 + m] = pars.cte_frac *
-
-                cte_frac_arr[i + j*amp_arr1] = pars.cte_frac *
-                    pars.col_scale[j*NAMPS + amp] *
-                    ((double) i - acs->offsety) / CTE_REF_ROW;
             }
         }
 
@@ -233,123 +212,39 @@ int doPCTE (ACSInfo *acs, SingleGroup *x) {
         }
 
         /* perform CTE correction */
-        /* OLD ACS CTE correction
         if (FixYCte(amp_arr1, amp_arr2, amp_sig_arr, amp_cor_arr, pars.sim_nit,
                     pars.shft_nit, pars.sub_thresh, cte_frac_arr, pars.levels,
-                    dpde_l, chg_leak_lt, chg_open_lt, acs->onecpu))
-        */
-        //double * pixDontKnowWhatThisIsYet = NULL; //For now, assuming cte_frac_arr???
-
-        FloatTwoDArray cteRprof;
-        FloatTwoDArray cteCprof;
-        initFloatData(&cteRprof);
-        initFloatData(&cteCprof);
-        allocFloatData(&cteRprof, pars.baseParams.rprof->data.ny, pars.baseParams.rprof->data.nx, False);
-        allocFloatData(&cteCprof, pars.baseParams.cprof->data.ny, pars.baseParams.cprof->data.nx, False);
-        //Transpose arrays to column major
-        //copyAndTransposeFloatData(&cteRprof, &pars.baseParams.rprof->data);
-        //copyAndTransposeFloatData(&cteCprof, &pars.baseParams.cprof->data);
-
-        //correctedColumn isn't needed - can be done in place (when all mem transposed to column major)
-        double * correctedColumn = NULL;
-        assert(correctedColumn = (double*)malloc(amp_arr1 * sizeof(*amp_sig_arr)));
-
-        //Correct image one column at a time, amp_arr2 = nColumns
-        //Before, with FixYCTE, the entire 2D array was passed in a split up internally by the function
-        //loop over columns
-        for (unsigned j = 0; j < amp_arr2; ++j)
-        {
-
-            // HORIZONTAL PRE/POST SCAN POPULATION
-            //is this applicable in acs?
-            Bool hasFlux = False;
-            for (unsigned i = 0; i < amp_arr1; ++i)
-            {
-                if (correctedColumn[i] > 0)
-                {
-                    hasFlux = True;
-                    break;
-                }
-            }
-            if (!hasFlux)
-                continue;
-
-            unsigned NREDO = 0;
-            Bool REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-            do { //while (redo) - post loop eval
-                /* perform CTE correction */
-                //for (int i = 0; i < pars->n_par; ++i)
-                //{
-               // if (simulateColumnReadout(correctedColumn, cte_frac_arr, &pars.baseParams, &cteRprof, &cteCprof, amp_arr1, pars.baseParams.n_par))
-                 //   return status;
-                //add damping
-
-                //Do the last iteration separately so as not to dampen.
-                //if (simulateColumnReadout(correctedColumn, cte_frac_arr, &pars.baseParams, &cteRprof, &cteCprof, amp_arr1, pars.baseParams.n_par))
-                  //  return status;
-
-               // REDO = pars.baseParams.thresh ? correctCROverSubtraction(cte_frac_arr, correctedColumn, amp_sig_arr, amp_arr1,
-                 //       pars.baseParams.fix_rocr) : False;
-
-            } while (REDO && ++NREDO < 5);
-            //copy corrected column back into original array
-            memcpy(&amp_sig_arr[j*amp_arr1], correctedColumn, sizeof(*amp_sig_arr)*amp_arr1);
+                    dpde_l, chg_leak_lt, chg_open_lt, acs->onecpu)) {
+            return (status);
         }
-        if (correctedColumn)
-        {
-            free(correctedColumn);
-            correctedColumn = NULL;
-        }
-        if (cte_frac_arr)
-        {
-            free(cte_frac_arr);
-            correctedColumn = NULL;
-        }
-        freeFloatData(&cteRprof);
-        freeFloatData(&cteCprof);
 
-        // add readout noise back
-        for (unsigned j = 0; j < amp_arr2; ++j)
-        {
-            for (unsigned i = 0; i < amp_arr1; ++i)
-            {
-                unsigned currentPixel = i + j*amp_arr1;
-                amp_cor_arr[currentPixel] = amp_sig_arr[currentPixel] + amp_nse_arr[currentPixel];
+        /* add readout noise back and convert corrected data back to DN.
+           add 10% correction to error in quadrature. */
+        for (k = 0; k < amp_arr1; k++) {
+            for (m = 0; m < amp_arr2; m++) {
+                amp_cor_arr[k*amp_arr2 + m] = amp_cor_arr[k*amp_arr2 + m] +
+                    amp_nse_arr[k*amp_arr2 + m];
+
+                temp_err = 0.1 * fabs(amp_cor_arr[k*amp_arr2 + m] -
+                                      amp_sci_arr[k*amp_arr2 + m]);
+                amp_err_arr[k*amp_arr2 + m] = sqrt(
+                    pow(amp_err_arr[k*amp_arr2 + m],2) + pow(temp_err,2));
             }
         }
-        free(amp_nse_arr);
-        amp_nse_arr = NULL;
-
-        //Compute error and convert corrected data back to DN.
-        // add 10% correction to error in quadrature.
-        for (unsigned j = 0; j < amp_arr2; ++j)
-        {
-            for (unsigned i = 0; i < amp_arr1; ++i)
-            {
-                unsigned currentPixel = i + j*amp_arr1;
-                double temp_err = 0.1 * fabs(amp_cor_arr[currentPixel] -
-                                              amp_sci_arr[currentPixel]);
-
-                amp_err_arr[currentPixel] = sqrt(
-                            pow(amp_err_arr[currentPixel],2) + pow(temp_err,2));
-            }
-        }
-        free(amp_sci_arr);
-        amp_sci_arr = NULL;
-        free(amp_sig_arr);
-        amp_sig_arr = NULL;
 
         /* put the CTE corrected data back into the SingleGroup structure */
         if (unmake_amp_array(acs, x, amp, amp_arr1, amp_arr2, amp_xbeg, amp_ybeg,
-                             amp_cor_arr, amp_err_arr, True /*unmake column major source*/)) {
+                             amp_cor_arr, amp_err_arr)) {
             return (status);
         }
 
         /* free space used by our amp arrays */
+        free(amp_sci_arr);
         free(amp_err_arr);
-        amp_err_arr = NULL;
+        free(amp_sig_arr);
+        free(amp_nse_arr);
         free(amp_cor_arr);
-        amp_cor_arr = NULL;
+        free(cte_frac_arr);
     }
 
     if (acs->printtime) {
@@ -416,6 +311,7 @@ static int get_amp_array_size(const ACSInfo *acs, SingleGroup *x,
     return status;
 }
 
+
 /* Make_amp_array returns an array view of the data readout through the
    specified amp in which the amp is at the lower left hand corner.
 */
@@ -424,164 +320,96 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                           const int arr1, const int arr2,
                           const int xbeg, const int ybeg,
                           double amp_sci_array[arr1*arr2],
-                          double amp_err_array[arr1*arr2],
-                          const Bool targetColumnMajor)
-{
-    return arrayToOrFromSingleGroup(acs, im, amp, arr1, arr2, xbeg, ybeg,
-            amp_sci_array, amp_err_array, targetColumnMajor, False);
+                          double amp_err_array[arr1*arr2]) {
+
+    extern int status;
+
+    /* iteration variables */
+    int i, j;
+
+    /* variables for the image row/column we want */
+    int r, c;
+
+    if (acs->detector == WFC_CCD_DETECTOR) {
+        for (i = 0; i < arr1; i++) {
+            for (j = 0; j < arr2; j++) {
+                if (amp == AMP_A) {
+                    r = ybeg + arr1 - i - 1;
+                    c = xbeg + j;
+                } else if (amp == AMP_B) {
+                    r = ybeg + arr1 - i - 1;
+                    c = xbeg + arr2 - j - 1;
+                } else if (amp == AMP_C) {
+                    r = ybeg + i;
+                    c = xbeg + j;
+                } else if (amp == AMP_D) {
+                    r = ybeg + i;
+                    c = xbeg + arr2 - j -1;
+                } else {
+                    trlerror("Amp number not recognized, must be 0-3.");
+                    status = ERROR_RETURN;
+                    return status;
+                }
+
+                amp_sci_array[i*arr2 + j] = Pix(im->sci.data, c, r);
+                amp_err_array[i*arr2 + j] = Pix(im->err.data, c, r);
+            }
+        }
+    } else {
+        sprintf(MsgText,"(pctecorr) Detector not supported: %i",acs->detector);
+        trlerror(MsgText);
+        status = ERROR_RETURN;
+        return status;
+    }
+
+    return status;
 }
+
 
 /* unmake_amp_array does the opposite of make_amp_array, it takes amp array
    views and puts them back into the single group in the right order.
 */
 static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
-                          const int amp,
-                          const int arr1, const int arr2,
-                          const int xbeg, const int ybeg,
-                          double amp_sci_array[arr1*arr2],
-                          double amp_err_array[arr1*arr2],
-                          const Bool targetColumnMajor)
-{
-    return arrayToOrFromSingleGroup(acs, im, amp, arr1, arr2, xbeg, ybeg,
-            amp_sci_array, amp_err_array, targetColumnMajor, True);
-}
-
-static int arrayToOrFromSingleGroup(const ACSInfo *acs, const SingleGroup *im,
-                          const int amp,
-                          const int arr1, const int arr2,
-                          const int xbeg, const int ybeg,
-                          double amp_sci_array[arr1*arr2],
-                          double amp_err_array[arr1*arr2],
-                          const Bool targetColumnMajor,
-                          const Bool toSingleGroup) {
+                            const int amp,
+                            const int arr1, const int arr2,
+                            const int xbeg, const int ybeg,
+                            double amp_sci_array[arr1*arr2],
+                            double amp_err_array[arr1*arr2]) {
 
     extern int status;
 
-    // variables for the image row/column we want
-    unsigned rowOffset;
-    unsigned columnOffset;
-    unsigned row;
-    unsigned column;
-    int iSig;
-    int jSig;
+    /* iteration variables */
+    int i, j;
 
-    if (acs->detector == WFC_CCD_DETECTOR)
-    {
-        switch(amp)
-        {
-        case AMP_A :
-        {
-            rowOffset = ybeg + arr1 - 1;
-            columnOffset = xbeg;
-            iSig = -1;
-            jSig = 1;
-            break;
-        }
-        case AMP_B :
-        {
-            rowOffset = ybeg + arr1 - 1;
-            columnOffset = xbeg + arr2 - 1;
-            iSig = -1;
-            jSig = -1;
-            break;
-        }
-        case AMP_C :
-        {
-            rowOffset = ybeg;
-            columnOffset = xbeg;
-            iSig = 1;
-            jSig = 1;
-            break;
-        }
-        case AMP_D :
-        {
-            rowOffset = xbeg + arr2 - 1;
-            columnOffset = xbeg + arr2 - 1;
-            iSig = 1;
-            jSig = -1;
-            break;
-        }
-        default :
-        {
-            trlerror("Amp number not recognized, must be 0-3.");
-            status = ERROR_RETURN;
-            return status;
-        }
-        }//end switch
+    /* variables for the image row/column we want */
+    int r, c;
 
-        /* These loops could be moved into each of the above case stmnts to remove extra op of *Signatures
-         * However, it maybe worth ignoring this for the sake of code neatness and maintainability.
-         * NOTE: loop order optimized to column major storage for target.
-         */
-        if (targetColumnMajor)
-        {
-            if (toSingleGroup)
-            {
-                //loop over columns
-                for (unsigned j = 0; j < arr2; ++j)
-                {
-                    column = columnOffset + jSig*j;
-                    //loop over rows
-                    for (unsigned i = 0; i < arr1; ++i)
-                    {
-                        row = rowOffset + iSig*i;
-                        Pix(im->sci.data, column, row) = (float) amp_sci_array[i + j*arr1];
-                        Pix(im->err.data, column, row) = (float) amp_err_array[i + j*arr1];
-                    }
+    if (acs->detector == WFC_CCD_DETECTOR) {
+        for (i = 0; i < arr1; i++) {
+            for (j = 0; j < arr2; j++) {
+                if (amp == AMP_A) {
+                    r = ybeg + arr1 - i - 1;
+                    c = xbeg + j;
+                } else if (amp == AMP_B) {
+                    r = ybeg + arr1 - i - 1;
+                    c = xbeg + arr2 - j - 1;
+                } else if (amp == AMP_C) {
+                    r = ybeg + i;
+                    c = xbeg + j;
+                } else if (amp == AMP_D) {
+                    r = ybeg + i;
+                    c = xbeg + arr2 - j -1;
+                } else {
+                    trlerror("Amp number not recognized, must be 0-3.");
+                    status = ERROR_RETURN;
+                    return status;
                 }
-            }
-            else
-            {
-                //loop over columns
-                for (unsigned j = 0; j < arr2; ++j)
-                {
-                    column = columnOffset + jSig*j;
-                    //loop over rows
-                    for (unsigned i = 0; i < arr1; ++i)
-                    {
-                        row = rowOffset + iSig*i;
-                        amp_sci_array[i + j*arr1] = Pix(im->sci.data, column, row);
-                        amp_err_array[i + j*arr1] = Pix(im->err.data, column, row);
-                    }
-                }
+
+                Pix(im->sci.data, c, r) = (float) amp_sci_array[i*arr2 + j];
+                Pix(im->err.data, c, r) = (float) amp_err_array[i*arr2 + j];
             }
         }
-        else
-        {
-            if (toSingleGroup)
-            {
-                //loop over columns
-                for (unsigned j = 0; j < arr2; ++j)
-                {
-                    column = columnOffset + jSig*j;
-                    //loop over rows
-                    for (unsigned i = 0; i < arr1; ++i)
-                    {
-                        row = rowOffset + iSig*i;
-                        Pix(im->sci.data, column, row) = (float) amp_sci_array[i*arr2 + j];
-                        Pix(im->err.data, column, row) = (float) amp_err_array[i*arr2 + j];
-                    }
-                }
-            }
-            else
-            {
-                //loop over columns
-                for (unsigned j = 0; j < arr2; ++j)
-                {
-                    column = columnOffset + jSig*j;
-                    //loop over rows
-                    for (unsigned i = 0; i < arr1; ++i)
-                    {
-                        row = rowOffset + iSig*i;
-                        amp_sci_array[i*arr2 + j] = Pix(im->sci.data, column, row);
-                        amp_err_array[i*arr2 + j] = Pix(im->err.data, column, row);
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
+    } else {
         sprintf(MsgText,"(pctecorr) Detector not supported: %i",acs->detector);
         trlerror(MsgText);
         status = ERROR_RETURN;
