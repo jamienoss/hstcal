@@ -364,19 +364,19 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
 
         //TESTcode only
-        copySingleGroup(cteCorrectedImage, smoothedImage, COLUMNMAJOR);
+       // copySingleGroup(cteCorrectedImage, smoothedImage, COLUMNMAJOR);
 
 
 
 
         // MAIN CORRECTION LOOP IN HERE
-      /*  if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
+        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
         {
             freeAll(&ptrReg);
             return status;
         }
         freePtr(&ptrReg, &trapPixelMap);
-*/
+
         const double scaleFraction = cte_pars.scale_frac;
         //freePtr(&ptrReg, &cte_pars);
 
@@ -398,10 +398,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         {
             for(unsigned j = 0; j < nRows; ++j)
             {
-                delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i))/ccdgain;// - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
+                delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
                 threadCounts += delta;
                 threadRawCounts += Pix(raw.sci.data, i, j);
-                Pix(raw.sci.data, i, j) = delta;//+= delta;
+                Pix(raw.sci.data, i, j) += delta;
             }
         }
 
@@ -485,7 +485,7 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
 
     //used to vary for dev purposes
     unsigned rowsStart = 0;//ctePars->imageRowsStart;
-    unsigned rowsEnd = image->sci.data.ny;//2070;//ctePars->imageRowsEnd;
+    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
     unsigned columnsStart[2] = {0, 2103};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
     unsigned columnsEnd[2] = {2103, 2103*2};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
