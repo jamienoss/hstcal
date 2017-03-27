@@ -13,7 +13,7 @@ def build(bld):
                   ],
         target = 'acscte.e',
         includes = ['.', '../../../../ctegen2'],
-        use = ['calacs', 'imphttab'] + bld.env.LOCAL_LIBS,
+        use = ['calacs', 'imphttab', 'ctegen2'] + bld.env.LOCAL_LIBS,
         lib = bld.env.EXTERNAL_LIBS,
         libpath = bld.env.LIBPATH,
         install_path = '${PREFIX}/bin'
