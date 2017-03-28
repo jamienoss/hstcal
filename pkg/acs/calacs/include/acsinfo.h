@@ -25,6 +25,7 @@ typedef struct {
     int printtime;                  /* print time after each step? */
     int verbose;                    /* print additional info? */
     int onecpu;                     /* turn off OpenMP usage if True */
+    int gen1cte;                    // revert to using gen1cte algorithm (default to NO - i.e. gen2cte)
 
     /* keywords and file names for reference files */
     RefFileInfo *refnames;

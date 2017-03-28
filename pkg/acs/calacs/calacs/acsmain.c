@@ -21,12 +21,13 @@ int main(int argc, char **argv) {
 	int debug = NO;		/* print debug statements during processing? */
 	int quiet = NO;		/* suppress STDOUT messages? */
 	int onecpu = NO;		/* suppress OpenMP usage? */
+    int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
 	int too_many = NO;	/* too many command-line arguments? */
 	int i, j;		/* loop indexes */
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int CalAcsRun (char *, int, int, int, int, int);
+	int CalAcsRun (char *, int, int, int, int, int, int);
     void WhichError (int);
     
 	/* Initialize status to OK and MsgText to null */
@@ -45,41 +46,51 @@ int main(int argc, char **argv) {
 	**		   3. save intermediate files?
 	**		   4. verbose?
 	*/
-	for (i = 1;  i < argc;  i++) {
-		if (!(strcmp(argv[i],"--version"))) {
-      printf("%s\n",ACS_CAL_VER);
-      exit(0);
-    }
-    
-    if (argv[i][0] == '-') {
-		  for (j = 1;  argv[i][j] != '\0';  j++) {
-		    if (argv[i][j] == 't') {
-          printtime = YES;
-		    } else if (argv[i][j] == 's') {
-          save_tmp = YES;
-		    } else if (argv[i][j] == 'v') {
-          verbose = YES;
-		    } else if (argv[i][j] == 'd') {
-          debug = YES;
-		    } else if (argv[i][j] == 'q') {
-          quiet = YES;
-		    } else if (argv[i][j] == '1') {
-          onecpu = YES;
-		    } else {
-          printf ("Unrecognized option %s\n", argv[i]);
-          exit (ERROR_RETURN);
-		    }
-		  }
-	    } else if (input[0] == '\0') {
-		strcpy (input, argv[i]);
-	    } else {
-		too_many = YES;
-	    }
+	for (i = 1;  i < argc;  i++)
+	{
+		if (!(strcmp(argv[i],"--version")))
+		{
+		    printf("%s\n",ACS_CAL_VER);
+		    exit(0);
+		}
+		if (argv[i] && strcmp(argv[i], "--gen1cte") == 0)
+        {
+            gen1cte = YES;
+            printf("WARNING: using older 1st generation CTE algorithm\n");
+            continue;
+        }
+
+        if (argv[i][0] == '-')
+        {
+            for (j = 1;  argv[i][j] != '\0';  j++)
+            {
+                if (argv[i][j] == 't') {
+                    printtime = YES;
+                } else if (argv[i][j] == 's') {
+                    save_tmp = YES;
+                } else if (argv[i][j] == 'v') {
+                    verbose = YES;
+                } else if (argv[i][j] == 'd') {
+                    debug = YES;
+                } else if (argv[i][j] == 'q') {
+                    quiet = YES;
+                } else if (argv[i][j] == '1') {
+                    onecpu = YES;
+                } else {
+                    printf ("Unrecognized option %s\n", argv[i]);
+                    exit (ERROR_RETURN);
+                }
+            }
+        }
+        else if (input[0] == '\0')
+            strcpy (input, argv[i]);
+        else
+            too_many = YES;
 	}
 	
 	if (input[0] == '\0' || too_many) {
         printf ("CALACS Version %s\n",ACS_CAL_VER_NUM);
-	    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-1] input \n");
+	    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-1] [--gen1cte] input \n");
 	    exit (ERROR_RETURN);
 	}
 
@@ -89,8 +100,14 @@ int main(int argc, char **argv) {
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);
 	
+	if (gen1cte == YES)
+    {
+        sprintf (MsgText, "WARNING: using older gen1 CTE algorithm");
+        trlmessage (MsgText);
+    }
+
 	/* Call the CALACS main program */
-	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, onecpu)) {
+	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, onecpu, gen1cte)) {
 
         if (status == NOTHING_TO_DO){
             /* If there is just nothing to do, 

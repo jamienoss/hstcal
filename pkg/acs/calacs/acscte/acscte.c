@@ -25,7 +25,7 @@ void InitCTETrl (char *, char *);
 
  */
 int ACScte (char *input, char *output, CalSwitch *cte_sw,
-            RefFileInfo *refnames, int printtime, int verbose, int onecpu) {
+            RefFileInfo *refnames, int printtime, int verbose, int onecpu, int gen1cte) {
 
     extern int status;
 
@@ -78,6 +78,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
     acs.printtime = printtime;
     acs.verbose = verbose;
     acs.onecpu = onecpu;
+    acs.gen1cte = gen1cte;
 
     /* For debugging...
     acs.pctecorr = PERFORM;

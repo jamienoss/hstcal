@@ -34,7 +34,8 @@ int DoCTE (ACSInfo *acs_info) {
     int i;        /* loop index */
     Bool subarray;
     int CCDHistory (ACSInfo *, Hdr *);
-    int doPCTE (ACSInfo *, SingleGroup *);
+    int doPCTEGen1 (ACSInfo *, SingleGroup *);
+    int doPCTEGen2 (ACSInfo *, SingleGroup *);
     int pcteHistory (ACSInfo *, Hdr *);
     int GetACSGrp (ACSInfo *, Hdr *);
     int OmitStep (int);
@@ -149,9 +150,17 @@ int DoCTE (ACSInfo *acs_info) {
     PCTEMsg(&acs[0], 1);
 
     if (acs_info->pctecorr == PERFORM) {
-        for (i = 0; i < acs_info->nimsets; i++) {
-            if (doPCTE(&acs[i], &x[i])) {
-                return status;
+        for (i = 0; i < acs_info->nimsets; i++)
+        {
+            if (acs_info->gen1cte == YES)//make explicit as not using bool
+            {
+                if (doPCTEGen1(&acs[i], &x[i]))
+                    return status;
+            }
+            else
+            {
+                if (doPCTEGen2(&acs[i], &x[i]))
+                    return status;
             }
         }
 

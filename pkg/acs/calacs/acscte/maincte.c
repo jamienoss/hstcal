@@ -35,6 +35,7 @@ int main (int argc, char **argv) {
     int verbose = NO;	/* print additional info? */
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
+    int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -59,7 +60,7 @@ int main (int argc, char **argv) {
     void FreeRefFile (RefFileInfo *);
     void initSwitch (CalSwitch *);
 
-    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int);
+    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int, int);
     int DefSwitch (char *);
     int MkName (char *, char *, char *, char *, char *, int);
     void WhichError (int);
@@ -98,19 +99,27 @@ int main (int argc, char **argv) {
     for (i = 1;  i < argc;  i++) {
 
         if (argv[i][0] == '-') {
-            for (j = 1;  argv[i][j] != '\0';  j++) {
-                if (argv[i][j] == 't') {
-                    printtime = YES;
-                } else if (argv[i][j] == 'v') {
-                    verbose = YES;
-                } else if (argv[i][j] == 'q') {
-                    quiet = YES;
-                } else if (argv[i][j] == '1') {
-                    onecpu = YES;
-                } else {
-                    printf (MsgText, "Unrecognized option %s\n", argv[i]);
-                    FreeNames (inlist, outlist, input, output);
-                    exit (1);
+            if (strcmp(argv[i], "--gen1cte") == 0)
+            {
+                gen1cte = YES;
+                printf("WARNING: using older 1st generation CTE algorithm\n");
+            }
+            else
+            {
+                for (j = 1;  argv[i][j] != '\0';  j++) {
+                    if (argv[i][j] == 't') {
+                        printtime = YES;
+                    } else if (argv[i][j] == 'v') {
+                        verbose = YES;
+                    } else if (argv[i][j] == 'q') {
+                        quiet = YES;
+                    } else if (argv[i][j] == '1') {
+                        onecpu = YES;
+                    } else {
+                        printf (MsgText, "Unrecognized option %s\n", argv[i]);
+                        FreeNames (inlist, outlist, input, output);
+                        exit (1);
+                    }
                 }
             }
         } else if (inlist[0] == '\0') {
@@ -122,7 +131,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  acscte [-t] [-v] [-q] [-1] input output\n");
+        printf ("syntax:  acscte [-t] [-v] [-q] [-1] [--gen1cte] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -131,6 +140,12 @@ int main (int argc, char **argv) {
 
     /* Copy command-line value for QUIET to structure */
     SetTrlQuietMode(quiet);
+
+    if (gen1cte == YES)
+    {
+        sprintf (MsgText, "WARNING: using older gen1 CTE algorithm");
+        trlmessage (MsgText);
+    }
 
     /* Was no calibration switch specified on command line?
        default values (mostly PERFORM)
@@ -196,7 +211,7 @@ int main (int argc, char **argv) {
 
         /* Calibrate the current input file. */
         if (ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
-                    onecpu)) {
+                    onecpu, gen1cte)) {
             sprintf (MsgText, "Error processing %s.", input);
             trlerror (MsgText);
             WhichError (status);
