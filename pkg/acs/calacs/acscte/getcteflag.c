@@ -25,7 +25,6 @@ int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
 
     int missing = 0;    /* true if any calibration file is missing */
     int nsteps = 0;     /* number of calibration steps to perform */
-    printf("here 11\n");
 
     int GetcteSw (ACSInfo *, Hdr *);
 
@@ -49,11 +48,9 @@ int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
     }
 
     /* Check each reference file that we need. */
-    printf("here13\n");
 
     if (checkPCTE (phdr, acs, &missing, &nsteps))
         return (status);
-    printf("here14\n");
 
     if (missing) {
         return (status = CAL_FILE_MISSING);

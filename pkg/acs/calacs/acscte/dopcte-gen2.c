@@ -134,10 +134,10 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
          return (status);
      }
      */
-   /* if (PixCteParams(acs->pcte.name, acs->expstart, &pars)) {
+    if (PixCteParams(acs->pcte.name, acs->expstart, &pars)) {
         return (status);
     }
-*/
+
     if (CompareCteParams(x, &pars)) {
         return (status);
     }
@@ -239,7 +239,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
        SingleGroup raw;
        initSingleGroup(&raw);
        addPtr(&ptrReg, &raw, &freeSingleGroup);
-       allocSingleGroupSciOnly(&raw, nColumns, nRows, False);
+       allocSingleGroup/*SciOnly*/(&raw, nColumns, nRows, False);
 
         /* read data from the SingleGroup into an array containing data from
            just one amp */
@@ -248,11 +248,12 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
             return (status);
         }
 
+
         //copy to column major storage
        SingleGroup columnMajorImage;
        initSingleGroup(&columnMajorImage);
        addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-       allocSingleGroupSciOnly(&columnMajorImage, nColumns, nRows, False);
+       allocSingleGroup/*SciOnly*/(&columnMajorImage, nColumns, nRows, False);
        assert(!copySingleGroup(&columnMajorImage, &raw, COLUMNMAJOR));
 
         /***CALCULATE THE SMOOTH READNOISE IMAGE***/
@@ -260,7 +261,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
        SingleGroup smoothedImage;
       initSingleGroup(&smoothedImage);
       addPtr(&ptrReg, &smoothedImage, &freeSingleGroup);
-      allocSingleGroupSciOnly(&smoothedImage, nColumns, nRows, False);
+      allocSingleGroup/*SciOnly*/(&smoothedImage, nColumns, nRows, False);
        setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
 
@@ -281,7 +282,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 */
         /* do some smoothing on the data so we don't amplify the read noise.
            data should be in electrons. */
-       if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars.baseParams, pars.rn_clip, max_threads, acs->verbose))
+       if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars.baseParams, pars.baseParams.rn_amp /*pars.rn_clip*/, max_threads, acs->verbose))
        {
            freeAll(&ptrReg);
            return (status);
@@ -296,7 +297,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
        SingleGroup trapPixelMap;
        initSingleGroup(&trapPixelMap);
        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
-       allocSingleGroupSciOnly(&trapPixelMap, nColumns, nRows, False);
+       allocSingleGroup/*SciOnly*/(&trapPixelMap, nColumns, nRows, False);
        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
        if (populateTrapPixelMap(&trapPixelMap, &pars.baseParams, acs->verbose, acs->expstart))
        {
@@ -343,8 +344,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
         }
 
         /* put the CTE corrected data back into the SingleGroup structure */
-        if (unmake_amp_array(acs, x, amp, amp_xbeg, amp_ybeg,
-                &raw)) {
+        if (unmake_amp_array(acs, &raw, amp, amp_xbeg, amp_ybeg,
+                x)) {
             return (status);
         }
 
@@ -356,6 +357,10 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
         free(amp_cor_arr);
         free(cte_frac_arr);
         */
+        freePtr(&ptrReg, &raw);
+        freePtr(&ptrReg, &columnMajorImage);
+        freePtr(&ptrReg, &smoothedImage);
+
         freePtr(&ptrReg, &pars.baseParams);
         //freeCTEParams(CTEParams * &pars.baseParams);
     }
@@ -465,10 +470,10 @@ static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
                 }
 
                 if (im->sci.data.data && output->sci.data.data)
-                    Pix(im->sci.data, c, r) = Pix(output->sci.data, j, i);
+                    Pix(output->sci.data, c, r) = Pix(im->sci.data, j, i);
 
                 if (im->err.data.data && output->err.data.data)
-                    Pix(im->err.data, c, r) = Pix(output->err.data, j, i);
+                    Pix(output->err.data, c, r) = Pix(im->err.data, j, i);
                 //Pix(im->sci.data, c, r) = (float) amp_sci_array[i*arr2 + j];
                 //Pix(im->err.data, c, r) = (float) amp_err_array[i*arr2 + j];
             }

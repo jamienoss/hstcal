@@ -666,7 +666,6 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
         sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads\n",timeSpent/maxThreads,maxThreads);
         trlmessage(MsgText);
     }
-    printf("smoothing: %f\n", ampReadNoise - rmsGlobal);
 
     return (status);
 }
