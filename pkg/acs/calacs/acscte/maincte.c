@@ -36,6 +36,7 @@ int main (int argc, char **argv) {
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
     int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
+    char pcteTabNameFromCmd[255];
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -60,7 +61,7 @@ int main (int argc, char **argv) {
     void FreeRefFile (RefFileInfo *);
     void initSwitch (CalSwitch *);
 
-    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int, int);
+    int ACScte (char *, char *, CalSwitch *, RefFileInfo *, int, int, int, int, const char * pcteTabNameFromCmd);
     int DefSwitch (char *);
     int MkName (char *, char *, char *, char *, char *, int);
     void WhichError (int);
@@ -99,10 +100,22 @@ int main (int argc, char **argv) {
     for (i = 1;  i < argc;  i++) {
 
         if (argv[i][0] == '-') {
-            if (strcmp(argv[i], "--gen1cte") == 0)
+            if (strncmp(argv[i], "--gen1cte", 9) == 0)
             {
                 gen1cte = YES;
-                printf("WARNING: using older 1st generation CTE algorithm\n");
+               // printf("WARNING: using older 1st generation CTE algorithm\n");
+            }
+            else if (strncmp(argv[i], "--pctetab", 9) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - no pctetab specified\n");
+                    exit(1);
+                }
+                strcpy(pcteTabNameFromCmd, argv[i+1]);
+                printf("WARNING: using pcteTab file '%s'\n", pcteTabNameFromCmd);
+                ++i;
+                continue;
             }
             else
             {
@@ -116,9 +129,8 @@ int main (int argc, char **argv) {
                     } else if (argv[i][j] == '1') {
                         onecpu = YES;
                     } else {
-                        printf (MsgText, "Unrecognized option %s\n", argv[i]);
-                        FreeNames (inlist, outlist, input, output);
-                        exit (1);
+                        printf ("Unrecognized option %s\n", argv[i]);
+                        break;
                     }
                 }
             }
@@ -131,7 +143,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  acscte [-t] [-v] [-q] [-1] [--gen1cte] input output\n");
+        printf ("syntax:  acscte [-t] [-v] [-q] [-1] [--gen1cte] [--pctetab <path>] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -211,7 +223,7 @@ int main (int argc, char **argv) {
 
         /* Calibrate the current input file. */
         if (ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
-                    onecpu, gen1cte)) {
+                    onecpu, gen1cte, pcteTabNameFromCmd)) {
             sprintf (MsgText, "Error processing %s.", input);
             trlerror (MsgText);
             WhichError (status);

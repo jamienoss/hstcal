@@ -121,6 +121,7 @@ typedef struct {
 
     /* calibration images and tables for ACSCTE */
     RefTab pcte;        /* Pixel CTE parameters table */
+    char pcteTabNameFromCmd[255];
 
     /* calibration images and tables for ACS2D */
     RefImage dark;      /* dark image */

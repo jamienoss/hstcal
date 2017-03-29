@@ -25,7 +25,8 @@ void InitCTETrl (char *, char *);
 
  */
 int ACScte (char *input, char *output, CalSwitch *cte_sw,
-            RefFileInfo *refnames, int printtime, int verbose, int onecpu, int gen1cte) {
+            RefFileInfo *refnames, int printtime, int verbose,
+            int onecpu, int gen1cte, const char * pcteTabNameFromCmd) {
 
     extern int status;
 
@@ -73,6 +74,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
     /* Copy command-line arguments into acs. */
     strcpy (acs.input, input);
     strcpy (acs.output, output);
+    strcpy(acs.pcteTabNameFromCmd, pcteTabNameFromCmd);
 
     acs.pctecorr = cte_sw->pctecorr;
     acs.printtime = printtime;
@@ -105,7 +107,6 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
         freeHdr (&phdr);
         return (status);
     }
-
     /* If we have MAMA data, do not even proceed here... */
     if (acs.detector == MAMA_DETECTOR) {
         /* Return ACS_OK, since processing can proceed, just with a
@@ -124,6 +125,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
        currently set to PERFORM will be reset to OMIT if the value
        in the header is COMPLETE.
     */
+
     if (GetCTEFlags (&acs, &phdr)) {
         freeHdr(&phdr);
         return (status);

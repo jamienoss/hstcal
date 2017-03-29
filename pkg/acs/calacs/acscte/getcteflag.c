@@ -25,12 +25,14 @@ int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
 
     int missing = 0;    /* true if any calibration file is missing */
     int nsteps = 0;     /* number of calibration steps to perform */
+    printf("here 11\n");
 
     int GetcteSw (ACSInfo *, Hdr *);
 
     /* Get the values for the Calibration Switches from the
     **    header for processing.
     */
+
     if (GetcteSw (acs, phdr) )
         return(status);
 
@@ -38,14 +40,20 @@ int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
        just want to be safe...
     */
     if (acs->detector != MAMA_DETECTOR) {
+
         if (checkCCD (phdr, acs, &missing))
+        {
+
             return (status);
+        }
     }
 
     /* Check each reference file that we need. */
+    printf("here13\n");
 
     if (checkPCTE (phdr, acs, &missing, &nsteps))
         return (status);
+    printf("here14\n");
 
     if (missing) {
         return (status = CAL_FILE_MISSING);
@@ -130,6 +138,7 @@ static int checkCCD (Hdr *phdr, ACSInfo *acs, int *missing) {
 
     if (acs->detector == MAMA_DETECTOR)
         return (status);
+
 
     if (GetTabRef (acs->refnames, phdr,
                    "CCDTAB", &acs->ccdpar, &calswitch))

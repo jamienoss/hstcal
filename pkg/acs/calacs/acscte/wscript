@@ -5,6 +5,7 @@ def build(bld):
         source = ['acscte.c',
                   'docte.c',
                   'dopcte.c',
+                  'dopcte-gen2.c',
                   'getcteflag.c',
                   'getctesw.c',
                   'pcte_fixycte.c',
