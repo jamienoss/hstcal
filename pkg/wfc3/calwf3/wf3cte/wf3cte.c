@@ -31,7 +31,7 @@
 
 
 int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
-        RefFileInfo *refnames, int printtime, int verbose, int onecpu) {
+        RefFileInfo *refnames, int printtime, int verbose, int onecpu, int fastCTE) {
 
     /*
     input: filename

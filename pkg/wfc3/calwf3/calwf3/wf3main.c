@@ -25,11 +25,12 @@ int main (int argc, char **argv) {
 	int quiet = NO;		/* suppress STDOUT messages? */
 	int too_many = NO;	/* too many command-line arguments? */
 	int onecpu = NO;  /* suppress openmp usage by using only 1 thread?*/
+    int fastCTE = NO; // Use high performance CTE implementation
     int i, j;		/* loop indexes */
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int  CalWf3Run  (char *, int, int, int, int, int);
+	int  CalWf3Run  (char *, int, int, int, int, int, int);
 	void WhichError (int);
 
 	/* Initialize status to OK and MsgText to null */
@@ -53,27 +54,32 @@ int main (int argc, char **argv) {
 			exit(0);
 		}
 		if (argv[i][0] == '-') {
-			for (j = 1;  argv[i][j] != '\0';  j++) {
-				if (argv[i][j] == 't') {
-					printtime = YES;
-				} else if (argv[i][j] == 's') {
-					save_tmp = YES;
-				} else if (argv[i][j] == 'r'){
-					printf ("Current version: %s\n", WF3_CAL_VER);
-					exit(0);
-				} else if (argv[i][j] == 'v') {
-					verbose = YES;
-				} else if (argv[i][j] == 'd') {
-					debug = NO;
-				} else if (argv[i][j] == 'q') {
-					quiet = YES;
-				} else if (argv[i][j] == '1'){
-                    onecpu = YES;
-                } else {
-					printf ("Unrecognized option %s\n", argv[i]);
-					exit (ERROR_RETURN);
-				}
-			}
+		    if (strncmp(argv[i], "--fast", 6) == 0)
+		        fastCTE = YES;
+		    else
+		    {
+                for (j = 1;  argv[i][j] != '\0';  j++) {
+                    if (argv[i][j] == 't') {
+                        printtime = YES;
+                    } else if (argv[i][j] == 's') {
+                        save_tmp = YES;
+                    } else if (argv[i][j] == 'r'){
+                        printf ("Current version: %s\n", WF3_CAL_VER);
+                        exit(0);
+                    } else if (argv[i][j] == 'v') {
+                        verbose = YES;
+                    } else if (argv[i][j] == 'd') {
+                        debug = NO;
+                    } else if (argv[i][j] == 'q') {
+                        quiet = YES;
+                    } else if (argv[i][j] == '1'){
+                        onecpu = YES;
+                    } else {
+                        printf ("Unrecognized option %s\n", argv[i]);
+                        exit (ERROR_RETURN);
+                    }
+                }
+		    }
 		} else if (input[0] == '\0') {
 			strcpy (input, argv[i]);
 		} else {
@@ -82,7 +88,7 @@ int main (int argc, char **argv) {
 	}
 
 	if (input[0] == '\0' || too_many) {
-		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] input \n");
+		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--fast] input \n");
 		exit (ERROR_RETURN);
 	}
 
@@ -92,8 +98,15 @@ int main (int argc, char **argv) {
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode (quiet);
 
+	if (fastCTE)
+    {
+        sprintf (MsgText, "WARNING: using high performance CTE implementation \n"
+                "Best results obtained when built with --O3 configure option");
+        trlmessage (MsgText);
+    }
+
 	/* Call the CALWF3 main program */
-	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, onecpu)) {
+	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, onecpu, fastCTE)) {
 
 		if (status == NOTHING_TO_DO) {
 			/* If there is just nothing to do, 
