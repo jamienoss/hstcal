@@ -29,13 +29,13 @@ static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *input,
                             SingleGroup * output
                             );
 
-int get_amp_array_size_acs_cte(const ACSInfo *acs, SingleGroup *x,
+int get_amp_array_size_acs_cte(const ACSInfo *acs, SingleGroup *image,
                               const int amp, char *amploc, char *ccdamp,
                               int *xsize, int *ysize, int *xbeg,
                               int *xend, int *ybeg, int *yend);
 
 
-int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
+int doPCTEGen2 (ACSInfo *acs, SingleGroup * image)
 {
 
     /* arguments:
@@ -47,23 +47,6 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);
-
-    /* interpolated cte profile shape parameters */
-    double chg_leak[MAX_TAIL_LEN*NUM_LOGQ];
-    double chg_open[MAX_TAIL_LEN*NUM_LOGQ];
-
-    /* interpolated profile charge parameters */
-    double dtde_q[MAX_PHI];
-
-    /* arrays interpolated at each parameterized charge level */
-    double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV];
-    double chg_open_lt[MAX_TAIL_LEN*NUM_LEV];
-    double dpde_l[NUM_LEV];
-
-
-
-    /* temporary variable used during final error calculation */
-    double temp_err;
 
     int max_threads=1;
 #   ifdef _OPENMP
@@ -90,19 +73,6 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
     int amp_xbeg, amp_xend;    /* int for beg and end of amp arrays on chip */
     int amp_ybeg, amp_yend;
 
-    /* make arrays to hold data amp by amp.
-       these can be large arrays so it's best to declare them as pointers and
-       get the space for the ararys using malloc */
-    double * amp_sci_arr; /* original sci data */
-    double * amp_err_arr; /* original err data */
-    double * amp_sig_arr; /* decomposed signal */
-    double * amp_nse_arr; /* decomposed readout error */
-    double * amp_cor_arr; /* cte corrected data */
-
-    /* in this algorithm each pixel has it's own CTE scaling,
-       so we need an array for that. */
-    double * cte_frac_arr;
-
     /* functions from calacs/lib */
     void parseWFCamps (char *acsamps, int chip, char *ccdamp);
     void TimeStamp (char *message, char *rootname);
@@ -121,12 +91,12 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 
     /**************** read and calculate parameters of CTE model ************/
     /* structure to hold CTE parameters from file */
-     ACSCTEParams pars;
+    ACSCTEParams pars;
     if (PixCteParams(acs->pcte.name, acs->expstart, &pars)) {
         return (status);
     }
 
-    if (CompareCteParams(x, &pars)) {
+    if (CompareCteParams(image, &pars)) {
         return (status);
     }
 
@@ -181,7 +151,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
         amp = *amploc - AMPSORDER[0];
 
         /* get amp array size */
-        if (get_amp_array_size_acs_cte(acs, x, amp, amploc, ccdamp,
+        if (get_amp_array_size_acs_cte(acs, image, amp, amploc, ccdamp,
                                &amp_xsize, &amp_ysize, &amp_xbeg,
                                &amp_xend, &amp_ybeg, &amp_yend)) {
             freeAll(&ptrReg);
@@ -221,11 +191,11 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 
         /* read data from the SingleGroup into an array containing data from
            just one amp */
-        if (make_amp_array(acs, x, amp, amp_xbeg, amp_ybeg,
-                          &raw)) {
+        if (make_amp_array(acs, x, amp, amp_xbeg, amp_ybeg, &raw))
+        {
+            freeAll(&ptrReg);
             return (status);
         }
-
 
         //copy to column major storage
         SingleGroup columnMajorImage;
@@ -272,6 +242,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 
        /* add readout noise back and convert corrected data back to DN.
            add 10% correction to error in quadrature. */
+        double temp_err;
         for (unsigned k = 0; k < nRows; ++k)
         {
             for (unsigned m = 0; m < nColumns; ++m)
@@ -302,9 +273,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
         freePtr(&ptrReg, &pars.baseParams);
     }
 
-    if (acs->printtime) {
+    if (acs->printtime)
         TimeStamp("CTE corrections complete...","");
-    }
 
     freeAll(&ptrReg);
     return (status);
@@ -318,13 +288,27 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *input,
 
     extern int status;
 
-    /* variables for the image row/column we want */
-    int r, c;
-
     const unsigned arr1 = output->sci.data.tot_ny;
     const unsigned arr2 = output->sci.data.tot_nx;
 
     if (acs->detector == WFC_CCD_DETECTOR) {
+
+    if (amp != AMP_A || amp != AMP_B || amp != AMP_C || amp != AMP_D)
+    {
+        trlerror("Amp number not recognized, must be 0-3.");
+        status = ERROR_RETURN;
+        return status;
+    }
+
+#ifdef _OPENMP
+        #pragma omp parallel
+#endif
+        {
+        int r;
+        int c;
+#ifdef _OPENMP
+        #pragma omp for schedule(static)
+#endif
         for (unsigned i = 0; i < arr1; ++i) {
             for (unsigned j = 0; j < arr2; ++j) {
                 if (amp == AMP_A) {
@@ -339,10 +323,6 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *input,
                 } else if (amp == AMP_D) {
                     r = ybeg + i;
                     c = xbeg + arr2 - j -1;
-                } else {
-                    trlerror("Amp number not recognized, must be 0-3.");
-                    status = ERROR_RETURN;
-                    return status;
                 }
 
                 if (input->sci.data.data && output->sci.data.data)
@@ -350,6 +330,7 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *input,
                 if (input->err.data.data && output->err.data.data)
                     Pix(output->err.data, j, i) = Pix(input->err.data, c, r);
             }
+        }
         }
     } else {
         sprintf(MsgText,"(pctecorr) Detector not supported: %i",acs->detector);
