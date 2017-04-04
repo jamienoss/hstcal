@@ -101,7 +101,10 @@ int main (int argc, char **argv) {
 
         if (argv[i][0] == '-') {
             if (strncmp(argv[i], "--gen1cte", 9) == 0)
+            {
                 gen1cte = YES;
+                continue;
+            }
             else if (strncmp(argv[i], "--pctetab", 9) == 0)
             {
                 if (i + 1 > argc - 1)

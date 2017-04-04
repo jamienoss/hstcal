@@ -56,7 +56,6 @@ int main(int argc, char **argv) {
 		if (argv[i] && strcmp(argv[i], "--gen1cte") == 0)
         {
             gen1cte = YES;
-            printf("WARNING: using older 1st generation CTE algorithm\n");
             continue;
         }
 

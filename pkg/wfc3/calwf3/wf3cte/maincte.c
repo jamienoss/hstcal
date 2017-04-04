@@ -108,7 +108,10 @@ int main (int argc, char **argv) {
 
         if (argv[i][0] == '-') {
             if (strncmp(argv[i], "--fast", 6) == 0)
+            {
                 fastCTE = YES;
+                continue;
+            }
             else
             {
                 for (j = 1;  argv[i][j] != '\0';  j++) {
