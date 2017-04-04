@@ -203,10 +203,10 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
         nRows = amp_ysize;
         nColumns = amp_xsize;
 
-        initCTEParams(&pars.baseParams, TRAPS, nRows, nColumns);
-        addPtr(&ptrReg, &pars.baseParams, &freeCTEParams);
-        allocateCTEParams(&pars.baseParams);
-        if (GetCTEPars (acs->pcteTabNameFromCmd, &pars.baseParams))
+        initCTEParamsFast(&pars.baseParams, TRAPS, nRows, nColumns);
+        addPtr(&ptrReg, &pars.baseParams, &freeCTEParamsFast);
+        allocateCTEParamsFast(&pars.baseParams);
+        if (GetCTEParsFast (acs->pcteTabNameFromCmd, &pars.baseParams))
         {
             freeAll(&ptrReg);
             return (status);

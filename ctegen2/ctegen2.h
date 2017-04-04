@@ -97,17 +97,17 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
 
 int populateTrapPixelMap(SingleGroup * input, CTEParams * params, const int verbose, const double expstart);
 int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * ctePars, double readNoiseAmp, unsigned maxThreads , int verbose);
-double find_dadj(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
+double find_dadjFast(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
 
 //helpers
 void * newAndZero(void ** ptr, const size_t count, const size_t size);
 void delete(void ** ptr);
-void initCTEParams(CTEParams * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns);
-void allocateCTEParams(CTEParams * pars);
-void freeCTEParams(CTEParams * pars);
+void initCTEParamsFast(CTEParams * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns);
+void allocateCTEParamsFast(CTEParams * pars);
+void freeCTEParamsFast(CTEParams * pars);
 
-int CompareCTEParams(SingleGroup * input, CTEParams * params);
-int GetCTEPars (char *filename, CTEParams * params);
+int CompareCTEParamsFast(SingleGroup * input, CTEParams * params);
+int GetCTEParsFast (char *filename, CTEParams * params);
 void ctewarn (char *message);
 void cteerror (char *message);
 void ctemessage (char *message);
@@ -124,9 +124,9 @@ int PutKeyStr(Hdr *, char *, char *, char *);
 
 # define RAZ_COLS 8412
 # define RAZ_ROWS 2070
-int inverse_cte_blur(const SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart);
-int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte);
-int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads);
-double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig);
+//int inverse_cte_blur(const SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart);
+//int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte);
+//int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads);
+//double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig);
 
 #endif

@@ -89,7 +89,8 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int
     void InitRefFile (RefFileInfo *);
     void FreeRefFile (RefFileInfo *);
     int  CCDRefInit (WF3Info *, CCD_Switch *, RefFileInfo *);
-    int  WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int, int);
+    int  WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
+    int  WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
     int  WF3ccd (char *, char *, CCD_Switch *, RefFileInfo *, int, int);
     int  WF32d (char *, char *,CCD_Switch *, RefFileInfo *, int, int);
     int  GetAsnMember (AsnInfo *, int, int, int, WF3Info *);
@@ -264,9 +265,13 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int
 
                      */
 
-
-                    if ( WF3cte(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu, fastCTE) )
-                        return (status);
+                    int ret = status;
+                    if (fastCTE)
+                        ret = WF3cteFast(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu);
+                    else
+                        ret = WF3cte(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu);
+                    if (ret)
+                        return status;
 
                     if (wf3hdr->sci_basic_ccd == PERFORM) {
 

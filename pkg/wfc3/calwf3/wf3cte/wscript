@@ -4,8 +4,8 @@ def build(bld):
     t = bld.program(
         source = 'maincte.c',
         target = 'wf3cte.e',
-        includes = ['.', '../../../../ctegen2/'],
-        use = ['calwf3', 'imphttab', 'ctegen2'] + bld.env.LOCAL_LIBS,
+        includes = ['.'],
+        use = ['calwf3', 'imphttab', 'wf3cte-fast'] + bld.env.LOCAL_LIBS,
         lib = bld.env.EXTERNAL_LIBS,
         libpath = bld.env.LIBPATH,
         install_path = '${PREFIX}/bin'

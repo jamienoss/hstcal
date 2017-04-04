@@ -586,7 +586,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
             rsz_loc[2] = rsz_loc[1] + nRows;
 
             for (unsigned j = 0; j < nRows; ++j)
-                PixColumnMajor(adjustment.sci.data, j, i) = find_dadj(1+i-imid, j, nRows, obs_loc, rsz_loc, ampReadNoise);
+                PixColumnMajor(adjustment.sci.data, j, i) = find_dadjFast(1+i-imid, j, nRows, obs_loc, rsz_loc, ampReadNoise);
         } /*end the parallel for*/ //implicit omp barrier
 
         //NOW GO OVER ALL THE nColumns AND nRows AGAIN TO SCALE THE PIXELS
@@ -670,7 +670,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * 
     return (status);
 }
 
-double find_dadj(const unsigned i, const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp)
+double find_dadjFast(const unsigned i, const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp)
 {
     /*
        This function determines for a given pixel how it can

@@ -31,7 +31,8 @@ MLS 2015
 static void FreeNames (char *, char *, char *, char *);
 void FreeRefFile (RefFileInfo *);
 void InitRefFile (RefFileInfo *);
-int WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int, int);
+int WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
+int WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
 int MkName (char *, char *, char *, char *, char *, int);
 void WhichError (int);
 int CompareNumbers (int, int, char *);
@@ -215,8 +216,13 @@ int main (int argc, char **argv) {
             }
 
             /* CALIBRATE THE CURRENT INPUT FILE. */
-            if (WF3cte (input, output, &cte_sw, &refnames, printtime, verbose,
-                        onecpu, fastCTE)) {
+            int ret = status;
+            if (fastCTE)
+                ret = WF3cteFast(input, output, &cte_sw, &refnames, printtime, verbose, onecpu);
+            else
+                ret = WF3cte(input, output, &cte_sw, &refnames, printtime, verbose, onecpu);
+
+            if (ret) {
                 sprintf (MsgText, "Error processing cte for %s", input);
                 trlerror (MsgText);
                 WhichError (status);

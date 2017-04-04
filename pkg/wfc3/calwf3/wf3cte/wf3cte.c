@@ -15,7 +15,6 @@
 # include <stdlib.h>
 # include <stdio.h>
 # include <float.h>
-#include <assert.h>
 
 # ifdef _OPENMP
 #  include <omp.h>
@@ -27,11 +26,10 @@
 # include "wf3err.h"
 # include "wf3corr.h"
 # include "cte.h"
-# include "../../../../ctegen2/ctegen2.h"
 
 
 int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
-        RefFileInfo *refnames, int printtime, int verbose, int onecpu, int fastCTE) {
+        RefFileInfo *refnames, int printtime, int verbose, int onecpu) {
 
     /*
     input: filename
@@ -76,9 +74,36 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     extern int status;
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
+    Hdr phdr; /*primary header for input image, all output information saved here*/
+    Hdr scihdr; /*science header in case of subarray image to detect chip*/
+    IODescPtr ip = NULL;
+
+    CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
+    SingleGroup cd; /*SCI 1, chip 2*/
+    SingleGroup ab; /*SCI 2, chip 1*/
+    SingleGroup subcd; /*subarray chip*/
+    SingleGroup subab; /*subarray chip*/
+    SingleGroup raz; /* THE LARGE FORMAT COMBINATION OF CDAB*/
+    SingleGroup rsz; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
+    SingleGroup rsc; /* CTE CORRECTED*/
+    SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
+    SingleGroup chg; /* THE CHANGE DUE TO CTE  */
+    SingleGroup raw; /* THE RAW IMAGE IN RAZ FORMAT */
+
+    int i,j; /*loop vars*/
     int max_threads=1;
-    PtrRegister ptrReg;
-    initPtrRegister(&ptrReg);
+    clock_t begin;
+    double  time_spent;
+    float hardset=0.0;
+
+    /* These are used to find subarrays with physical overscan */
+    int sci_bin[2];			/* bin size of science image */
+    int sci_corner[2];		/* science image corner location */
+    int ref_bin[2];
+    int ref_corner[2];
+    int rsize = 1;          /* reference pixel size */
+    int start=0;            /*where the subarray starts*/
+    int finish=0;           /*where the subarray ends*/
 
     /*check if this is a subarray image.
       This is necessary because the CTE routine will start with the raw images
@@ -103,7 +128,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
       apertures which do not have overscan pixels, but this gets around string
       comparisons and any future name changes or aperture additions in the future)
      */
-    clock_t begin = (double)clock();
+    begin = (double)clock();
 
     /*CONTAIN PARALLEL PROCESSING TO A SINGLE THREAD AS USER OPTION*/
 #   ifdef _OPENMP
@@ -134,7 +159,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /* CHECK WHETHER THE OUTPUT FILE ALREADY EXISTS. */
     if (FileExists (wf3.output)){
         WhichError(status);
-        freeAll(&ptrReg);
         return (ERROR_RETURN);
     }
 
@@ -151,17 +175,14 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 
     if (wf3.biascorr == COMPLETE){
         trlmessage("BIASCORR complete for input image, CTE can't be performed");
-        freeAll(&ptrReg);
         return(ERROR_RETURN);
     }
     if (wf3.darkcorr == COMPLETE){
         trlmessage("DARKCORR complete for input image, CTE can't be performed");
-        freeAll(&ptrReg);
         return(ERROR_RETURN);
     }
     if (wf3.blevcorr == COMPLETE){
         trlmessage("BLEVCORR complete for input image, CTE can't be performed");
-        freeAll(&ptrReg);
         return(ERROR_RETURN);
     }
 
@@ -170,428 +191,1324 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
        WITH THOSE NAMES.
        */
     if (initCTETrl (input, output))
-    {
-        freeAll(&ptrReg);
         return (status);
-    }
 
     /* OPEN INPUT IMAGE IN ORDER TO READ ITS PRIMARY HEADER. */
-    Hdr phdr; /*primary header for input image, all output information saved here*/
-    initHdr(&phdr);
-    addPtr(&ptrReg, &phdr, &freeHdr);
     if (LoadHdr (wf3.input, &phdr) ){
         WhichError(status);
-        freeAll(&ptrReg);
         return (ERROR_RETURN);
     }
 
     /* GET KEYWORD VALUES FROM PRIMARY HEADER. */
     if (GetKeys (&wf3, &phdr)) {
-        freeAll(&ptrReg);
+        freeHdr (&phdr);
         return (status);
     }
 
     if (GetCTEFlags (&wf3, &phdr)) {
-        freeAll(&ptrReg);
+        freeHdr(&phdr);
         return (status);
     }
 
-    /*READ IN THE CTE PARAMETER TABLE*/
-    CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
-    initCTEParams(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
-    addPtr(&ptrReg, &cte_pars, &freeCTEParams);
-    allocateCTEParams(&cte_pars);
-    if (GetCTEPars (wf3.pctetab.name, &cte_pars))
-    {
-        freeAll(&ptrReg);
-        return (status);
+
+    /*SET UP THE ARRAYS WHICH WILL BE PASSED AROUND*/
+    initSingleGroup(&raz);
+    allocSingleGroup(&raz, RAZ_COLS, RAZ_ROWS, True);
+
+    initSingleGroup(&rsz);
+    allocSingleGroup(&rsz, RAZ_COLS, RAZ_ROWS, True);
+
+    initSingleGroup(&rsc);
+    allocSingleGroup(&rsc, RAZ_COLS, RAZ_ROWS, True);
+
+    initSingleGroup(&rzc);
+    allocSingleGroup(&rzc, RAZ_COLS, RAZ_ROWS, True);
+
+    initSingleGroup(&raw);
+    allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
+
+    initSingleGroup(&chg);
+    allocSingleGroup(&chg, RAZ_COLS, RAZ_ROWS, True);
+
+    /*hardset the science arrays*/
+    for (i=0;i<RAZ_COLS;i++){
+        for(j=0;j<RAZ_ROWS;j++){
+            Pix(raw.sci.data,i,j)=hardset;
+            Pix(raz.sci.data,i,j)=hardset;
+            Pix(rsz.sci.data,i,j)=hardset;
+            Pix(rsc.sci.data,i,j)=hardset;
+            Pix(rzc.sci.data,i,j)=hardset;
+            Pix(chg.sci.data,i,j)=hardset;
+        }
     }
+
+    /*READ IN THE CTE PARAMETER TABLE*/
+    initCTEParams(&cte_pars);
+    if (GetCTEPars (wf3.pctetab.name, &cte_pars))
+        return (status);
 
     if (verbose){
         PrRefInfo ("pctetab", wf3.pctetab.name, wf3.pctetab.pedigree,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
     }
 
-    //Store sizes - these are corrected for subarrays in getSubarray()
-    cte_pars.nRowsPerFullFrame = RAZ_ROWS;
-    cte_pars.nColumnsPerFullFrame = RAZ_COLS;
-    cte_pars.nColumnsPerChip = cte_pars.nColumnsPerFullFrame/2;
-    cte_pars.nRowsPerChip = cte_pars.nRowsPerFullFrame;
-    cte_pars.nColumnsPerQuad = cte_pars.nColumnsPerFullFrame/4;
-    cte_pars.nRowsPerQuad = cte_pars.nRowsPerFullFrame;
-    cte_pars.isSubarray = wf3.subarray;
-    cte_pars.refAndIamgeBinsIdenticle = True;
+    /* Full frame and subarrays always have group 1
+       If it's a subarray, the group can be from either chip
+       and will still be labled group 1 because it's the FIRST
+       and only group, so look at the ccdchip instead.
 
-    unsigned nChips = wf3.subarray ? 1 : 2;
-    for(unsigned chip = 1; chip <= nChips; ++chip)
-    {
-        //This is used for the final output
-        SingleGroup raw;
-        initSingleGroup(&raw);
-        addPtr(&ptrReg, &raw, &freeSingleGroup);
+       amps ab are in chip1, sci,2
+       amps cd are in chip2, sci,1
 
-        //Load image into 'raw' one chip at a time
-        if (wf3.subarray)
-        {
-            if (getCCDChipId(&wf3.chip, wf3.input, "SCI", 1) ||
-                    getSubarray(&raw, &cte_pars, &wf3))
-            {
-                freeAll(&ptrReg);
-                return status;
-            }
+    */
+    if (wf3.subarray) {
+        /* OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER. */
+        ip = openInputImage (wf3.input, "SCI", 1);
+        if (hstio_err()) {
+            sprintf (MsgText, "Image: \"%s\" is not present", wf3.input);
+            trlerror (MsgText);
+            return (status = OPEN_FAILED);
         }
-        else
-        {
-            cte_pars.columnOffset = 0;
-            cte_pars.rowOffset = 0;
-            getSingleGroup(wf3.input, chip, &raw);
-            if (hstio_err())
-            {
-                freeAll(&ptrReg);
-                return (status = OPEN_FAILED);
-            }
-        }
+        getHeader (ip, &scihdr);
+        if (ip != NULL)
+            closeImage (ip);
 
-        cte_pars.nRows = raw.sci.data.ny;
-        cte_pars.nColumns = raw.sci.data.nx;
-        findAlignedQuadImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
-
-        //leave raw as pre-biased image, clone and use copy from here on out
-        SingleGroup rowMajorImage;
-        initSingleGroup(&rowMajorImage);
-        addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
-        allocSingleGroupSciOnly(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, False);
-        SingleGroup * image = &rowMajorImage;
-        copySingleGroup(image, &raw, raw.sci.data.storageOrder);
-        //align raw image for later comparison with aligned corrected image
-        alignAmps(&raw, &cte_pars);
-
-        //biac bias subtraction
-        if (doCteBias(&wf3, image))
-        {
-            freeAll(&ptrReg);
-            return(status);
-        }
-        alignAmps(image, &cte_pars);
-
-        //CTE correction not sensitive enough to work without amp bias and gain correction
-        //which require vertical overscan
-        if (cte_pars.isSubarray)
-        {
-            for (unsigned quad = 0; quad < 2; ++quad)
-            {
-                if (cte_pars.quadExists[quad] && !cte_pars.hasPrescan[quad])
-                {
-                    sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",
-                            cte_pars.columnOffset, cte_pars.columnOffset + cte_pars.nColumns);
-                    trlmessage(MsgText);
-                    freeAll(&ptrReg);
-                    return(ERROR_RETURN);
-                }
-            }
-        }
-
-        //c++ ref would be good here
-        const unsigned nRows = cte_pars.nRows;
-        const unsigned nColumns = cte_pars.nColumns;
-
-        //copy to column major storage
-        SingleGroup columnMajorImage;
-        initSingleGroup(&columnMajorImage);
-        addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-        allocSingleGroupSciOnly(&columnMajorImage, nColumns, nRows, False);
-        assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
-        image = &columnMajorImage;
-
-        //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-        if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
-        {
-            freeAll(&ptrReg);
+        /* Get CCD-specific parameters. */
+        if (GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, 1, &wf3.chip)){
+            freeHdr(&scihdr);
             return (status);
         }
+        freeHdr(&scihdr);
 
-        /*//Subtract these now - not before alignAmps()
-                if (wf3.subarray)
-                {
-                    cte_pars.nColumnsPerChip -= 2*cte_pars.postscanWidth;
-                    cte_pars.nColumnsPerQuad -= cte_pars.postscanWidth;
-                }
-*/
-        /***CALCULATE THE SMOOTH READNOISE IMAGE***/
-        trlmessage("CTE: Calculating smooth readnoise image");
-        SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
-        setStorageOrder(smoothedImage, COLUMNMAJOR);
+        if (wf3.chip == 2){ /*sci1,cd*/
+            start=0;
+            finish=0;
+            /*get CD subarray from first extension*/
+            initSingleGroup (&subcd);
+            getSingleGroup (wf3.input, 1, &subcd);
+            if (hstio_err()){
+                freeSingleGroup(&subcd);
+                return (status = OPEN_FAILED);
+            }
 
+            /*create an empty full size chip for pasting*/
+            initSingleGroup(&cd);
+            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, True);
+            cd.group_num=1;
+            CreateEmptyChip(&wf3, &cd);
 
-
-
-        //WARNING TEST CODE ONLY
-       // copySingleGroup(smoothedImage, image, COLUMNMAJOR);
-
-
-
-        /***CREATE THE NOISE MITIGATION MODEL ***/
-        if (cte_pars.noise_mit == 0)
-        {
-            //printf("smooth clipping level: %f\n",cte_pars.rn_amp);
-            if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, max_threads, wf3.verbose))
-            {
-                freeAll(&ptrReg);
+            if (GetCorner(&subcd.sci.hdr, rsize, sci_bin, sci_corner))
                 return (status);
+            if (GetCorner(&cd.sci.hdr, rsize, ref_bin, ref_corner))
+                return (status);
+
+            start = sci_corner[0] - ref_corner[0];
+            finish = start + subcd.sci.data.nx;
+            if ( start >= 25 &&  finish + 60 <= (RAZ_COLS/2) - 25){
+                sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
+                trlmessage(MsgText);
+                return(ERROR_RETURN);
             }
-        }
-        else
-        {
-            trlmessage("Only noise model 0 implemented!");
-            freeAll(&ptrReg);
-            return (status=ERROR_RETURN);
-        }
 
-        SingleGroup trapPixelMap;
-        initSingleGroup(&trapPixelMap);
-        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
-        allocSingleGroupSciOnly(&trapPixelMap, nColumns, nRows, False);
-        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-        if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
-        {
-            freeAll(&ptrReg);
-            return status;
-        }
+            /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
+              AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
+              CTE CODE VARIABLES.
+              */
+            if (CompareCTEParams(&subcd, &cte_pars))
+                return (status);
 
-        SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
-        image = NULL;
+            /*Put the subarray data into full frame*/
+            Sub2Full(&wf3, &subcd, &cd, 0, 1, 1);
 
+            /* now create an empty chip 1*/
+            initSingleGroup(&ab);
+            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, True);
+            ab.group_num=2;
+            CreateEmptyChip(&wf3, &ab);
 
+            /* SAVE A COPY OF THE RAW IMAGE BEFORE BIAS FOR LATER */
+            makeRAZ(&cd,&ab,&raw);
 
-        //TESTcode only
-       // copySingleGroup(cteCorrectedImage, smoothedImage, COLUMNMAJOR);
+            /* Subtract the BIAC file from the subarray before continuing
+               The bias routine will take care of cutting out the correct
+               image location for the subarray.*/
 
-
-
-
-        // MAIN CORRECTION LOOP IN HERE
-        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
-        {
-            freeAll(&ptrReg);
-            return status;
-        }
-        freePtr(&ptrReg, &trapPixelMap);
-
-        const double scaleFraction = cte_pars.scale_frac;
-        //freePtr(&ptrReg, &cte_pars);
-
-        // CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT
-        const float ccdgain = wf3.ccdgain;
-        float totalCounts = 0;
-        float totalRawCounts = 0;
-    #ifdef _OPENMP
-        #pragma omp parallel shared(cteCorrectedImage, smoothedImage, raw)
-    #endif
-        {
-        float threadCounts = 0;
-        float threadRawCounts = 0;
-        float delta;
-    #ifdef _OPENMP
-        #pragma omp for schedule(static)
-    #endif
-        for (unsigned i = 0; i < nColumns; ++i)
-        {
-            for(unsigned j = 0; j < nRows; ++j)
-            {
-                delta = (PixColumnMajor(cteCorrectedImage->sci.data,j,i) - PixColumnMajor(smoothedImage->sci.data,j,i))/ccdgain;
-                threadCounts += delta;
-                threadRawCounts += Pix(raw.sci.data, i, j);
-                Pix(raw.sci.data, i, j) += delta;
+            if (doCteBias(&wf3,&subcd)){
+                freeSingleGroup(&subcd);
+                return(status);
             }
+
+            /*reset the array after bias subtraction*/
+            Sub2Full(&wf3, &subcd, &cd, 0, 1, 1);
+
+
+        } else { /*chip is 1, ab, sci2*/
+            start=0;
+            finish=0;
+            initSingleGroup(&subab);
+            getSingleGroup(wf3.input, 1, &subab);
+            if (hstio_err()){
+                freeSingleGroup(&subab);
+                return (status = OPEN_FAILED);
+            }
+
+            /*make an empty fullsize chip for pasting*/
+            initSingleGroup(&ab);
+            allocSingleGroup(&ab,RAZ_COLS/2,RAZ_ROWS, True);
+            ab.group_num=2;
+            CreateEmptyChip(&wf3, &ab);
+
+            if ( GetCorner(&subab.sci.hdr, rsize, sci_bin, sci_corner))
+                return (status);
+
+            if ( GetCorner(&ab.sci.hdr, rsize, ref_bin, ref_corner))
+                return (status);
+
+            start = sci_corner[0] - ref_corner[0];
+            finish = start + subab.sci.data.nx + 2103;
+            finish = start + subab.sci.data.nx;
+            if ( start >= 25 &&  finish + 60 <= (RAZ_COLS/2) - 25){
+                sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
+                trlmessage(MsgText);
+                return(ERROR_RETURN);
+            }
+            /*add subarray to full frame image*/
+            Sub2Full(&wf3, &subab, &ab, 0, 1, 1);
+
+            /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
+              AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
+              CTE CODE VARIABLES.
+              */
+            if (CompareCTEParams(&subab, &cte_pars))
+                return (status);
+
+            /* now create an empty chip 2*/
+            initSingleGroup(&cd);
+            allocSingleGroup(&cd,RAZ_COLS/2,RAZ_ROWS, True);
+            cd.group_num=1;
+            CreateEmptyChip(&wf3, &cd);
+
+            /* SAVE A COPY OF THE RAW IMAGE FOR LATER */
+            makeRAZ(&cd,&ab,&raw);
+
+            /* Subtract the BIAC file from the subarray before continuing*/
+            subab.group_num=2;
+            if (doCteBias(&wf3,&subab)){
+                freeSingleGroup(&subab);
+                return(status);
+            }
+
+            /*reset the array after bias subtraction*/
+            Sub2Full(&wf3, &subab, &ab, 0, 1, 1);
         }
 
-    #ifdef _OPENMP
-        #pragma omp critical(deltaAggregate)
-    #endif
-        {
-            totalCounts += threadCounts;
-            totalRawCounts += threadRawCounts;
-        }
-        }//end omp threads
-        printf("\nTotal count difference (rac-raw) incurred from correction: %f (%f%%)\n\n", totalCounts, totalCounts/totalRawCounts*100);
-
-        cteCorrectedImage = NULL;
-        smoothedImage = NULL;
-        freePtr(&ptrReg, &rowMajorImage);
-        freePtr(&ptrReg, &columnMajorImage);
-
-     /*   //Put back this alteration before calling alignAmps again (in outputImage())
-        if (wf3.subarray)
-        {
-            cte_pars.nColumnsPerChip += 2*cte_pars.postscanWidth;
-            cte_pars.nColumnsPerQuad += cte_pars.postscanWidth;
-        }
+    } else {
+        /* Full frame image, just read in the groups
+           and init the mask to use all pixels
         */
-        if (outputImage(output, &raw, &cte_pars))//needs to pop status
-        {
-            freeAll(&ptrReg);
-            return status;
+
+        initSingleGroup (&cd);
+        getSingleGroup (wf3.input, 1, &cd);
+        if (hstio_err()){
+            return (status = OPEN_FAILED);
         }
 
-        // SAVE USEFUL HEADER INFORMATION
-        if (chip == 2)
-        {
-            if (cteHistory(&wf3, raw.globalhdr))
-            {
-                freeAll(&ptrReg);
-                return status;
+        initSingleGroup (&ab);
+        getSingleGroup (wf3.input, 2, &ab);
+        if (hstio_err()){
+            return (status = OPEN_FAILED);
+        }
+
+        /*setup the mask*/
+        for(i=0; i< ab.dq.data.nx; i++){
+            for(j=0; j< ab.dq.data.ny; j++){
+                PPix(&ab.dq.data, i, j) = 1;
+                PPix(&cd.dq.data, i, j) = 1;
             }
+        }
+
+        /* SAVE A COPY OF THE RAW IMAGE FOR LATER */
+        makeRAZ(&cd,&ab,&raw);
+
+        /***SUBTRACT THE CTE BIAS FROM BOTH CHIPS IN PLACE***/
+        if (doCteBias(&wf3,&cd)){
+            freeSingleGroup(&cd);
+            return(status);
+        }
+
+        if (doCteBias(&wf3,&ab)){
+            freeSingleGroup(&ab);
+            return(status);
+        }
+        /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
+          AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
+          CTE CODE VARIABLES.
+          */
+        if (CompareCTEParams(&cd, &cte_pars))
+            return (status);
+
+    }
+
+
+    /*CONVERT TO RAZ, SUBTRACT BIAS AND CORRECT FOR GAIN*/
+    if (raw2raz(&wf3, &cd, &ab, &raz))
+        return (status);
+
+    /***CALCULATE THE SMOOTH READNOISE IMAGE***/
+    trlmessage("CTE: Calculating smooth readnoise image");
+
+
+    /***CREATE THE NOISE MITIGATION MODEL ***/
+    if (cte_pars.noise_mit == 0) {
+        if (raz2rsz(&wf3, &raz, &rsz, cte_pars.rn_amp, max_threads))
+            return (status);
+    } else {
+        trlmessage("Only noise model 0 implemented!");
+        return (status=ERROR_RETURN);
+    }
+
+    /***CONVERT THE READNOISE SMOOTHED IMAGE TO RSC IMAGE
+      THIS IS WHERE THE CTE GETS CALCULATED         ***/
+    if (rsz2rsc(&wf3, &rsz, &rsc, &cte_pars))
+        return (status);
+
+    /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
+    for (i=0;i<RAZ_COLS;i++){
+        for(j=0; j<RAZ_ROWS; j++){
+           Pix(chg.sci.data,i,j) = (Pix(rsc.sci.data,i,j) - Pix(rsz.sci.data,i,j))/wf3.ccdgain;
+           Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + Pix(chg.sci.data,i,j);
+        }
+    }
+
+    /*BACK TO NORMAL FORMATTING*/
+    /*Copies rzc data to cd->sci.data and ab->sci.data */
+    undoRAZ(&cd,&ab,&rzc);
+
+    /* COPY BACK THE SCIENCE SUBARRAYS AND
+       SAVE THE NEW RAW FILE WITH UPDATED SCIENCE
+       ARRAYS AND PRIMARY HEADER TO RAC
+       */
+    if (wf3.subarray) {
+        if (wf3.chip == 2) {
+            /*** SAVE USEFUL HEADER INFORMATION ***/
+            if (cteHistory (&wf3, subcd.globalhdr))
+                return (status);
+
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(raw.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
+            PutKeyDbl(subcd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
-        }
-        freePtr(&ptrReg, &raw);
 
-        double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
-        if (verbose){
-            sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
-            trlmessage(MsgText);
+            Full2Sub(&wf3, &subcd, &cd, 0, 1, 1);
+            putSingleGroup(output, 1, &subcd,0);
+            freeSingleGroup(&subcd);
+        } else {
+
+            /*** SAVE USEFUL HEADER INFORMATION ***/
+            if (cteHistory (&wf3, subab.globalhdr))
+                return (status);
+
+            /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
+            PutKeyDbl(subab.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+            trlmessage("PCTEFRAC saved to header");
+
+            Full2Sub(&wf3, &subab, &ab, 0, 1, 1);
+            putSingleGroup(output, 1, &subab,0);
+            freeSingleGroup(&subab);
         }
 
-        }//end of chip for loop
+    } else { /*FUll FRAME*/
+        /*** SAVE USEFUL HEADER INFORMATION ***/
+        if (cteHistory (&wf3, cd.globalhdr))
+            return (status);
+
+        /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
+        PutKeyDbl(cd.globalhdr, "PCTEFRAC", cte_pars.scale_frac,"CTE scaling fraction based on expstart");
+        trlmessage("PCTEFRAC saved to header");
+
+        putSingleGroup(output,cd.group_num, &cd,0);
+        putSingleGroup(output,ab.group_num, &ab,0);
+    }
+
+    /** CLEAN UP ON AISLE 3 **/
+    freeSingleGroup(&rzc);
+    freeSingleGroup(&rsc);
+    freeSingleGroup(&chg);
+    freeSingleGroup(&raz);
+    freeSingleGroup(&rsz);
+    freeSingleGroup(&raw);
+    freeSingleGroup(&cd);
+    freeSingleGroup(&ab);
+
+    time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
+    if (verbose){
+        sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
+        trlmessage(MsgText);
+    }
 
     PrSwitch("pctecorr", COMPLETE);
-    if (wf3.printtime)
-        TimeStamp("PCTECORR Finished", wf3.rootname);
+    if(wf3.printtime)
+        TimeStamp("PCTECORR Finished",wf3.rootname);
 
-    freeAll(&ptrReg);
     return (status);
 }
 
 
 /********************* SUPPORTING SUBROUTINES *****************************/
-int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * ctePars)
-{
-    /* Do an additional bias correction using the residual bias level measured for each amplifier from the
-     * steadiest pixels in the horizontal overscan and subtracted from the pixels for that amplifier.
-     */
 
-    //WARNING - assumes column major storage order
-    assert(image->sci.data.storageOrder == COLUMNMAJOR);
+int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
+    /*
 
+       convert a raw file to raz file: CDAB longwise amps, save data array
+       for comparison with what jay has during testing
+
+       -->do an additional bias correction using the  residual bias level measured for each amplifier from the
+       steadiest pixels in the horizontal overscan and subtracted fom the pixels for that amplifier.
+
+       ---> convert into electrons at the end
+       ---> add supplemental bias info to the header
+
+       allocate contiguous 2d array on the heap
+       with pointers and return the pointer to the head of the array
+
+       The Following macros are used to represent 2-d indexing.
+       Two dimensional arrays are stored in FITS order.
+
+       ny
+       ^
+       N | a05   a15   a25   a35
+       A | a04   a14   a24   a34
+       X | a03   a13   a23   a33
+       I | a02   a12   a22   a32
+       S | a01   a11   a21   a31
+       2 | a00   a10   a20   a30
+       ---------------------------> nx
+       NAXIS1
+
+       NAXIS1 is 4 and NAXIS2 is 6
+       PIX(a,1,4) accesses a14
+
+       In the raz image, each quadrant has been rotated such that the readout amp is located at the lower left.
+       The reoriented four quadrants are then arranged into a single 8412x2070 image (science pixels plus overscan),
+       with amps C, D, A, and B, in that order. In the raz image, pixels are all parallel-shifted down,
+       then serial-shifted to the left.
+
+*/
     extern int status;
 
-    float biasMean[2] = {0, 0};
-    float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
+    int i,j,k;              /*loop counters*/
+    int subcol = (RAZ_COLS/4); /* for looping over quads  */
+    extern int status;      /* variable for return status */
+    float bias_post[4];
+    float bsig_post[4];
+    float bias_pre[4];
+    float bsig_pre[4];
+    float gain;
 
-    enum OverscanType overscanType = ctePars->isSubarray ? PRESCAN : POSTSCAN;
-    unsigned nOverscanColumnsToIgnore = ctePars->isSubarray ? 5 : 3;
-    findOverscanBias(image, biasMean, biasSigma, overscanType, nOverscanColumnsToIgnore, ctePars);
+    /*INIT THE ARRAYS*/
+    for(i=0;i<4;i++){
+        bias_post[i]=0.;
+        bsig_post[i]=0.;
+        bias_pre[i]=0.;
+        bsig_pre[i]=0.;
+    }
 
-    //used to vary for dev purposes
-    unsigned rowsStart = 0;//ctePars->imageRowsStart;
-    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
-    unsigned columnsStart[2] = {0, 2103};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
-    unsigned columnsEnd[2] = {2103, 2103*2};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+    gain=wf3->ccdgain;
 
-#ifdef _OPENMP
-    #pragma omp parallel shared(image, biasMean, biasSigma)
-#endif
-    {
-    //Image will only ever be at most 2 amps i.e. a single chip
-    // SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
-    for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
-    {
-        //Check if amp even present
-        if (!ctePars->quadExists[nthAmp])
-            continue;
-#ifdef _OPENMP
-        #pragma omp for schedule(static)
-#endif
-        //NOTE: this nolonger overwrites overscan regions!!!
-        for (unsigned i = columnsStart[nthAmp]; i < columnsEnd[nthAmp]; ++i)
-        {
-            for (unsigned j = rowsStart; j < rowsEnd; ++j)
-            {
-                PixColumnMajor(image->sci.data, j, i) -= biasMean[nthAmp];
-                PixColumnMajor(image->sci.data, j, i) *= ccdGain;
+    /*REFORMAT TO RAZ*/
+    makeRAZ(cd,ab,raz);
+
+
+    /*SUBTRACT THE EXTRA BIAS CALCULATED, AND MULTIPLY BY THE GAIN
+      Note that for user subarray the image is in only 1 quad, and only
+      has prescan bias pixels so the regions are different for full and subarrays
+    */
+    if (wf3->subarray){
+        findPreScanBias(raz, bias_pre, bsig_pre);
+        for (k=0;k<4;k++){
+            for (i=0; i<subcol;i++){
+                for (j=0;j<RAZ_ROWS; j++){
+                    if(Pix(raz->dq.data,i+k*subcol,j))
+                        Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
+                        Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                }
+            }
+        }
+    } else {
+        findPostScanBias(raz, bias_post, bsig_post);
+        for (k=0;k<4;k++){
+            for (i=0; i<subcol;i++){
+                for (j=0;j<RAZ_ROWS; j++){
+                    Pix(raz->sci.data,i+k*subcol,j) -= bias_post[k];
+                    Pix(raz->sci.data,i+k*subcol,j) *= gain;
+                }
             }
         }
     }
-    } // close parallel block
 
     return(status);
 }
 
-int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overscanType, unsigned nOverscanColumnsToIgnore, CTEParams * ctePars)
-{
-    //WARNING - assumes column major storage order
-    assert(image->sci.data.storageOrder == COLUMNMAJOR);
+/*calculate the post scan and bias after the biac file has been subtracted
+  add some history information to the header
 
-    /*Calculate the post scan and bias after the biac file has been subtracted.
-      This calls resistmean, which does a better job clipping outlying pixels
-      that just a standard stddev clip single pass.
+  Jay gave no explanation why plist is limited to 55377 for full arrays, his
+  subarray limitation was just 1/4 of this value
 
-      The first 25 columns in a quad are serial physical overscan (prescan)
-      The last 30 columns in a quad are parallel virtual overscan and are only present in full frame quads (postscan)
-      The last 19 rows in a quad are serial
-      Actual image size = 2051 (rows) x 2048 (columns)
-     */
+  the serial virtual overscan pixels are also called the trailing-edge pixels
+  these only exist in full frame images
+  */
+
+int findPostScanBias(SingleGroup *raz, float *mean, float *sigma){
+
+    extern int status;
+    int arrsize = 55377;
+    int i,j,k;              /*Looping variables */
+    float plist[arrsize];  /*bias bpixels to measure*/
+    float *plistSub;
+    float min=0.0;
+    float max=0.0;
+    float rmean=0.0;
+    float rsigma=0.0;
+    float sigreg =7.5; /*sigma clip*/
+
+
+    int subcol = RAZ_COLS/4;
+    int npix=0; /*track array size for resistant mean*/
+
+    /*init plist for full size
+      We'll allocate heap memory for smaller arrays
+      */
+    for (i=0;i<arrsize;i++){
+        plist[i]=0.;
+    }
+
+    for (k=0;k<4;k++){  /*for each quadrant cdab = 0123*/
+        npix=0; /*reset for each quad*/
+        rmean=0.;
+        rsigma=0.;
+        for (i=RAZ_ROWS+5;i<= subcol-1; i++){ /*quad area for post scan bias pixels*/
+            for (j=0; j<2051; j++){
+                if (npix < arrsize){
+                    if ( Pix(raz->dq.data,i+k*subcol,j)) {
+                        plist[npix] = Pix(raz->sci.data,i+k*subcol,j);
+                        npix+=1;
+                    }
+                }
+            }
+        }
+        if (npix > 0 ){
+            plistSub = (float *) calloc(npix, sizeof(float));
+            if (plistSub == NULL){
+                trlerror("out of memory for resistmean entrance in findPostScanBias.");
+                free(plistSub);
+                return (ERROR_RETURN);
+            }
+            for(i=0; i<npix; i++){
+                plistSub[i]=plist[i];
+            }
+            resistmean(plistSub, npix, sigreg, &rmean, &rsigma, &min, &max);
+            free(plistSub);
+        }
+        mean[k]= rmean;
+        sigma[k] = rsigma;
+    }
+    return status;
+}
+
+/*CALCULATE THE PRE SCAN AND BIAS AFTER THE BIAC FILE HAS BEEN SUBTRACTED
+
+  The serial physical overscan pixels are also known as the serial prescan,
+  they are the only pixels available for subarrays. For full frame arrays
+  the prescan is not used as part of the correction, instead the virtual
+  overscan pixels are used and modeled in findPostScanBias.
+
+*/
+
+int findPreScanBias(SingleGroup *raz, float *mean, float *sigma){
+    /** this calls resistmean, which does a better job clipping outlying pixels
+      that just a standard stddev clip single pass*/
+
+    extern int status;
+    int arrsize = 55377;
+    int i,j,k;              /*Looping variables */
+    float plist[arrsize];    /*bias pixels to measure*/
+    float *plistSub; /*heap allocation for variable size plist array*/
+    float min=0.0;
+    float max=0.0;
+    float rmean;
+    float rsigma;
+    float sigreg =7.5; /*sigma clip*/
+    int subcol = RAZ_COLS/4;
+    int npix=0; /*track array size for resistant mean*/
+
+
+    /*init plist*/
+    for (i=0;i<arrsize;i++){
+        plist[i]=0.;
+    }
+
+    for (k=0;k<4;k++){  /*for each quadrant, CDAB ordered*/
+        npix=0;
+        rmean=0.;
+        rsigma=0.;
+        for (i=5;i<25; i++){
+            for (j=0; j<2051; j++){ /*all rows*/
+                if (npix < arrsize ){
+                    if (Pix(raz->dq.data,i+(k*subcol),j)){
+                        plist[npix] = Pix(raz->sci.data,i+k*subcol,j);
+                        npix+=1;
+                    }
+                }
+            }
+         }
+
+        if (0 < npix ){
+            plistSub = (float *) calloc(npix, sizeof(float));
+            if (plistSub == NULL){
+                trlerror("out of memory for resistmean entrance in findPostScanBias.");
+                free(plistSub);
+                return (ERROR_RETURN);
+            }
+            for(i=0; i<npix; i++){
+                plistSub[i]=plist[i];
+            }
+            resistmean(plistSub, npix, sigreg, &rmean, &rsigma, &min, &max);
+            free(plistSub);
+        }
+
+        mean[k]= rmean;
+        sigma[k] = rsigma;
+        if(npix>0)
+            printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n",npix,k+1,rmean,k+1,rsigma);
+    }
+    return status;
+}
+
+
+int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads){
+    /*
+       This routine will read in a RAZ image and will output the smoothest
+       image that is consistent with being the observed image plus readnoise. (RSZ image)
+       This is necessary because we want the CTE-correction algorithm to produce the smoothest
+       possible reconstruction, consistent with the original image and the
+       known readnoise.  This algorithm constructs a model that is smooth
+       where the pixel-to-pixel variations can be thought of as being related
+       to readnoise, but if the variations are too large, then it respects
+       the pixel values.  Basically... it uses a 2-sigma threshold.
+
+       This is strategy #1 in a two-pronged strategy to mitigate the readnoise
+       amplification.  Strategy #2 will be to not iterate when the deblurring
+       is less than the readnoise.
+
+*/
 
     extern int status;
 
-    for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
-    {
-        if (!ctePars->quadExists[nthAmp])
-            continue;
+    int i, j, NIT; /*loop variables*/
+    int imid;
+    double dptr=0.0;
+    double  rms=0.0;
+    double  rmsu=0.0;
+    double nrms=0.0;
+    double nrmsu=0.0;
+    float hardset=0.0f;
+    double setdbl=0.0;
 
-        float * imageOverscanPixels = NULL;
-        unsigned nOverscanPixels = 0;
-        unsigned overscanWidth = 0;
-        unsigned nOverscanRows = ctePars->imageRowsEnd;
 
-        //Find overscan columns
-        if (overscanType == PRESCAN)//subarray
-        {
-            if (!ctePars->hasPrescan[nthAmp])
-                continue;
-            unsigned overscanStart = ctePars->columnOffset < nOverscanColumnsToIgnore ? nOverscanColumnsToIgnore - ctePars->columnOffset : 0;
-            overscanWidth = ctePars->imageColumnsStart[nthAmp] - overscanStart;
-            nOverscanPixels = overscanWidth*nOverscanRows;
-            imageOverscanPixels = image->sci.data.data + overscanStart*ctePars->nRows;
+    /*1D ARRAYS FOR CENTRAL AND NEIGHBORING RAZ_COLS*/
+    double obs_loc[3][RAZ_ROWS] ;
+    double rsz_loc[3][RAZ_ROWS] ;
+
+    NIT=1;
+
+    /*ALL ELEMENTS TO FLAG*/
+    for(i=0;i<3;i++){
+        for (j=0; j<RAZ_ROWS; j++){
+            obs_loc[i][j]=setdbl;
+            rsz_loc[i][j]=setdbl;
         }
-        else if (overscanType == POSTSCAN)//full frame
-        {
-            if (!ctePars->hasPostscan[nthAmp])
-                continue;
-            overscanWidth = ctePars->postscanWidth - nOverscanColumnsToIgnore;
-            nOverscanPixels = overscanWidth*nOverscanRows;
-            imageOverscanPixels = image->sci.data.data + (ctePars->imageColumnsEnd[nthAmp] + nOverscanColumnsToIgnore-1)*ctePars->nRows;
-        }
-        else
-            assert(0);
-
-        //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
-        //not be needed and a pointer to the data could be passed directly to resistmean instead.
-        float * overscanPixels = malloc(nOverscanPixels*sizeof(*overscanPixels));
-        assert(overscanPixels);
-        for (unsigned column = 0; column < overscanWidth; ++column)
-        {
-            //memcpy(overscanPixels, imageOverscanPixels, nOverscanPixels*sizeof(*overscanPixels));
-            memcpy(overscanPixels + column*nOverscanRows, imageOverscanPixels + column*ctePars->nRows, nOverscanRows*sizeof(*overscanPixels));
-        }
-
-        float rmean = 0;
-        float rsigma = 0;
-        float min = 0;
-        float max = 0;
-        resistmean(overscanPixels, nOverscanPixels, 7.5, &rmean, &rsigma, &min, &max);
-        mean[nthAmp] = rmean;
-        sigma[nthAmp] = rsigma;
-
-        printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
-
-        if (overscanPixels)
-            free(overscanPixels);
     }
 
-    return status;
+    /***INITIALIZE THE LOCAL IMAGE GROUPS***/
+    SingleGroup rnz;
+    initSingleGroup(&rnz);
+    allocSingleGroup(&rnz, RAZ_COLS, RAZ_ROWS, True);
+
+    SingleGroup zadj;
+    initSingleGroup(&zadj);
+    allocSingleGroup(&zadj, RAZ_COLS, RAZ_ROWS, True);
+
+
+    /*COPY THE RAZ IMAGE INTO THE RSZ OUTPUT IMAGE
+      AND INITIALIZE THE OTHER IMAGES*/
+    for(i=0;i<RAZ_COLS;i++){
+        for (j=0;j<RAZ_ROWS;j++){
+            Pix(rsz->sci.data,i,j) = Pix(raz->sci.data,i,j);
+            Pix(rsz->dq.data,i,j) = Pix(raz->dq.data,i,j);
+            Pix(rnz.sci.data,i,j) = hardset;
+            Pix(zadj.sci.data,i,j) = hardset;
+        }
+    }
+
+
+    /*THE RSZ IMAGE JUST GETS UPDATED AS THE RAZ IMAGE IN THIS CASE*/
+    if (rnsig < 0.1){
+        trlmessage("rnsig < 0.1, No read-noise mitigation needed");
+        return(status);
+    }
+
+    /*GO THROUGH THE ENTIRE IMAGE AND ADJUST PIXELS TO MAKE THEM
+      SMOOTHER, BUT NOT SO MUCH THAT IT IS NOT CONSISTENT WITH
+      READNOISE.  DO THIS IN BABY STEPS SO THAT EACH ITERATION
+      DOES VERY LITTLE ADJUSTMENT AND INFORMATION CAN GET PROPAGATED
+      DOWN THE LINE.
+      */
+
+    rms=setdbl;
+
+    for(NIT=1; NIT<=100; NIT++){
+        #pragma omp parallel for schedule(dynamic) \
+        private(i,j,imid,obs_loc,rsz_loc,dptr)\
+        shared(raz, rsz, rnsig,rms,nrms, zadj)
+        for(i=0; i<RAZ_COLS; i++){
+            imid=i;
+            /*RESET TO MIDDLE RAZ_COLS AT ENDPOINTS*/
+            if (imid < 1)
+                imid=1;
+            if (imid == RAZ_COLS-1)
+                imid = RAZ_COLS-2;
+
+            /*COPY THE MIDDLE AND NEIGHBORING PIXELS FOR ANALYSIS*/
+            for(j=0; j<RAZ_ROWS; j++){
+                obs_loc[0][j] = Pix(raz->sci.data,imid-1,j);
+                obs_loc[1][j] = Pix(raz->sci.data,imid,j);
+                obs_loc[2][j] = Pix(raz->sci.data,imid+1,j);
+
+                rsz_loc[0][j] = Pix(rsz->sci.data,imid-1,j);
+                rsz_loc[1][j] = Pix(rsz->sci.data,imid,j);
+                rsz_loc[2][j] = Pix(rsz->sci.data,imid+1,j);
+            }
+            for (j=0; j<RAZ_ROWS; j++){
+             if(Pix(raz->dq.data,imid,j)) {
+                find_dadj(1+i-imid,j, obs_loc, rsz_loc, rnsig, &dptr);
+                Pix(zadj.sci.data,i,j) = dptr;
+              }
+            }
+        } /*end the parallel for*/
+
+        /*NOW GO OVER ALL THE RAZ_COLS AND RAZ_ROWS AGAIN TO SCALE THE PIXELS
+        */
+        for(i=0; i<RAZ_COLS;i++){
+            for(j=0; j<RAZ_ROWS; j++){
+                if (Pix(raz->dq.data,i,j)){
+                    Pix(rsz->sci.data,i,j) +=  (Pix(zadj.sci.data,i,j)*0.75);
+                    Pix(rnz.sci.data,i,j) = (Pix(raz->sci.data,i,j) - Pix(rsz->sci.data,i,j));
+                }
+            }
+        }
+
+        rms=setdbl;
+        nrms=setdbl;
+
+        /*This is probably a time sink because the arrays are being
+          accessed out of storage order, careful of page faults */
+        #pragma omp parallel for schedule(dynamic,1)\
+        private(i,j,rmsu,nrmsu) \
+        shared(raz,rsz,rms,rnsig,nrms)
+        for(j=0; j<RAZ_ROWS; j++){
+            nrmsu=setdbl;
+            rmsu=setdbl;
+            for(i = 0;i<RAZ_COLS; i++){
+                if ( (fabs(Pix(raz->sci.data,i,j)) > 0.1) ||
+                        (fabs(Pix(rsz->sci.data,i,j)) > 0.1) ){
+                    rmsu  +=  ( Pix(rnz.sci.data,i,j) * Pix(rnz.sci.data,i,j) );
+                    nrmsu += 1.0;
+                }
+            }
+            #pragma omp critical (rms)
+            {   rms  += rmsu;
+                nrms += nrmsu;
+            }
+        }
+        rms = sqrt(rms/nrms);
+
+        /*epsilon type comparison*/
+        if ( (rnsig-rms) < 0.00001) break; /*this exits the NIT for loop*/
+    } /*end NIT*/
+
+    freeSingleGroup(&zadj);
+    freeSingleGroup(&rnz);
+
+    return (status);
 }
+
+
+int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig, double *d){
+    /*
+       This function determines for a given pixel how it can
+       adjust in a way that is not inconsistent with its being
+       readnoise.  To do this, it looks at its upper and lower
+       neighbors and sees whether it is consistent with either
+       (modulo readnoise).  To the extent that it is consistent
+       then move it towards them.  But also bear in mind that
+       that we don't want it to be more than 2 RN sigmas away
+       from its original value.  This is pretty much a tug of
+       war... with readnoise considerations pushing pixels to
+       be closer to their neighbors, but the original pixel
+       values also pull to keep the pixel where it was.  Some
+       accommodation is made for both considerations.
+       */
+
+    extern int status;
+
+    double mval=0.0;
+    double    dval0, dval0u, w0;
+    double    dval9, dval9u, w9;
+    double    dmod1, dmod1u, w1;
+    double    dmod2, dmod2u, w2;
+
+    dval0=0.;
+    dval0u=0.;
+    w0=0.;
+    dval9=0.;
+    dval9u=0.;
+    w9=0.;
+    dmod1=0.;
+    dmod1u=0.;
+    w1=0.;
+    dmod2=0.;
+    dmod2u=0.;
+    w2=0.;
+
+    mval = rszloc[i][j];
+    dval0  = obsloc[i][j] - mval;
+    dval0u = dval0;
+
+    if (dval0u >1.0)
+        dval0u =  1.0;
+    if (dval0u <-1.0)
+        dval0u = -1.0;
+
+    dval9 = 0.;
+
+    /*COMPARE THE SURROUNDING PIXELS*/
+    if (i==1 &&  RAZ_ROWS-1>=j  && j>0 ) {
+
+        dval9 = obsloc[i][j-1]  - rszloc[i][j-1] +
+            obsloc[i][j]    - rszloc[i][j]  +
+            obsloc[i][j+1]  - rszloc[i][j+1] +
+            obsloc[i-1][j-1]- rszloc[i-1][j-1] +
+            obsloc[i-1][j]  - rszloc[i-1][j] +
+            obsloc[i-1][j+1]- rszloc[i-1][j+1] +
+            obsloc[i+1][j-1]- rszloc[i+1][j-1] +
+            obsloc[i+1][j]  - rszloc[i+1][j] +
+            obsloc[i+1][j+1]- rszloc[i+1][j+1];
+    }
+
+    dval9 =dval9 / 9.;
+    dval9u = dval9;
+
+    if (dval9u > (rnsig*0.33))
+        dval9u =  rnsig*0.33;
+    if (dval9u <  rnsig*-0.33)
+        dval9u = rnsig*-0.33;
+
+    dmod1 = 0.;
+    if (j>0)
+        dmod1 = rszloc[i][j-1] - mval;
+
+    dmod1u = dmod1;
+    if (dmod1u > rnsig*0.33)
+        dmod1u =  rnsig*0.33;
+    if (dmod1u < rnsig*-0.33)
+        dmod1u = rnsig*-0.33;
+
+    dmod2 = 0.;
+    if (j < RAZ_ROWS-1)
+        dmod2 =  rszloc[i][j+1] - mval;
+
+    dmod2u = dmod2;
+    if (dmod2u > rnsig*0.33)
+        dmod2u =  rnsig*0.33;
+    if (dmod2u < rnsig*-0.33)
+        dmod2u = rnsig*-0.33;
+
+
+    /*
+       IF IT'S WITHIN 2 SIGMA OF THE READNOISE, THEN
+       TEND TO TREAT AS READNOISE; IF IT'S FARTHER OFF
+       THAN THAT, THEN DOWNWEIGHT THE INFLUENCE
+       */
+    w0 =   (dval0*dval0) / ((dval0*dval0)+ 4.0*(rnsig*rnsig));
+    w9 =   (dval9*dval9) / ((dval9*dval9)+ 18.0*(rnsig*rnsig));
+    w1 = (4*rnsig*rnsig) / ((dmod1*dmod1)+4.0*(rnsig*rnsig));
+    w2 = (4*rnsig*rnsig) / ((dmod2*dmod2)+4.0*(rnsig*rnsig));
+
+    /*(note that with the last two, if a pixel
+      is too discordant with its upper or lower
+      that neighbor has less of an ability to
+      pull it)*/
+
+    *d = ((dval0u * w0 * 0.25f) + /* desire to keep the original pixel value */
+            (dval9u*w9*0.25f) + /* desire to keep the original sum over 3x3*/
+            (dmod1u*w1*0.25f) + /*desire to get closer to the pixel below*/
+            (dmod2u*w2*0.25f)) ; /*desire to get closer to the pixel above*/
+
+    return(status);
+}
+
+
+/*** THIS ROUTINE PERFORMS THE CTE CORRECTIONS
+  rsz is the readnoise smoothed image
+  rsc is the coorection output image
+  rac = raw + ((rsc-rsz) / gain )
+
+ ***/
+int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, CTEParams *cte) {
+
+    extern int status;
+
+    int i,j;
+    double cte_i=0.0;
+    double cte_j=0.0;
+    double ro=0;
+    int io=0;
+    double ff_by_col[RAZ_COLS][4];
+    float hardset=0.0;
+
+    /*These are already in the parameter structure
+      int     Ws              the number of traps < 999999, taken from pctetab read
+      int     q_w[TRAPS];     the run of charge with level  cte->qlevq_data[]
+      float   dpde_w[TRAPS];  the run of charge loss with level cte->dpdew_data[]
+
+      float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel, TRAPS=999
+      float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)
+
+      The rprof array gives the fraction of charge that comes out of every parallel serial-shift
+      the cummulative distribution in cprof then tells you what's left
+
+*/
+
+    SingleGroup pixz_fff;
+    initSingleGroup(&pixz_fff);
+    allocSingleGroup(&pixz_fff, RAZ_COLS, RAZ_ROWS, True);
+
+    /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
+      THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
+      IN THE REFERENCE FILE*/
+
+    for(i=0; i<RAZ_COLS;i++){
+        ff_by_col[i][0]=1.;
+        ff_by_col[i][1]=1.;
+        ff_by_col[i][2]=1.;
+        ff_by_col[i][3]=1.;
+        j= cte->iz_data[i]; /*which column to scale*/
+        ff_by_col[j][0]=cte->scale512[i];
+        ff_by_col[j][1]=cte->scale1024[i];
+        ff_by_col[j][2]=cte->scale1536[i];
+        ff_by_col[j][3]=cte->scale2048[i];
+
+        /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
+          Index is figured on the final size of the image
+          not the current size. Moved above
+          */
+
+        for(j=0; j<RAZ_ROWS; j++){
+            Pix(pixz_fff.sci.data,i,j)=hardset;
+            ro = j/512.0; /*ro can be zero, it's an index*/
+            if (ro <0 ) ro=0.;
+            if (ro > 2.999) ro=2.999; /*only 4 quads, 0 to 3*/
+            io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
+            cte_j= (j+1) / 2048.0;
+            cte_i= ff_by_col[i][io] + (ff_by_col[i][io+1] -ff_by_col[i][io]) * (ro-io);
+            Pix(pixz_fff.sci.data,i,j) =  (cte_i*cte_j);
+        }
+    }
+
+    /*FOR REFERENCE TO JAYS CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
+
+      int   iz_data[RAZ_ROWS];  column number in raz format
+      double scale512[RAZ_ROWS];      scaling appropriate at row 512
+      double scale1024[RAZ_ROWS];     scaling appropriate at row 1024
+      double scale1536[RAZ_ROWS];     scaling appropriate at row 1536
+      double scale2048[RAZ_ROWS];     scaling appropriate at row 2048
+      */
+
+    /*THIS IS RAZ2RAC_PAR IN JAYS CODE - MAIN CORRECTION LOOP IN HERE*/
+    inverse_cte_blur(rsz, rsc, &pixz_fff, cte, wf3->verbose,wf3->expstart);
+    freeSingleGroup(&pixz_fff);
+    return(status);
+}
+
+
+
+/*** this routine does the inverse CTE blurring... it takes an observed
+  image and generates the image that would be pushed through the readout
+  algorithm to generate the observation
+
+  CTE_FF is found using the observation date of the data
+  FIX_ROCRs is cte->fix_rocr
+  Ws is the number of TRAPS that are < 999999
+
+  this is sub_wfc3uv_raz2rac_par in jays code
+
+  floor rounds to negative infinity
+  ceiling rounds to positive infinity
+  truncate rounds up or down to zero
+  round goes to the nearest integer
+
+  fff is the input cte scaling array calculated over all pixels
+  This is a big old time sink function
+ ***/
+
+int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart){
+
+    extern int status;
+
+    /*looping vars*/
+    int NREDO, REDO;
+    int NITINV, NITCTE;
+    int i;
+    int j,jj;
+    double dmod;
+    int jmax;
+    float hardset=0.0f;
+    int totflux=0;
+
+    double cte_ff; /*cte scaling based on observation date*/
+    double setdbl=0.0;
+
+    /*DEFINE TO MAKE PRIVATE IN PARALLEL RUN*/
+    double *pix_obsd=&setdbl;
+    double *pix_modl=&setdbl;
+    double *pix_curr=&setdbl;
+    double *pix_init=&setdbl;
+    double *pix_read=&setdbl;
+    double *pix_ctef=&setdbl;
+
+    /*STARTING DEFAULTS*/
+    NITINV=1;
+    NITCTE=1;
+    cte_ff=0.0;
+    jmax=0;
+    dmod=0.0;
+
+    /*LOCAL IMAGES TO PLAY WITH, THEY WILL REPLACE THE INPUTS*/
+    SingleGroup rz; /*pixz_raz*/
+    initSingleGroup(&rz);
+    allocSingleGroup(&rz, RAZ_COLS, RAZ_ROWS, True);
+
+    SingleGroup rc; /*pixz_rac*/
+    initSingleGroup(&rc);
+    allocSingleGroup(&rc, RAZ_COLS, RAZ_ROWS, True);
+
+    SingleGroup pixz_fff; /*pixz_fff*/
+    initSingleGroup(&pixz_fff);
+    allocSingleGroup(&pixz_fff, RAZ_COLS, RAZ_ROWS, True);
+
+
+    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
+      APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
+      INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
+      CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
+      OVER 3 YEARS AFTER INSTALLATION*/
+
+    cte_ff=  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
+    cte->scale_frac=cte_ff;   /*save to param structure for header update*/
+
+    if(verbose){
+        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cte_ff);
+        trlmessage(MsgText);
+    }
+
+    /*SET UP THE SCALING ARRAY WITH INPUT DATA, hardset arrays for safety*/
+    for (i=0;i<RAZ_COLS;i++){
+        for(j=0;j<RAZ_ROWS;j++){
+            Pix(rc.sci.data,i,j)=hardset;
+            Pix(rz.sci.data,i,j)=hardset;
+            Pix(pixz_fff.sci.data,i,j)=hardset;
+            Pix(rz.sci.data,i,j) = Pix(rsz->sci.data,i,j);
+            Pix(rz.dq.data,i,j) = Pix(rsz->dq.data,i,j);
+            Pix(pixz_fff.sci.data,i,j) =  cte_ff * Pix(fff->sci.data,i,j);
+        }
+    }
+
+    #pragma omp parallel for schedule (dynamic,1) \
+    private(dmod,i,j,jj,jmax,REDO,NREDO,totflux, \
+            pix_obsd,pix_modl,pix_curr,pix_init,\
+            pix_read,pix_ctef,NITINV,NITCTE)\
+    shared(rc,rz,cte,pixz_fff)
+
+    for (i=0; i< RAZ_COLS; i++){
+        pix_obsd = (double *) calloc(RAZ_ROWS, sizeof(double));
+        pix_modl = (double *) calloc(RAZ_ROWS, sizeof(double));
+        pix_curr = (double *) calloc(RAZ_ROWS, sizeof(double));
+        pix_init = (double *) calloc(RAZ_ROWS, sizeof(double));
+        pix_read = (double *) calloc(RAZ_ROWS, sizeof(double));
+        pix_ctef = (double *) calloc(RAZ_ROWS, sizeof(double));
+
+        totflux=0;
+        /*HORIZONTAL PRE/POST SCAN POPULATION */
+        for (j=0; j< RAZ_ROWS; j++){
+            if(Pix(rz.dq.data,i,j)){
+                pix_obsd[j] = Pix(rz.sci.data,i,j); /*starts as input RAZ*/
+                totflux += 1;
+            }
+        }
+
+        if (totflux >= 1) {/*make sure the column has flux in it*/
+            NREDO=0; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+            REDO=0; /*FALSE*/
+            do { /*replacing goto 9999*/
+                /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
+                for (j=0; j<RAZ_ROWS; j++){
+                    pix_modl[j] =  Pix(rz.sci.data,i,j);
+                    pix_ctef[j] =  Pix(pixz_fff.sci.data,i,j);
+                }
+                /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
+                  IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
+                for (NITINV=1; NITINV<=cte->n_forward; NITINV++){
+                    for (j=0; j<RAZ_ROWS; j++){
+                        pix_curr[j]=pix_modl[j];
+                        pix_read[j]=pix_modl[j];
+                        pix_ctef[j]=Pix(pixz_fff.sci.data,i,j);
+                    }
+
+                    /*TAKE EACH PIXEL DOWN THE DETECTOR IN NCTENPAR=7*/
+                    for (NITCTE=1; NITCTE<=cte->n_par; NITCTE++){
+                        sim_colreadout_l(pix_curr, pix_read, pix_ctef, cte);
+
+                        /*COPY THE JUST UPDATED READ OUT IMAGE INTO THE INPUT IMAGE*/
+                        for (j=0; j< RAZ_ROWS; j++){
+                            pix_curr[j]=pix_read[j];
+                        }
+                    } /* end NITCTE */
+
+                    /*DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
+                      AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE*/
+                    for (j=0; j< RAZ_ROWS; j++){
+                        dmod =  (pix_obsd[j] - pix_read[j]);
+                        if (NITINV < cte->n_forward){
+                            dmod *= (dmod*dmod) /((dmod*dmod) + (cte->rn_amp * cte->rn_amp));
+                        }
+                        pix_modl[j] += dmod; /*dampen each pixel as the best is determined*/
+                    }
+                } /*NITINV end*/
+
+                /*LOOK FOR AND DOWNSCALE THE CTE MODEL IF WE FIND
+                  THE TELL-TALE SIGN OF READOUT CRS BEING OVERSUBTRACTED;
+                  IF WE FIND ANY THEN GO BACK UP AND RERUN THIS COLUMN
+
+
+                  THE WFC3 UVIS MODEL SEARCHES FOR OVERSUBTRACTED TRAILS.
+                  WHICH ARE  DEFINED AS EITHER:
+
+                  - A SINGLE PIXEL VALUE BELOW -10E-
+                  - TWO CONSECUTIVE PIXELS TOTALING -12 E-
+                  - THREE TOTALLING -15 E-
+
+                  WHEN WE DETECT SUCH AN OVER-SUBTRACTED TAIL, WE ITERATIVELY REDUCE
+                  THE LOCAL CTE SCALING BY 25% UNTIL THE TRAIL IS
+                  NO LONGER NEGATIVE  THIS DOES NOT IDENTIFY ALL READOUT-CRS, BUT IT DOES
+                  DEAL WITH MANY OF THEM. FOR IMAGES THAT HAVE BACKGROUND GREATER THAN 10 OR SO,
+                  THIS WILL STILL END UP OVERSUBTRACTING CRS A BIT, SINCE WE ALLOW
+                  THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
+
+*/
+                if (cte->fix_rocr) {
+                    for (j=10; j< RAZ_ROWS-2; j++){
+                        if (  (( cte->thresh > pix_modl[j] ) &&
+                                    ( cte->thresh > (pix_modl[j] - pix_obsd[j]))) ||
+
+                                (((pix_modl[j] + pix_modl[j+1]) < -12.) &&
+                                 (pix_modl[j] + pix_modl[j+1] - pix_obsd[j] - pix_obsd[j+1] < -12.)) ||
+
+                                (((pix_modl[j] + pix_modl[j+1] + pix_modl[j+2]) < -15.) &&
+                                 ((pix_modl[j] + pix_modl[j+1] + pix_modl[j+2] -pix_obsd[j] -
+                                   pix_obsd[j+1] - pix_obsd[j+2]) <-15.))  ){
+
+                            jmax=j;
+
+                            /*GO DOWNSTREAM AND LOOK FOR THE OFFENDING CR*/
+                            for (jj=j-10; jj<=j;jj++){
+                                if ( (pix_modl[jj] - pix_obsd[jj]) >
+                                        (pix_modl[jmax] - pix_obsd[jmax]) ) {
+                                    jmax=jj;
+                                }
+                            }
+                            /* DOWNGRADE THE CR'S SCALING AND ALSO FOR THOSE
+                               BETWEEN THE OVERSUBTRACTED PIXEL AND IT*/
+                            for (jj=jmax; jj<=j;jj++){
+                                Pix(pixz_fff.sci.data,i,jj) *= 0.75;
+                            }
+                            REDO=1; /*TRUE*/
+                        } /*end if*/
+                    } /*end for  j*/
+                }/*end fix cr*/
+
+                if (REDO) NREDO +=1;
+                if (NREDO == 5)  REDO=0; /*stop*/
+            } while (REDO); /*replacing goto 9999*/
+        } /*totflux > 1, catch for subarrays*/
+
+#pragma omp critical (cte)
+        for (j=0; j< RAZ_ROWS; j++){
+            if (Pix(rz.dq.data,i,j)){
+                Pix(rc.sci.data,i,j)= pix_modl[j];
+            }
+        }
+
+        free(pix_obsd);
+        free(pix_modl);
+        free(pix_curr);
+        free(pix_init);
+        free(pix_read);
+        free(pix_ctef);
+
+    } /*end i*/
+
+    for (i=0; i< RAZ_COLS; i++){
+        for (j=0; j< RAZ_ROWS; j++){
+            if(Pix(rsz->dq.data,i,j)){
+                Pix(rsz->sci.data,i,j) = Pix(rz.sci.data,i,j);
+                Pix(rsc->sci.data,i,j) = Pix(rc.sci.data,i,j);
+                Pix(fff->sci.data,i,j) = Pix(pixz_fff.sci.data,i,j);
+            }
+        }
+    }
+
+    freeSingleGroup(&rz);
+    freeSingleGroup(&rc);
+    freeSingleGroup(&pixz_fff);
+
+    return(status);
+}
+
+
+/*This is the workhorse subroutine; it simulates the readout
+  of one column pixi() and outputs this to pixo() using a single
+  iteration.  It can be called successively to do the transfer
+  in steps.
+
+
+  JDIM == RAZ_ROWS
+  WDIM == TRAPS  Ws is the input traps number < 999999
+  NITs == cte_pars->n_par
+
+  These are already in the parameter structure CTEParams
+  int     Ws              the number of traps < 999999
+  float     q_w[TRAPS];     the run of charge with level  == qlevq_data
+  float   dpde_w[TRAPS];  the run of charge loss with level == dpdew_data
+  float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel == rprof fits image
+  float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)  == cprof fits image
+
+
+  W = wcol_data = trap id
+
+  q_w[TRAP] = qlev_q from QPROF  traps as function of packet size = cte->qlevq_data[TRAP]
+
+  pixi (curr), pixo (read) , pixf(cteff) are passed and are 1d arrays which have values for a particular column
+
+  the ttrap reference to the image array has to be -1 for C
+  */
+
+int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
+
+    extern int status;
+    int j;
+    int ttrap;
+
+    int w;
+    double ftrap;
+    double pix_1;
+    double padd_2;
+    double padd_3;
+    double prem_3;
+    double pmax;
+    double fcarry;
+
+    padd_3=0.0;
+    prem_3=0.0;
+    padd_2=0.0;
+    fcarry=0.0;
+    pix_1=0.0;
+    w=0;
+    j=0;
+    ftrap=0.0;
+    ttrap=0;
+
+    FloatHdrData *rprof;
+    FloatHdrData *cprof;
+
+    /*from the reference table*/
+    rprof = cte->rprof;
+    cprof = cte->cprof;
+
+    /*FIGURE OUT WHICH TRAPS WE DON'T NEED TO WORRY ABOUT IN THIS COLUMN
+      PMAX SHOULD ALWAYS BE POSITIVE HERE  */
+    pmax=10.;
+    for(j=0; j<RAZ_ROWS; j++){
+        pixo[j] = pixi[j];
+        if (pixo[j] > pmax)
+            pmax=pixo[j];
+    }
+
+    /*GO THROUGH THE TRAPS ONE AT A TIME, FROM HIGHEST TO LOWEST Q,
+      AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
+    for (w = cte->cte_traps-1; w>=0; w--){
+        if ( cte->qlevq_data[w] <= pmax ) {
+
+            ftrap = 0.0e0;
+            ttrap = cte->cte_len; /*for referencing the image at 0*/
+            fcarry = 0.0e0;
+
+            /*GO UP THE COLUMN PIXEL BY PIXEL*/
+            for(j=0; j<RAZ_ROWS;j++){
+                pix_1 = pixo[j];
+
+
+                if ( (ttrap < cte->cte_len) || ( pix_1 >= cte->qlevq_data[w] - 1. ) ){
+                    if (pixo[j] >= 0 ){
+                        pix_1 = pixo[j] + fcarry; /*shuffle charge in*/
+                        fcarry = pix_1 - floor(pix_1); /*carry the charge remainder*/
+                        pix_1 = floor(pix_1); /*reset pixel*/
+                    }
+
+                    /*HAPPENS AFTER FIRST PASS*/
+                    /*SHUFFLE CHARGE IN*/
+                    if ( j> 0  ) {
+                        if (pixf[j] < pixf[j-1])
+                            ftrap *= (pixf[j] /  pixf[j-1]);
+                    }
+
+                    /*RELEASE THE CHARGE*/
+                    padd_2=0.0;
+                    if (ttrap <cte->cte_len){
+                        ttrap += 1;
+                        padd_2 = Pix(rprof->data,w,ttrap-1) *ftrap;
+                    }
+
+                    padd_3 = 0.0;
+                    prem_3 = 0.0;
+                    if ( pix_1 >= cte->qlevq_data[w]){
+                        prem_3 =  cte->dpdew_data[w] / cte->n_par * pixf[j];  /*dpdew is 1 in file */
+                        if (ttrap < cte->cte_len)
+                            padd_3 = Pix(cprof->data,w,ttrap-1)*ftrap;
+                        ttrap=0;
+                        ftrap=prem_3;
+                    }
+
+                    pixo[j] += padd_2 + padd_3 - prem_3;
+                } /*replaces trap continue*/
+            }/*end if j>0*/
+        }/* end if qlevq > pmax, replaces continue*/
+
+    }/*end for w*/
+
+    return(status);
+
+}
+
 
 int initCTETrl (char *input, char *output) {
 
@@ -663,295 +1580,4 @@ int initCTETrl (char *input, char *output) {
     InitTrlFile (trl_in, trl_out);
 
     return(status);
-}
-
-//NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
-int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
-{
-    extern int status;
-
-    if (!ctePars->isSubarray)
-        return status;
-
-    // get subarray from first extension
-    getSingleGroup(wf3->input, 1, image);
-    if (hstio_err()){
-        freeSingleGroup(image);
-        return (status = OPEN_FAILED);
-    }
-    // getSingleGroup will set image->group_num to 1 here so now correct
-    image->group_num = wf3->chip == 2 ? 1 : 2;
-
-    ctePars->nRows = image->sci.data.ny;
-    ctePars->nColumns = image->sci.data.nx;
-
-    // These are used to find subarrays location within a full chip (2 quads)
-    int sci_bin[2];         // bin size of science image
-    int sci_corner[2];      // science image corner location
-    int ref_bin[2];
-    int ref_corner[2];
-    int rsize = 1;          // reference pixel size
-
-    if (GetCorner(&image->sci.hdr, rsize, sci_bin, sci_corner))
-    {
-        freeSingleGroup(image);
-        return (status);
-    }
-    //Create a dummy header to represent the full chip (both amps) and populate via initChipMetaData
-    {
-        Hdr fullChipHdr;
-        initChipMetaData(wf3, &fullChipHdr, image->group_num);
-        if (GetCorner (&fullChipHdr, rsize, ref_bin, ref_corner))
-        {
-            freeSingleGroup(image);
-            return (status);
-        }
-    }
-
-    ctePars->refAndIamgeBinsIdenticle = ref_bin[0] == sci_bin[0] && ref_bin[1] == sci_bin[1] ? True : False;
-    ctePars->columnOffset = sci_corner[0] - ref_corner[0];
-    ctePars->rowOffset = sci_corner[1] - ref_corner[1];
-
-    /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
-      AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
-      CTE CODE VARIABLES.
-      */
-    if (CompareCTEParams(image, ctePars))
-    {
-        freeSingleGroup(image);
-        return (status);
-    }
-
-    return status;
-}
-
-int unalignAmps(SingleGroup * image, CTEParams * ctePars)
-{
-    //The function alignAmps is symmetric, wrapping as aid when reading logic
-    return alignAmps(image, ctePars);
-}
-
-int alignAmps(SingleGroup * image, CTEParams * ctePars)
-{
-    //WARNING - assumes row major storage
-    assert(image->sci.data.storageOrder == ROWMAJOR);
-
-    //Align amps such that they are at the bottom left
-    extern int status;
-
-    unsigned columnOffset = ctePars->columnOffset;
-    unsigned nColumns = ctePars->nColumns;
-    unsigned nRows = ctePars->nRows;
-
-    Bool isCDAmp = image->group_num == 1 ? True : False;
-    if (ctePars->isSubarray)
-    {
-        if (isCDAmp)
-            printf("subarray from CD amp\n");
-        else
-            printf("subarray from AB amp\n");
-    }
-
-    //If subarray only in c quad do nothing as this is already bottom left aligned
-    if (isCDAmp && !ctePars->quadExists[1])//columnOffset + nColumns < ctePars->nColumnsPerQuad)
-        return status;
-
-    //Find if subarray extends into either b or d quad and flip right to left
-    if (ctePars->quadExists[1])//  &columnOffset + nColumns > ctePars->nColumnsPerQuad)
-    {
-        if (ctePars->isSubarray)
-            printf("subarray extends into amps B or D\n");
-        //grab a row, flip it, put it back
-        unsigned rowLength = columnOffset + nColumns - ctePars->nColumnsPerQuad;
-        unsigned quadBoundary = nColumns - rowLength;
-        float * row = NULL;
-        for (unsigned i = 0; i < nRows; ++i)
-        {
-            //find row
-            row = image->sci.data.data + i*nColumns + quadBoundary;
-            //flip right to left
-            float tempPixel;
-            for (unsigned j = 0; j < rowLength/2; ++j)
-            {
-                tempPixel = row[j];
-                row[j] = row[rowLength-1-j];
-                row[rowLength-1-j] = tempPixel;
-            }
-        }
-    }
-
-    //Only thing left is to flip ab chip upside down
-    if (!isCDAmp) // isABAmp
-    {
-        //either physically align all or propagate throughout a mechanism to work on the array upside down (flip b quad though)
-        //we'll just flip all for now. See if there's info in the header specifying amp location rel to pix in file,
-        //i.e. a way to know whether the chip is 'upside down'. Could then reverse cte corr trail walk direction
-        float * tempRow = NULL;
-        size_t rowSize = nColumns*sizeof(*tempRow);
-        tempRow = malloc(rowSize);
-        float * topRow = NULL;
-        float * bottomRow = NULL;
-        for (unsigned i = 0; i < nRows/2; ++i)
-        {
-            topRow = image->sci.data.data + i*nColumns;
-            bottomRow = image->sci.data.data + (nRows-1-i)*nColumns;
-            memcpy(tempRow, topRow, rowSize);
-            memcpy(topRow, bottomRow, rowSize);
-            memcpy(bottomRow, tempRow, rowSize);
-        }
-        free(tempRow);
-    }
-
-    return status;
-}
-
-
-int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction)
-{
-    /*** SAVE USEFUL HEADER INFORMATION ***/
-    if (cteHistory(wf3, image->globalhdr))
-        return status;
-
-    /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-    PutKeyDbl(image->globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
-    trlmessage("PCTEFRAC saved to header");
-
-    //Full2Sub(wf3, subChip, fullChip, 0, 1, 1);
-    putSingleGroup(fileName, 1, image, 0);
-    //freeSingleGroup(subChip);
-    return status;
-}
-
-int getCCDChipId(int * value, char * fileName, char * ename, int ever)
-{
-    extern int status;
-    // OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER.
-    IODescPtr ip = openInputImage (fileName, "SCI", ever);
-    if (hstio_err()) {
-        sprintf (MsgText, "Image: \"%s\" is not present", fileName);
-        trlerror (MsgText);
-        return (status = OPEN_FAILED);
-    }
-    Hdr scihdr;
-    initHdr(&scihdr);
-    getHeader(ip, &scihdr);
-    if (ip)
-        closeImage (ip);
-    /* Get CCD-specific parameters. */
-    if (GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, ever, value)){
-        freeHdr(&scihdr);
-        return (status);
-    }
-    freeHdr(&scihdr);
-
-    return status;
-}
-
-int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
-{
-    extern int status;
-
-    SingleGroup temp;
-    initSingleGroup(&temp);
-    if (image->sci.data.storageOrder == COLUMNMAJOR)
-    {
-        allocSingleGroup(&temp, image->sci.data.nx, image->sci.data.ny, False);
-        copySingleGroup(&temp, image, ROWMAJOR);
-        image = &temp;
-    }
-
-    unalignAmps(image, ctePars);
-
-    status = putSingleGroup(fileName, image->group_num, image, 0);
-    freeSingleGroup(&temp);
-    return status;
-}
-
-void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
-{
-    //WARNING this assumes quads have already been aligned
-
-    ctePars->prescanWidth = prescanWidth;
-    ctePars->postscanWidth = postscanWidth;
-    ctePars->parallelOverscanWidth = parallelOverscanWidth;
-    ctePars->imageRowsStart = 0;
-    //Ignore last 19 rows of parallel virtual overscan, i.e. the last 19 pixels in a column
-    ctePars->imageRowsEnd = ctePars->nRows <= ctePars->nRowsPerQuad - parallelOverscanWidth ? ctePars->nRows : ctePars->nRowsPerQuad - parallelOverscanWidth;
-
-    //find image boundaries
-    const unsigned nColumns = ctePars->nColumns;
-    const unsigned columnOffset = ctePars->columnOffset;
-    const unsigned nColumnsPerQuad = ctePars->nColumnsPerQuad;
-
-    if (ctePars->isSubarray)
-    {
-        ctePars->hasPostscan[0] = False; //always true
-        ctePars->hasPostscan[1] = False; //always true
-    }
-    else
-    {
-        ctePars->quadExists[0] = True;
-        ctePars->quadExists[1] = True;
-        ctePars->hasPrescan[0] = True;
-        ctePars->hasPrescan[1] = True;
-        ctePars->hasPostscan[0] = True;
-        ctePars->hasPostscan[1] = True;
-        ctePars->imageColumnsStart[0] = prescanWidth;
-        ctePars->imageColumnsEnd[0] = nColumnsPerQuad - postscanWidth;
-        ctePars->imageColumnsStart[1] = nColumnsPerQuad + prescanWidth; //skip 30 pixels of previous quads virtual overscan
-        ctePars->imageColumnsEnd[1] = ctePars->nColumnsPerChip - postscanWidth;
-        return;
-    }
-
-    //NOTE: For subarrays nColumnsPerChip & nColumnsPerQuad do NOT include the 60 & 30 extra postscan columns
-    if (columnOffset < nColumnsPerQuad) //image starts in 1st quad A or C
-    {
-        ctePars->quadExists[0] = True;
-        if (columnOffset < prescanWidth)
-        {
-            ctePars->hasPrescan[0] = True;
-            ctePars->imageColumnsStart[0] = prescanWidth - columnOffset;
-        }
-        else
-        {
-            ctePars->hasPrescan[0] = False;
-            ctePars->imageColumnsStart[0] = 0;
-        }
-
-        if (columnOffset + nColumns > nColumnsPerQuad) //image also extends into 2nd quad B or D
-        {
-            //NOTE: This code assumes that the extension into the 2nd quad does so beyond the prescan
-            //i.e. there is actually an image in the 2nd quad
-            assert(columnOffset + nColumns > nColumnsPerQuad + prescanWidth);
-
-            ctePars->quadExists[1] = True;
-            ctePars->hasPrescan[1] = True;
-            ctePars->imageColumnsEnd[0] = nColumnsPerQuad - columnOffset;
-            ctePars->imageColumnsStart[1] = ctePars->imageColumnsEnd[0] + prescanWidth;
-            ctePars->imageColumnsEnd[1] = nColumns;
-        }
-        else
-        {
-            ctePars->quadExists[1] = False;
-            ctePars->hasPrescan[1] = False;
-            ctePars->imageColumnsEnd[0] = nColumns;
-            ctePars->imageColumnsStart[1] = 0;
-            ctePars->imageColumnsEnd[1] = 0;
-        }
-   }
-   else if (columnOffset > nColumnsPerQuad) //image only exits in 2nd quad B or D
-   {
-       if (columnOffset - nColumnsPerQuad < prescanWidth)
-       {
-           ctePars->hasPrescan[0] = True;
-           ctePars->imageColumnsStart[0] = prescanWidth - (columnOffset - nColumnsPerQuad);
-       }
-       else
-       {
-           ctePars->hasPrescan[0] = False;
-           ctePars->imageColumnsStart[0] = 0;
-       }
-   }
-   else
-       assert(0); //image is subarray but exists in neither quad???
 }

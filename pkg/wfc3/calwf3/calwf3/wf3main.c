@@ -54,7 +54,7 @@ int main (int argc, char **argv) {
 			exit(0);
 		}
 		if (argv[i][0] == '-') {
-		    if (strncmp(argv[i], "--fast", 6) == 0)
+		    if (strncmp(argv[i], "--fast-cte", 10) == 0)
 		        fastCTE = YES;
 		    else
 		    {

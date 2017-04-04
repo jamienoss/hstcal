@@ -23,7 +23,7 @@ MLS 2015: read in the CTE parameters from the PCTETAB file
 # include "cte.h"
 */
 
-void initCTEParams(CTEParams * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns)
+void initCTEParamsFast(CTEParams * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns)
 {
     pars->nRows = _nRows;
     pars->nColumns = _nColumns;
@@ -101,7 +101,7 @@ void * newAndZero(void ** ptr, size_t count, size_t size)
     return *ptr;
 }
 
-void allocateCTEParams(CTEParams * pars)
+void allocateCTEParamsFast(CTEParams * pars)
 {
     newAndZero((void*)&pars->iz_data, pars->nColumns, sizeof(*pars->iz_data));
     newAndZero((void*)&pars->scale512, pars->nColumns, sizeof(*pars->scale512));
@@ -132,7 +132,7 @@ void allocateCTEParams(CTEParams * pars)
     assert(pars->dpdew_data);
 }
 
-void freeCTEParams(CTEParams * pars)
+void freeCTEParamsFast(CTEParams * pars)
 {
     delete((void*)&pars->iz_data);
     delete((void*)&pars->wcol_data);
@@ -162,7 +162,7 @@ void freeCTEParams(CTEParams * pars)
 
 /************ HELPER SUBROUTINES ****************************/
 
-int GetCTEPars (char *filename, CTEParams *pars) {
+int GetCTEParsFast (char *filename, CTEParams *pars) {
     /* Read the cte parameters from the reference table PCTETAB
 
        These are taken from the PCTETAB global header:
@@ -589,7 +589,8 @@ No.    Name         Type      Cards   Dimensions   Format
         'FIXROCR' : 1, #set to 1 for true, fix the readout cr's
 
  */
-int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
+
+int CompareCTEParamsFast(SingleGroup *group, CTEParams *pars) {
 
     extern int status;
 
@@ -728,7 +729,7 @@ void ctewarn (char *message) {
 
     char line[SZ_LINE+1];
 
-    /* Use macro for beginning of Warning message */
+    // Use macro for beginning of Warning message
     sprintf(line,"%s",WARN_PREFIX);
     strcat (line,message);
 
@@ -739,7 +740,7 @@ void cteerror (char *message) {
 
     char line[SZ_LINE+1];
 
-    /* Use macro for beginning of Warning message */
+    // Use macro for beginning of Warning message
     sprintf(line,"%s",ERR_PREFIX);
     strcat (line,message);
 
@@ -750,3 +751,4 @@ void ctemessage (char *message) {
     printf ("%s\n", message);
         fflush(stdout);
 }
+
