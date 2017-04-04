@@ -17,13 +17,13 @@
 # include "../../../../ctegen2/ctegen2.h"
 #include <assert.h>
 
-static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int make_amp_array(const ACSInfo *acs, const SingleGroup *input,
                           const int amp,
                           const int xbeg, const int ybeg,
                           SingleGroup * output
                           );
 
-static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *input,
                             const int amp,
                             const int xbeg, const int ybeg,
                             SingleGroup * output
@@ -171,7 +171,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 
     /* loop over amps on this chip and do CTE correction */
     numamps = strlen(ccdamp);
-    for (i = 0; i < numamps; i++) {
+    for (unsigned i = 0; i < numamps; ++i) {
         sprintf(MsgText, "(pctecorr) Performing CTE correction for amp %c",
                 ccdamp[i]);
         trlmessage(MsgText);
@@ -311,7 +311,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 }
 
 
-static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int make_amp_array(const ACSInfo *acs, const SingleGroup *input,
                           const int amp,
                           const int xbeg, const int ybeg,
                           SingleGroup * output) {
@@ -345,10 +345,10 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                     return status;
                 }
 
-                if (im->sci.data.data && output->sci.data.data)
-                    Pix(output->sci.data, j, i) = Pix(im->sci.data, c, r);
-                if (im->err.data.data && output->err.data.data)
-                    Pix(output->err.data, j, i) = Pix(im->err.data, c, r);
+                if (input->sci.data.data && output->sci.data.data)
+                    Pix(output->sci.data, j, i) = Pix(input->sci.data, c, r);
+                if (input->err.data.data && output->err.data.data)
+                    Pix(output->err.data, j, i) = Pix(input->err.data, c, r);
             }
         }
     } else {
@@ -365,54 +365,12 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
 /* unmake_amp_array does the opposite of make_amp_array, it takes amp array
    views and puts them back into the single group in the right order.
 */
-static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
+static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *input,
                             const int amp,
                             const int xbeg, const int ybeg,
                             SingleGroup * output) {
 
-    extern int status;
-
-    /* variables for the image row/column we want */
-    int r, c;
-    const unsigned arr1 = im->sci.data.tot_ny;
-    const unsigned arr2 = im->sci.data.tot_nx;
-
-    if (acs->detector == WFC_CCD_DETECTOR) {
-        for (unsigned i = 0; i < arr1; ++i) {
-            for (unsigned j = 0; j < arr2; ++j) {
-                if (amp == AMP_A) {
-                    r = ybeg + arr1 - i - 1;
-                    c = xbeg + j;
-                } else if (amp == AMP_B) {
-                    r = ybeg + arr1 - i - 1;
-                    c = xbeg + arr2 - j - 1;
-                } else if (amp == AMP_C) {
-                    r = ybeg + i;
-                    c = xbeg + j;
-                } else if (amp == AMP_D) {
-                    r = ybeg + i;
-                    c = xbeg + arr2 - j -1;
-                } else {
-                    trlerror("Amp number not recognized, must be 0-3.");
-                    status = ERROR_RETURN;
-                    return status;
-                }
-
-                if (im->sci.data.data && output->sci.data.data)
-                    Pix(output->sci.data, c, r) = Pix(im->sci.data, j, i);
-
-                if (im->err.data.data && output->err.data.data)
-                    Pix(output->err.data, c, r) = Pix(im->err.data, j, i);
-            }
-        }
-    } else {
-        sprintf(MsgText,"(pctecorr) Detector not supported: %i",acs->detector);
-        trlerror(MsgText);
-        status = ERROR_RETURN;
-        return status;
-    }
-
-    return status;
+    return make_amp_array(acs, input, amp, xbeg, ybeg, output);
 }
 
 
