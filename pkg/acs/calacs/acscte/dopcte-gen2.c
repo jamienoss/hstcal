@@ -81,9 +81,6 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
     trlmessage(MsgText);
 #   endif
 
-    /* iteration variable */
-    int i, k, m;
-
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */
     int numamps;               /* number of amps on chip */
     int amp;                   /* index amp A:0, B:1, etc. */
@@ -125,15 +122,6 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
     /**************** read and calculate parameters of CTE model ************/
     /* structure to hold CTE parameters from file */
      ACSCTEParams pars;
-/*     initCTEParams(&pars.baseParams, TRAPS, nRows, nColumns);
-     addPtr(&ptrReg, &pars.baseParams, &freeCTEParams);
-     allocateCTEParams(&pars.baseParams);
-     if (GetCTEPars (acs->pcte.name, &pars.baseParams))
-     {
-         freeAll(&ptrReg);
-         return (status);
-     }
-     */
     if (PixCteParams(acs->pcte.name, acs->expstart, &pars)) {
         return (status);
     }
@@ -225,21 +213,11 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
         pars.baseParams.columnOffset = 0;
         pars.baseParams.rowOffset = 0;
 
-
-        /* allocate space to hold this amp's data in its various forms */
-        //amp_sci_arr = (double *) malloc(nRows * nColumns * sizeof(double));
-        /*amp_err_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_sig_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_nse_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        amp_cor_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-        cte_frac_arr = (double *) malloc(amp_arr1 * amp_arr2 * sizeof(double));
-*/
-
         //This is used for the final output
-       SingleGroup raw;
-       initSingleGroup(&raw);
-       addPtr(&ptrReg, &raw, &freeSingleGroup);
-       allocSingleGroup/*SciOnly*/(&raw, nColumns, nRows, False);
+        SingleGroup raw;
+        initSingleGroup(&raw);
+        addPtr(&ptrReg, &raw, &freeSingleGroup);
+        allocSingleGroup/*SciOnly*/(&raw, nColumns, nRows, False);
 
         /* read data from the SingleGroup into an array containing data from
            just one amp */
@@ -250,49 +228,27 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
 
 
         //copy to column major storage
-       SingleGroup columnMajorImage;
-       initSingleGroup(&columnMajorImage);
-       addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-       allocSingleGroup/*SciOnly*/(&columnMajorImage, nColumns, nRows, False);
-       assert(!copySingleGroup(&columnMajorImage, &raw, COLUMNMAJOR));
+        SingleGroup columnMajorImage;
+        initSingleGroup(&columnMajorImage);
+        addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
+        allocSingleGroup/*SciOnly*/(&columnMajorImage, nColumns, nRows, False);
+        assert(!copySingleGroup(&columnMajorImage, &raw, COLUMNMAJOR));
 
         /***CALCULATE THE SMOOTH READNOISE IMAGE***/
-       trlmessage("CTE: Calculating smooth readnoise image");
-       SingleGroup smoothedImage;
-      initSingleGroup(&smoothedImage);
-      addPtr(&ptrReg, &smoothedImage, &freeSingleGroup);
-      allocSingleGroup/*SciOnly*/(&smoothedImage, nColumns, nRows, False);
-       setStorageOrder(&smoothedImage, COLUMNMAJOR);
+        trlmessage("CTE: Calculating smooth readnoise image");
+        SingleGroup smoothedImage;
+        initSingleGroup(&smoothedImage);
+        addPtr(&ptrReg, &smoothedImage, &freeSingleGroup);
+        allocSingleGroup/*SciOnly*/(&smoothedImage, nColumns, nRows, False);
+        setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
-
-        /* fill cte_frac_arr
-
-           To match cte_frac_arr: v8.1.3  ->  v8.2
-               k*amp_arr2+m  -> (k+20)*(amp_arr2+24) + (m+24)
-
-           offsety (LTV2) always 0 for fullframe and -1 for 2K subarray.
-        */
-       /* for (k = 0; k < amp_arr1; k++) {
-            for (m = 0; m < amp_arr2; m++) {
-                cte_frac_arr[k*amp_arr2 + m] = pars.cte_frac *
-                    pars.col_scale[m*NAMPS + amp] *
-                    ((double) k - acs->offsety) / CTE_REF_ROW;
-            }
-        }
-*/
         /* do some smoothing on the data so we don't amplify the read noise.
            data should be in electrons. */
-       if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars.baseParams, pars.baseParams.rn_amp /*pars.rn_clip*/, max_threads, acs->verbose))
-       {
-           freeAll(&ptrReg);
-           return (status);
-       }
-     /*   if (DecomposeRN(nRows, nColumns, amp_sci_arr,
-                        pars.rn_clip, pars.noise_model,
-                        amp_sig_arr, amp_nse_arr)) {
+        if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars.baseParams, pars.baseParams.rn_amp /*pars.rn_clip*/, max_threads, acs->verbose))
+        {
+            freeAll(&ptrReg);
             return (status);
-        }
-*/
+       }
 
        SingleGroup trapPixelMap;
        initSingleGroup(&trapPixelMap);
@@ -313,56 +269,37 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup *x)
            return status;
        }
        freePtr(&ptrReg, &trapPixelMap);
-     /*   if (FixYCte(nRows, nColumns, amp_sig_arr, amp_cor_arr, pars.sim_nit,
-                    pars.shft_nit, pars.sub_thresh, cte_frac_arr, pars.levels,
-                    dpde_l, chg_leak_lt, chg_open_lt, acs->onecpu)) {
-            return (status);
-        }
-*/
 
-
-        /* add readout noise back and convert corrected data back to DN.
+       /* add readout noise back and convert corrected data back to DN.
            add 10% correction to error in quadrature. */
-        for (k = 0; k < nRows; k++) {
-            for (m = 0; m < nColumns; m++) {
+        for (unsigned k = 0; k < nRows; ++k)
+        {
+            for (unsigned m = 0; m < nColumns; ++m)
+            {
 
-                float delta = (PixColumnMajor(cteCorrectedImage->sci.data,k,m) - PixColumnMajor(smoothedImage.sci.data,k,m));///ccdgain;
-                //amp_cor_arr[k*nColumns + m] = amp_cor_arr[k*nColumns + m] +
-                  //  amp_nse_arr[k*nColumns + m];
+                float delta = (PixColumnMajor(cteCorrectedImage->sci.data,k,m) - PixColumnMajor(smoothedImage.sci.data,k,m));
 
                 temp_err = 0.1 * fabs(delta - Pix(raw.sci.data, m, k));
                 Pix(raw.sci.data,m,k) += delta;
 
-                //temp_err = 0.1 * fabs(amp_cor_arr[k*nColumns + m] -
-                                   //   amp_sci_arr[k*nColumns + m]);
                 float err2 = Pix(raw.err.data,m, k);
                 err2 *= err2;
                 Pix(raw.err.data,m, k) = sqrt(err2 + temp_err*temp_err);
-               // amp_err_arr[k*nColumns + m] = sqrt(
-                //    pow(amp_err_arr[k*nColumns + m],2) + pow(temp_err,2));
             }
         }
 
         /* put the CTE corrected data back into the SingleGroup structure */
-        if (unmake_amp_array(acs, &raw, amp, amp_xbeg, amp_ybeg,
-                x)) {
+        if (unmake_amp_array(acs, &raw, amp, amp_xbeg, amp_ybeg, x))
+        {
+            freeAll(&ptrReg);
             return (status);
         }
 
         /* free space used by our amp arrays */
-       /* free(amp_sci_arr);
-        free(amp_err_arr);
-        free(amp_sig_arr);
-        free(amp_nse_arr);
-        free(amp_cor_arr);
-        free(cte_frac_arr);
-        */
         freePtr(&ptrReg, &raw);
         freePtr(&ptrReg, &columnMajorImage);
         freePtr(&ptrReg, &smoothedImage);
-
         freePtr(&ptrReg, &pars.baseParams);
-        //freeCTEParams(CTEParams * &pars.baseParams);
     }
 
     if (acs->printtime) {
@@ -381,9 +318,6 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
 
     extern int status;
 
-    /* iteration variables */
-    int i, j;
-
     /* variables for the image row/column we want */
     int r, c;
 
@@ -391,8 +325,8 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
     const unsigned arr2 = output->sci.data.tot_nx;
 
     if (acs->detector == WFC_CCD_DETECTOR) {
-        for (i = 0; i < arr1; i++) {
-            for (j = 0; j < arr2; j++) {
+        for (unsigned i = 0; i < arr1; ++i) {
+            for (unsigned j = 0; j < arr2; ++j) {
                 if (amp == AMP_A) {
                     r = ybeg + arr1 - i - 1;
                     c = xbeg + j;
@@ -415,8 +349,6 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                     Pix(output->sci.data, j, i) = Pix(im->sci.data, c, r);
                 if (im->err.data.data && output->err.data.data)
                     Pix(output->err.data, j, i) = Pix(im->err.data, c, r);
-                //amp_sci_array[i*arr2 + j] = Pix(im->sci.data, c, r);
-                //amp_err_array[i*arr2 + j] = Pix(im->err.data, c, r);
             }
         }
     } else {
@@ -440,17 +372,14 @@ static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
 
     extern int status;
 
-    /* iteration variables */
-    int i, j;
-
     /* variables for the image row/column we want */
     int r, c;
     const unsigned arr1 = im->sci.data.tot_ny;
     const unsigned arr2 = im->sci.data.tot_nx;
 
     if (acs->detector == WFC_CCD_DETECTOR) {
-        for (i = 0; i < arr1; i++) {
-            for (j = 0; j < arr2; j++) {
+        for (unsigned i = 0; i < arr1; ++i) {
+            for (unsigned j = 0; j < arr2; ++j) {
                 if (amp == AMP_A) {
                     r = ybeg + arr1 - i - 1;
                     c = xbeg + j;
@@ -474,8 +403,6 @@ static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
 
                 if (im->err.data.data && output->err.data.data)
                     Pix(output->err.data, c, r) = Pix(im->err.data, j, i);
-                //Pix(im->sci.data, c, r) = (float) amp_sci_array[i*arr2 + j];
-                //Pix(im->err.data, c, r) = (float) amp_err_array[i*arr2 + j];
             }
         }
     } else {
