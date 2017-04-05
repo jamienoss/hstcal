@@ -197,7 +197,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     }
 
     /*READ IN THE CTE PARAMETER TABLE*/
-    CTEParams cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
+    CTEParamsFast cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
     addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
     allocateCTEParamsFast(&cte_pars);
@@ -206,10 +206,20 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freeAll(&ptrReg);
         return (status);
     }
+    //Compute scale fraction
+    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
+          APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
+          INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
+          CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
+          OVER 3 YEARS AFTER INSTALLATION*/
+    cte_pars.scale_frac = (wf3.expstart - cte_pars.cte_date0)/(cte_pars.cte_date1 - cte_pars.cte_date0);
 
     if (verbose){
         PrRefInfo ("pctetab", wf3.pctetab.name, wf3.pctetab.pedigree,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
+
+        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g", cte_pars.scale_frac);
+        trlmessage(MsgText);
     }
 
     //Store sizes - these are corrected for subarrays in getSubarray()
@@ -260,7 +270,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup rowMajorImage;
         initSingleGroup(&rowMajorImage);
         addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
-        allocSingleGroupSciOnly(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, False);
+        allocSingleGroupExts(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, SCIEXT, False);
         SingleGroup * image = &rowMajorImage;
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
         //align raw image for later comparison with aligned corrected image
@@ -299,7 +309,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup columnMajorImage;
         initSingleGroup(&columnMajorImage);
         addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-        allocSingleGroupSciOnly(&columnMajorImage, nColumns, nRows, False);
+        allocSingleGroupExts(&columnMajorImage, nColumns, nRows, SCIEXT, False);
         assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
         image = &columnMajorImage;
 
@@ -350,9 +360,9 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
-        allocSingleGroupSciOnly(&trapPixelMap, nColumns, nRows, False);
+        allocSingleGroupExts(&trapPixelMap, nColumns, nRows, SCIEXT, False);
         setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-        if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose, wf3.expstart))
+        if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose))
         {
             freeAll(&ptrReg);
             return status;
@@ -465,7 +475,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
 
 /********************* SUPPORTING SUBROUTINES *****************************/
-int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * ctePars)
+int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParamsFast * ctePars)
 {
     /* Do an additional bias correction using the residual bias level measured for each amplifier from the
      * steadiest pixels in the horizontal overscan and subtracted from the pixels for that amplifier.
@@ -518,7 +528,7 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParams * 
     return(status);
 }
 
-int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overscanType, unsigned nOverscanColumnsToIgnore, CTEParams * ctePars)
+int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum OverscanType overscanType, unsigned nOverscanColumnsToIgnore, CTEParamsFast * ctePars)
 {
     //WARNING - assumes column major storage order
     assert(image->sci.data.storageOrder == COLUMNMAJOR);
@@ -594,7 +604,7 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 }
 
 //NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
-int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
+int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
 {
     extern int status;
 
@@ -653,13 +663,13 @@ int getSubarray(SingleGroup * image, CTEParams * ctePars, WF3Info * wf3)
     return status;
 }
 
-int unalignAmps(SingleGroup * image, CTEParams * ctePars)
+int unalignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 {
     //The function alignAmps is symmetric, wrapping as aid when reading logic
     return alignAmps(image, ctePars);
 }
 
-int alignAmps(SingleGroup * image, CTEParams * ctePars)
+int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 {
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);
@@ -775,7 +785,7 @@ int getCCDChipId(int * value, char * fileName, char * ename, int ever)
     return status;
 }
 
-int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
+int outputImage(char * fileName, SingleGroup * image, CTEParamsFast * ctePars)
 {
     extern int status;
 
@@ -795,7 +805,7 @@ int outputImage(char * fileName, SingleGroup * image, CTEParams * ctePars)
     return status;
 }
 
-void findAlignedQuadImageBoundaries(CTEParams * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
+void findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
 {
     //WARNING this assumes quads have already been aligned
 

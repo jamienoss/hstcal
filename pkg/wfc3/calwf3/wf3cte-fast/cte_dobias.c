@@ -9,7 +9,7 @@
 # include "wf3err.h"
 # include "cte-fast.h"
 
-int doNewCTEBias( SingleGroup * image, char * filename, CTEParams * ctePars, Bool verbose)
+int doNewCTEBias( SingleGroup * image, char * filename, CTEParamsFast * ctePars, Bool verbose)
 {
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);

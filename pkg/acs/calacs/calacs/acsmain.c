@@ -22,12 +22,14 @@ int main(int argc, char **argv) {
 	int quiet = NO;		/* suppress STDOUT messages? */
 	int onecpu = NO;		/* suppress OpenMP usage? */
     int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
+    char pcteTabNameFromCmd[255];
+    *pcteTabNameFromCmd = '\0';
 	int too_many = NO;	/* too many command-line arguments? */
 	int i, j;		/* loop indexes */
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int CalAcsRun (char *, int, int, int, int, int, int);
+	int CalAcsRun (char *, int, int, int, int, int, int, const char * pcteTabNameFromCmd);
     void WhichError (int);
     
 	/* Initialize status to OK and MsgText to null */
@@ -58,7 +60,18 @@ int main(int argc, char **argv) {
             gen1cte = YES;
             continue;
         }
-
+		else if (strncmp(argv[i], "--pctetab", 9) == 0)
+        {
+            if (i + 1 > argc - 1)
+            {
+                printf("ERROR - no pctetab specified\n");
+                exit(1);
+            }
+            strcpy(pcteTabNameFromCmd, argv[i+1]);
+            printf("WARNING: using pcteTab file '%s'\n", pcteTabNameFromCmd);
+            ++i;
+            continue;
+        }
         if (argv[i][0] == '-')
         {
             for (j = 1;  argv[i][j] != '\0';  j++)
@@ -89,7 +102,7 @@ int main(int argc, char **argv) {
 	
 	if (input[0] == '\0' || too_many) {
         printf ("CALACS Version %s\n",ACS_CAL_VER_NUM);
-	    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-1] [--gen1cte] input \n");
+	    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-1] [--gen1cte] [--pctetab <path>] input \n");
 	    exit (ERROR_RETURN);
 	}
 
@@ -101,12 +114,17 @@ int main(int argc, char **argv) {
 	
 	if (gen1cte == YES)
     {
-        sprintf (MsgText, "WARNING: using older gen1 CTE algorithm");
-        trlmessage (MsgText);
+        sprintf(MsgText, "WARNING: using older gen1 CTE algorithm");
+        trlwarn(MsgText);
+    }
+	if (*pcteTabNameFromCmd != '\0')
+    {
+        sprintf(MsgText, "WARNING: using cmd line specified PCTETAB file: '%s'", pcteTabNameFromCmd);
+        trlwarn(MsgText);
     }
 
 	/* Call the CALACS main program */
-	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, onecpu, gen1cte)) {
+	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, onecpu, gen1cte, pcteTabNameFromCmd)) {
 
         if (status == NOTHING_TO_DO){
             /* If there is just nothing to do, 

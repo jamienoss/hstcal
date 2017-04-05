@@ -81,33 +81,33 @@ typedef struct {
     char descrip2[256]; /*descrip from table row, not read in for cte purposes*/
     char cte_name[256]; /*name of cte algorithm */
     char cte_ver[256]; /*version of algorithm */
-} CTEParams;
+} CTEParamsFast;
 
-int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParams * cte);
-int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, SingleGroup * trapPixelMap, CTEParams * cte);
+int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParamsFast * cte);
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, SingleGroup * trapPixelMap, CTEParamsFast * cte);
 
-int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows);
 
-int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
+int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts);
 
 Bool correctCROverSubtraction(float * const traps, const double * const pix_model, const double * const pix_observed,
         const unsigned nRows, const double threshHold);
 
-int populateTrapPixelMap(SingleGroup * input, CTEParams * params, const int verbose, const double expstart);
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * ctePars, double readNoiseAmp, unsigned maxThreads , int verbose);
+int populateTrapPixelMap(SingleGroup * input, CTEParamsFast * params, const int verbose);
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double readNoiseAmp, unsigned maxThreads , int verbose);
 double find_dadjFast(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
 
 //helpers
 void * newAndZero(void ** ptr, const size_t count, const size_t size);
 void delete(void ** ptr);
-void initCTEParamsFast(CTEParams * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns);
-void allocateCTEParamsFast(CTEParams * pars);
-void freeCTEParamsFast(CTEParams * pars);
+void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns);
+void allocateCTEParamsFast(CTEParamsFast * pars);
+void freeCTEParamsFast(CTEParamsFast * pars);
 
-int CompareCTEParamsFast(SingleGroup * input, CTEParams * params);
-int GetCTEParsFast (char *filename, CTEParams * params);
+int CompareCTEParamsFast(SingleGroup * input, CTEParamsFast * params);
+int GetCTEParsFast (char *filename, CTEParamsFast * params);
 void ctewarn (char *message);
 void cteerror (char *message);
 void ctemessage (char *message);

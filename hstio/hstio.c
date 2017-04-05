@@ -849,11 +849,26 @@ int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize)
     return 0;
 }
 
-int allocSingleGroupSciOnly(SingleGroup *x, int i, int j, Bool zeroInitialize)
+int allocSingleGroupExts(SingleGroup *x, int i, int j, unsigned extension, Bool zeroInitialize)
 {
-    if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize) ||
-            allocFloatHdrData(&(x->sci),i,j, zeroInitialize))
+    if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize))
         return -1;
+
+    if (extension & SCIEXT)
+    {
+        if (allocFloatHdrData(&(x->sci),i,j, zeroInitialize))
+            return -1;
+    }
+    if (extension & ERREXT)
+    {
+        if (allocFloatHdrData(&(x->err),i,j, zeroInitialize))
+            return -1;
+    }
+    if (extension & DQEXT)
+    {
+        if (allocShortHdrData(&(x->dq),i,j, zeroInitialize))
+            return -1;
+    }
     return 0;
 }
 
@@ -867,6 +882,53 @@ void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder)
     group->dq.data.storageOrder = storageOrder;
 
 }
+
+void copyOffsetFloatData(float * output, const float * input,
+        unsigned nRows, unsigned nColumns,
+		unsigned outputOffset, unsigned inputOffset,
+		unsigned outputSkipLength, unsigned inputSkipLength)
+{
+    //WARNING - assumes row major storage
+#ifdef _OPENMP
+    #pragma omp parallel for shared(output, input) schedule(static)
+#endif
+    for (unsigned ithRow = 0; ithRow < nRows; ++ithRow)
+        memcpy(output + outputOffset + ithRow*outputSkipLength, input + inputOffset + ithRow*inputSkipLength, nColumns*sizeof(*output));
+}
+void copyOffsetShortData(short * output, const short * input,
+        unsigned nRows, unsigned nColumns,
+		unsigned outputOffset, unsigned inputOffset,
+		unsigned outputSkipLength, unsigned inputSkipLength)
+{
+    //WARNING - assumes row major storage
+#ifdef _OPENMP
+    #pragma omp parallel for shared(output, input) schedule(static)
+#endif
+    for (unsigned ithRow = 0; ithRow < nRows; ++ithRow)
+        memcpy(output + outputOffset + ithRow*outputSkipLength, input + inputOffset + ithRow*inputSkipLength, nColumns*sizeof(*output));
+}
+
+void copyOffsetSingleGroup(SingleGroup * output, const SingleGroup * input,
+        unsigned nRows, unsigned nColumns,
+		unsigned outputOffset, unsigned inputOffset,
+		unsigned outputSkipLength, unsigned inputSkipLength)
+{
+    if (!output || !input)
+        return;
+    //WARNING - assumes row major storage
+    assert(output->sci.data.storageOrder == ROWMAJOR && output->sci.data.storageOrder == ROWMAJOR);
+
+    //sci data
+    if (output->sci.data.data && input->sci.data.data)
+        copyOffsetFloatData(output->sci.data.data, input->sci.data.data, nRows, nColumns, outputOffset, inputOffset, outputSkipLength, inputSkipLength);
+    //err data
+    if (output->err.data.data && input->err.data.data)
+        copyOffsetFloatData(output->err.data.data, input->err.data.data, nRows, nColumns, outputOffset, inputOffset, outputSkipLength, inputSkipLength);
+    //dq data
+    if (output->dq.data.data && input->dq.data.data)
+        copyOffsetShortData(output->dq.data.data, input->dq.data.data, nRows, nColumns, outputOffset, inputOffset, outputSkipLength, inputSkipLength);
+}
+
 
 int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder)
 {

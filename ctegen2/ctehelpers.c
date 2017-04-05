@@ -23,7 +23,7 @@ MLS 2015: read in the CTE parameters from the PCTETAB file
 # include "cte.h"
 */
 
-void initCTEParamsFast(CTEParams * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns)
+void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns)
 {
     pars->nRows = _nRows;
     pars->nColumns = _nColumns;
@@ -101,7 +101,7 @@ void * newAndZero(void ** ptr, size_t count, size_t size)
     return *ptr;
 }
 
-void allocateCTEParamsFast(CTEParams * pars)
+void allocateCTEParamsFast(CTEParamsFast * pars)
 {
     newAndZero((void*)&pars->iz_data, pars->nColumns, sizeof(*pars->iz_data));
     newAndZero((void*)&pars->scale512, pars->nColumns, sizeof(*pars->scale512));
@@ -132,7 +132,7 @@ void allocateCTEParamsFast(CTEParams * pars)
     assert(pars->dpdew_data);
 }
 
-void freeCTEParamsFast(CTEParams * pars)
+void freeCTEParamsFast(CTEParamsFast * pars)
 {
     delete((void*)&pars->iz_data);
     delete((void*)&pars->wcol_data);
@@ -162,7 +162,7 @@ void freeCTEParamsFast(CTEParams * pars)
 
 /************ HELPER SUBROUTINES ****************************/
 
-int GetCTEParsFast (char *filename, CTEParams *pars) {
+int GetCTEParsFast (char *filename, CTEParamsFast *pars) {
     /* Read the cte parameters from the reference table PCTETAB
 
        These are taken from the PCTETAB global header:
@@ -590,7 +590,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
  */
 
-int CompareCTEParamsFast(SingleGroup *group, CTEParams *pars) {
+int CompareCTEParamsFast(SingleGroup *group, CTEParamsFast *pars) {
 
     extern int status;
 

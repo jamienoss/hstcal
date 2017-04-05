@@ -37,6 +37,7 @@ int main (int argc, char **argv) {
     int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
     int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
     char pcteTabNameFromCmd[255];
+    *pcteTabNameFromCmd = '\0';
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -113,7 +114,6 @@ int main (int argc, char **argv) {
                     exit(1);
                 }
                 strcpy(pcteTabNameFromCmd, argv[i+1]);
-                printf("WARNING: using pcteTab file '%s'\n", pcteTabNameFromCmd);
                 ++i;
                 continue;
             }
@@ -155,8 +155,13 @@ int main (int argc, char **argv) {
 
     if (gen1cte == YES)
     {
-        sprintf (MsgText, "WARNING: using older gen1 CTE algorithm");
-        trlmessage (MsgText);
+        sprintf (MsgText, "Using older gen1 CTE algorithm");
+        trlwarn (MsgText);
+    }
+    if (*pcteTabNameFromCmd != '\0')
+    {
+        sprintf (MsgText, "Using cmd line specified PCTETAB file: '%s'", pcteTabNameFromCmd);
+        trlwarn (MsgText);
     }
 
     /* Was no calibration switch specified on command line?

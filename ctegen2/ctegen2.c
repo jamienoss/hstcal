@@ -98,7 +98,7 @@ void freeAll(PtrRegister * reg)
     reg->freeFunctions[0] = NULL;
 }
 
-int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParams * cte)
+int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * cte)
 {
     //WARNING - assumes column major storage order
     assert(trapPixelMap->sci.data.storageOrder == COLUMNMAJOR);
@@ -221,7 +221,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
   the ttrap reference to the image array has to be -1 for C
   */
 
-int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
+int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows)
 {
     extern int status;
@@ -317,7 +317,7 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
     return status;
 }
 
-int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParams * const cte,
+int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts)
 {
     extern int status;
@@ -385,7 +385,7 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
     return redo;
 }
 
-int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int verbose, const double expstart)
+int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const int verbose)
 {
     /*These are already in the parameter structure
          int     Ws              the number of traps < 999999, taken from pctetab read
@@ -418,20 +418,8 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
 
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
+    const double cteScale = cte->scale_frac;
 
-    /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
-          APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
-          INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
-          CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
-          OVER 3 YEARS AFTER INSTALLATION*/
-    // cte scaling based on observation date
-    const double cteScale =  (expstart - cte->cte_date0)/ (cte->cte_date1 - cte->cte_date0);
-    cte->scale_frac = cteScale; // save to param structure for header update
-    if (verbose)
-    {
-        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g",cteScale);
-        trlmessage(MsgText);
-    }
     //double ff_by_col[nColumns][4];
 
    /* for (unsigned i = 0; i < nColumns; ++i){
@@ -492,7 +480,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParams * cte, const int 
     return(status);
 }
 
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParams * ctePars, double ampReadNoise, unsigned maxThreads, int verbose)
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double ampReadNoise, unsigned maxThreads, int verbose)
 {
     /*
        This routine will read in a RAZ image and will output the smoothest

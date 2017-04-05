@@ -133,6 +133,10 @@ enum StorageOrder
     COLUMNMAJOR
 };
 
+#define SCIEXT 0x01
+#define ERREXT 0x02
+#define DQEXT 0x04
+
 typedef struct {
         short *buffer;          /* the pointer to the beg. of the buffer */
         int buffer_size;        /* the size of the full 2-d array in the */
@@ -734,14 +738,20 @@ IShortHdrData }
 void initSingleGroup(SingleGroup *);
 int allocSingleGroup(SingleGroup *, int, int, Bool zeroInitialize);
 int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize);
-int allocSingleGroupSciOnly(SingleGroup *x, int i, int j, Bool zeroInitialize);
+int allocSingleGroupExts(SingleGroup *x, int i, int j, unsigned extension, Bool zeroInitialize);
 void freeSingleGroup(SingleGroup *);
 void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder);
 int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum StorageOrder targetStorageOrder);
+void copyOffsetSingleGroup(SingleGroup * output, const SingleGroup * input, unsigned nRows, unsigned nColumns, unsigned outputOffset, unsigned inputOffset, unsigned outputSkipLength, unsigned inputSkipLength);
 # define IMultiGroup { 0, NULL }
 void initMultiGroup(MultiGroup *);
 int allocMultiGroup(MultiGroup *, int);
 void freeMultiGroup(MultiGroup *);
+
+int copyFloatData(FloatTwoDArray * target, const FloatTwoDArray * source, enum StorageOrder targetStorageOrder);
+void copyOffsetFloatData(float * output, const float * input, unsigned nRows, unsigned nColumns, unsigned outputOffset, unsigned inputOffset, unsigned outputSkipLength, unsigned inputSkipLength);
+int copyShortData(ShortTwoDArray * target, const ShortTwoDArray * source, enum StorageOrder targetStorageOrder);
+void copyOffsetShortData(short * output, const short * input, unsigned nRows, unsigned nColumns, unsigned outputOffset, unsigned inputOffset, unsigned outputSkipLength, unsigned inputSkipLength);
 
 # define ISingleNicmosGroup { NULL, 0, NULL, IFloatHdrData, IFloatHdrData, \
 IShortHdrData, IShortHdrData, IFloatHdrData }

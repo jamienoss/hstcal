@@ -40,7 +40,7 @@ typedef struct {
     double chg_leak[NUM_PSI * NUM_LOGQ];
     int levels[NUM_LEV];
     double col_scale[AMP_COLS * NAMPS];
-    CTEParams baseParams;
+    CTEParamsFast baseParams;
 } ACSCTEParams;
 
 /* function prototypes */
@@ -68,6 +68,5 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             const int levels[NUM_LEV], const double dpde_l[NUM_LEV],
             const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
             const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV], int onecpu);
-//int sim_colreadout_l(double * pixo, const double * pixf, const CTEParams * cte, const unsigned nRows);
 
 #endif
