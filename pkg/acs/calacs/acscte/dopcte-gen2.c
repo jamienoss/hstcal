@@ -110,8 +110,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
             return (status);
         }
 
-        nRows = amp_ysize;//arr1
-        nColumns = amp_xsize;//arr2
+        nRows = amp_ysize;
+        nColumns = amp_xsize;
 
         /**************** read and calculate parameters of CTE model ************/
         if (!headerRead)
@@ -139,7 +139,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
             pars.rowOffset = 0;//amp_ybeg;//acs->offsety;
         }
 
-        pars.scale_frac = 0.041907;//(acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0);
+        //warning remove fabs
+        pars.scale_frac = fabs((acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0));//0.041907;//(acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0);
         if (!headerWritten)// && (acs->chip == 2 || acs->subarray == YES))
         {
             headerWritten = True;
@@ -179,7 +180,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
             freeAll(&ptrReg);
             return (status);
         }
-/*
+
         //copy to column major storage
         SingleGroup columnMajorImage;
         initSingleGroup(&columnMajorImage);
@@ -224,9 +225,9 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
         // add 10% correction to error in quadrature.
         double temp_err;
-//#ifdef _OPENMP
-//        #pragma omp parallel for shared(nRows, nColumns, cteCorrectedImage, smoothedImage, raw) schedule(static)
-//#endif
+#ifdef _OPENMP
+        #pragma omp parallel for shared(nRows, nColumns, cteCorrectedImage, smoothedImage, ampImage) schedule(static)
+#endif
         //This loop order is row major as more row major storage is accessed than column.
         //MORE: look into worth splitting out ops - prob needs a order swap (copy) so perhaps not worth it.
         for (unsigned k = 0; k < nRows; ++k)
@@ -243,7 +244,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
                 Pix(ampImage.err.data, m, k) = sqrt(err2 + temp_err*temp_err);
             }
         }
-*/
+
         // put the CTE corrected data back into the SingleGroup structure
         if (alignAmp(&ampImage, ampID))//unmake_amp_array(image, &raw, acs, amp, nRows, nColumns, amp_xbeg, amp_ybeg))
         {
@@ -254,8 +255,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
         /* free space used by our amp arrays */
         freePtr(&ptrReg, &ampImage);
-        //freePtr(&ptrReg, &columnMajorImage);
-        //freePtr(&ptrReg, &smoothedImage);
+        freePtr(&ptrReg, &columnMajorImage);
+        freePtr(&ptrReg, &smoothedImage);
     }
 
     if (acs->printtime)
