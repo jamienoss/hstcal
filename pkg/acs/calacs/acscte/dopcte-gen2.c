@@ -91,6 +91,14 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     Bool headerWritten = False;
     CTEParamsFast pars;
     addPtr(&ptrReg, &pars, &freeCTEParamsFast);
+    unsigned nScaleTableColumns = 8412;
+    initCTEParamsFast(&pars, TRAPS, 0, 0, nScaleTableColumns);
+    allocateCTEParamsFast(&pars);
+    if (GetCTEParsFast (acs->pcteTabNameFromCmd, &pars))
+    {
+        freeAll(&ptrReg);
+        return (status);
+    }
 
     for (unsigned i = 0; i < numamps; ++i)
     {
@@ -117,8 +125,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         if (!headerRead)
         {
             headerRead = True;
-            initCTEParamsFast(&pars, TRAPS, nRows, nColumns);
-            allocateCTEParamsFast(&pars);
+           // initCTEParamsFast(&pars, TRAPS, nRows, nColumns);
+           // allocateCTEParamsFast(&pars);
             if (GetCTEParsFast (acs->pcteTabNameFromCmd, &pars))
             {
                 freeAll(&ptrReg);

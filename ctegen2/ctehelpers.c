@@ -13,17 +13,7 @@ MLS 2015: read in the CTE parameters from the PCTETAB file
 #include "wf3.h" //need to remove this dependency
 #include "ctegen2.h"
 
-/*
-# include "hstio.h"
-# include "ximio.h"
-# include "xtables.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "wf3err.h"
-# include "cte.h"
-*/
-
-void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns)
+void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns, const unsigned _nScaleTableColumns)
 {
     pars->nRows = _nRows;
     pars->nColumns = _nColumns;
@@ -47,10 +37,11 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsig
     pars->nRowsPerChip = 0;
     pars->nColumnsPerQuad = 0;
     pars->nRowsPerQuad = 0;
+
     pars->isSubarray = False;
     pars->refAndIamgeBinsIdenticle = True;
-    pars->rowOffset = 0;
-    pars->columnOffset = 0;
+    pars->rowOffset = 0; //from begining of chip
+    pars->columnOffset = 0; //from begining of chip
     pars->imageRowsStart = 0;
     pars->imageRowsEnd = 0;
     pars->postscanWidth = 0;
@@ -66,6 +57,7 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsig
         pars->quadExists[i] = False;
     }
 
+    pas->nScaleTableColumns = 0;
     pars->iz_data = NULL;
     pars->wcol_data = NULL;
     pars->scale512 = NULL;
@@ -103,25 +95,15 @@ void * newAndZero(void ** ptr, size_t count, size_t size)
 
 void allocateCTEParamsFast(CTEParamsFast * pars)
 {
-    newAndZero((void*)&pars->iz_data, pars->nColumns, sizeof(*pars->iz_data));
-    newAndZero((void*)&pars->scale512, pars->nColumns, sizeof(*pars->scale512));
-    newAndZero((void*)&pars->scale1024, pars->nColumns, sizeof(*pars->scale1024));
-    newAndZero((void*)&pars->scale1536, pars->nColumns, sizeof(*pars->scale1536));
-    newAndZero((void*)&pars->scale2048, pars->nColumns, sizeof(*pars->scale2048));
+    newAndZero((void*)&pars->iz_data, pars->nScaleTableColumns, sizeof(*pars->iz_data));
+    newAndZero((void*)&pars->scale512, pars->nScaleTableColumns, sizeof(*pars->scale512));
+    newAndZero((void*)&pars->scale1024, pars->nScaleTableColumns, sizeof(*pars->scale1024));
+    newAndZero((void*)&pars->scale1536, pars->nScaleTableColumns, sizeof(*pars->scale1536));
+    newAndZero((void*)&pars->scale2048, pars->nScaleTableColumns, sizeof(*pars->scale2048));
     newAndZero((void*)&pars->wcol_data, pars->nTraps, sizeof(*pars->wcol_data));
     newAndZero((void*)&pars->qlevq_data, pars->nTraps, sizeof(*pars->qlevq_data));
     newAndZero((void*)& pars->dpdew_data, pars->nTraps, sizeof(*pars->dpdew_data));
 
-/*
-    pars->iz_data = calloc(pars->nRows, sizeof(*pars->iz_data));
-    pars->scale512 = calloc(pars->nRows, sizeof(*pars->scale512));
-    pars->scale1024 = calloc(pars->nRows, sizeof(*pars->scale1024));
-    pars->scale1536 = calloc(pars->nRows, sizeof(*pars->scale1536));
-    pars->scale2048 = calloc(pars->nRows, sizeof(*pars->scale2048));
-    pars->wcol_data = calloc(pars->nTraps, sizeof(*pars->wcol_data));
-    pars->qlevq_data = calloc(pars->nTraps, sizeof(*pars->qlevq_data));
-    pars->dpdew_data = calloc(pars->nTraps, sizeof(*pars->dpdew_data));
-*/
     assert(pars->iz_data);
     assert(pars->wcol_data);
     assert(pars->scale512);
@@ -482,7 +464,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
     /* read data from table */
     /* loop over table rows */
-    for (unsigned j = 0; j < pars->nColumns; ++j)
+    for (unsigned j = 0; j < pars->nScaleTableColumns; ++j)
     {
         /* get trap from this row */
     	pars->iz_data[j] = c_tbeGetInt(tbl_ptr, iz_ptr, j+1);

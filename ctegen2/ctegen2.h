@@ -60,6 +60,8 @@ typedef struct {
     unsigned prescanWidth;
     unsigned parallelOverscanWidth;
 
+    unsigned nScaleTableColumns; //length of the arrays iz_data, scale512, scale1024, scale1536, scale2048 (nColumns both chips)
+
     //Bool indicating whether image exists in 1st and/or 2nd quad
     //0 index => A or C quad
     //1 indeax => B or D quad

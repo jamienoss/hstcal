@@ -198,7 +198,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParamsFast cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
-    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS);
+    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS);
     addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
     allocateCTEParamsFast(&cte_pars);
     if (GetCTEParsFast (wf3.pctetab.name, &cte_pars))
