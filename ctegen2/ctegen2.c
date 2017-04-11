@@ -128,7 +128,6 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
     const FloatTwoDArray * cteCprof = &cte->cprof->data;
 
 #ifdef _OPENMP
-    unsigned nThreads = omp_get_num_procs();
 #pragma omp parallel shared(input, output, cte, cteRprof, cteCprof, trapPixelMap)
 #endif
 {
@@ -438,6 +437,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
 #ifdef _OPENMP
     #pragma omp for schedule(static)
 #endif
+
     for (unsigned i = 0; i < cte->nScaleTableColumns; ++i)
     {
         unsigned column = cte->iz_data[i] - cte->razColumnOffset; //which column to scale
@@ -447,18 +447,17 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
         trapColumnScale[1] = cte->scale1024[i];
         trapColumnScale[2] = cte->scale1536[i];
         trapColumnScale[3] = cte->scale2048[i];
-        /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
-          Index is figured on the final size of the image
-          not the current size. Moved above
-         */
+        //CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
+        //  Index is figured on the final size of the image
+        //  not the current size.
         for (unsigned j = 0; j < nRows; ++j)
         {
-            ro = j / 512.0; /*ro can be zero, it's an index*/
+            ro = j / 512.0; //ro can be zero, it's an index
             if (ro > 2.999)
-            	ro = 2.999; // only 4 quads, 0 to 3
+                ro = 2.999; // only 4 quads, 0 to 3
             else if (ro < 0)
-            	ro = 0;
-            io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
+                ro = 0;
+            io = (int) floor(ro); //force truncation towards 0 for pos numbers
             cte_j = (j+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
             PixColumnMajor(trapPixelMap->sci.data, j, column) = cte_i * cte_j * cteScale;

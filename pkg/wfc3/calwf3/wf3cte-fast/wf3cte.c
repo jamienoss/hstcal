@@ -31,7 +31,7 @@
 
 
 int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
-        RefFileInfo *refnames, int printtime, int verbose, int onecpu) {
+        RefFileInfo *refnames, int printtime, int verbose, unsigned nThreads) {
 
     /*
     input: filename
@@ -76,7 +76,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     extern int status;
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
-    int max_threads=1;
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);
 
@@ -105,21 +104,21 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
      */
     clock_t begin = (double)clock();
 
-    /*CONTAIN PARALLEL PROCESSING TO A SINGLE THREAD AS USER OPTION*/
-#   ifdef _OPENMP
+#ifdef _OPENMP
     trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
-    if (onecpu){
-        omp_set_dynamic(0);
-        max_threads=1;
-        sprintf(MsgText,"onecpu == TRUE, Using only %i threads/cpu", max_threads);
-    } else {
-        omp_set_dynamic(0);
-        max_threads = omp_get_num_procs(); /*be nice, use 1 less than avail?*/
-        sprintf(MsgText,"Setting max threads to %i of %i cpus",max_threads, omp_get_num_procs());
+    omp_set_dynamic(0);
+    unsigned ompMaxThreads = omp_get_num_procs();
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
     }
-    omp_set_num_threads(max_threads);
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
     trlmessage(MsgText);
-#   endif
+#endif
 
 
     /* COPY COMMAND-LINE ARGUMENTS INTO WF3. */
@@ -198,7 +197,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParamsFast cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
-    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, max_threads);
+    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, nThreads);
     addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
     if ((status = allocateCTEParamsFast(&cte_pars)))
     {
@@ -470,7 +469,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
         if (verbose){
-            sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/max_threads,max_threads);
+            sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/nThreads,nThreads);
             trlmessage(MsgText);
         }
 

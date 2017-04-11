@@ -58,7 +58,7 @@
 
  */
 
-int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int onecpu, int fastCTE) {
+int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, unsigned nThreads, Bool fastCTE) {
 
     extern int status;
 
@@ -90,7 +90,7 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int
     void FreeRefFile (RefFileInfo *);
     int  CCDRefInit (WF3Info *, CCD_Switch *, RefFileInfo *);
     int  WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
-    int  WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
+    int  WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned);
     int  WF3ccd (char *, char *, CCD_Switch *, RefFileInfo *, int, int);
     int  WF32d (char *, char *,CCD_Switch *, RefFileInfo *, int, int);
     int  GetAsnMember (AsnInfo *, int, int, int, WF3Info *);
@@ -265,9 +265,10 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int
 
                      */
 
+                    int onecpu = nThreads == 1 ? YES : NO;
                     int ret = status;
                     if (fastCTE)
-                        ret = WF3cteFast(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu);
+                        ret = WF3cteFast(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, nThreads);
                     else
                         ret = WF3cte(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu);
                     if (ret)

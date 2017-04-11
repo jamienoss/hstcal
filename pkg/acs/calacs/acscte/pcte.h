@@ -21,9 +21,10 @@
 
 #define NAMPS 4
 #define AMP_COLS 2048
+#define N_COLUMNS_PER_FULLFRAME AMP_COLS
 
 //New params needed for second gen CTE correction algorithm
-#define TRAPS 6675 //max number of traps per column = rows in pctetab[1]
+#define TRAPS 999//6675 //max number of traps per column = rows in pctetab[1]
 # define SZ_LINE           255 //from calwf3/msg.h
 
 /* structure to hold CTE parameters from reference file */

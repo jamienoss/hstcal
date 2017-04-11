@@ -32,7 +32,7 @@ static void FreeNames (char *, char *, char *, char *);
 void FreeRefFile (RefFileInfo *);
 void InitRefFile (RefFileInfo *);
 int WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
-int WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
+int WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned);
 int MkName (char *, char *, char *, char *, char *, int);
 void WhichError (int);
 int CompareNumbers (int, int, char *);
@@ -57,6 +57,7 @@ int main (int argc, char **argv) {
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP with onely one thread, if available? */
     int fastCTE = NO; // Use high performance CTE implementation
+    unsigned nThreads = 0;
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -112,6 +113,17 @@ int main (int argc, char **argv) {
                 fastCTE = YES;
                 continue;
             }
+            else if (strncmp(argv[i], "-nThreads", 9) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - number of threads not specified\n");
+                    exit(1);
+                }
+                ++i;
+                nThreads = argv[i];
+                continue;
+            }
             else
             {
                 for (j = 1;  argv[i][j] != '\0';  j++) {
@@ -140,7 +152,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  WF3cte [-v] [-1] [--fast] input output\n");
+        printf ("syntax:  WF3cte [-v] [-1] [--fast [-nThreads <N>]] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -158,10 +170,25 @@ int main (int argc, char **argv) {
 
     if (fastCTE)
     {
-        sprintf (MsgText, "WARNING: using high performance CTE implementation \n"
+        sprintf(MsgText, "Using high performance CTE implementation \n"
                 "Best results obtained when built with --O3 configure option");
-        trlmessage (MsgText);
+        trlwarn(MsgText);
     }
+    else if (nThreads)
+    {
+        sprintf(MsgText, "cmd options -nThreads requires --fast");
+        trlerror(MsgText);
+        exit(1);
+    }
+
+    if (onecpu && nThreads != 1)
+    {
+        sprintf(MsgText, "cmd options -1 & -nThreads cannot be used together");
+        trlerror(MsgText);
+        exit(1);
+    }
+    if (!nThreads)
+        nThreads = 1;
 
     /* The number of input and output files must be the same. */
     if (CompareNumbers (n_in, n_out, "output"))
@@ -221,7 +248,7 @@ int main (int argc, char **argv) {
             /* CALIBRATE THE CURRENT INPUT FILE. */
             int ret = status;
             if (fastCTE)
-                ret = WF3cteFast(input, output, &cte_sw, &refnames, printtime, verbose, onecpu);
+                ret = WF3cteFast(input, output, &cte_sw, &refnames, printtime, verbose, nThreads);
             else
                 ret = WF3cte(input, output, &cte_sw, &refnames, printtime, verbose, onecpu);
 

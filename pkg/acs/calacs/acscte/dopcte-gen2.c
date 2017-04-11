@@ -37,24 +37,31 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
     extern int status;
 
+    if (acs->subarray != 0)
+    {
+        sprintf(MsgText, "UNIMPLEMENTED - CTE correction for fullframe images only");
+        trlerror(MsgText);
+        return (status = -1);
+    }
+
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);
-
-    int max_threads=1;
-#   ifdef _OPENMP
+    unsigned nThreads = acs->nThreads;
+#ifdef _OPENMP
     trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
-    if (acs->onecpu){
-        omp_set_dynamic(0);
-        max_threads=1;
-        sprintf(MsgText,"onecpu == TRUE, Using only %i threads/cpu", max_threads);
-    } else {
-        omp_set_dynamic(0);
-        max_threads = omp_get_num_procs(); /*be nice, use 1 less than avail?*/
-        sprintf(MsgText,"Setting max threads to %i of %i cpus",max_threads, omp_get_num_procs());
+    omp_set_dynamic(0);
+    unsigned ompMaxThreads = omp_get_num_procs();
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
     }
-    omp_set_num_threads(max_threads);
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
     trlmessage(MsgText);
-#   endif
+#endif
 
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */
     int numamps;               /* number of amps on chip */
@@ -87,12 +94,11 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
     /* loop over amps on this chip and do CTE correction */
     numamps = strlen(ccdamp);
-    Bool headerRead = False;
-    Bool headerWritten = False;
     CTEParamsFast pars;
     addPtr(&ptrReg, &pars, &freeCTEParamsFast);
     unsigned nScaleTableColumns = 8412;
-    initCTEParamsFast(&pars, TRAPS, 0, 0, nScaleTableColumns, max_threads);
+    initCTEParamsFast(&pars, TRAPS, 0, 0, nScaleTableColumns, nThreads);
+    pars.refAndIamgeBinsIdenticle = True;
     if ((status = allocateCTEParamsFast(&pars)))
     {
         freeAll(&ptrReg);
@@ -105,6 +111,26 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         freeAll(&ptrReg);
         return (status);
     }
+    //warning remove fabs
+    pars.scale_frac = fabs((acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0));//0.041907;//(acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0);
+
+    if (PutKeyDbl(chipImage->globalhdr, "PCTEFRAC", pars.scale_frac, "CTE scaling factor"))
+    {
+        trlerror("(pctecorr) Error writing PCTEFRAC to image header");
+        freeAll(&ptrReg);
+        return (status = HEADER_PROBLEM);
+    }
+
+    sprintf(MsgText, "(pctecorr) Read noise level PCTERNCL: %f", pars.rn_amp);
+    trlmessage(MsgText);
+    sprintf(MsgText, "(pctecorr) Readout simulation forward modeling iterations PCTENFOR: %i",
+            pars.n_forward);
+    trlmessage(MsgText);
+    sprintf(MsgText, "(pctecorr) Number of iterations used in the parallel transfer PCTENPAR: %i",
+            pars.n_par);
+    trlmessage(MsgText);
+    sprintf(MsgText, "(pctecorr) CTE_FRAC: %f", pars.scale_frac);
+    trlmessage(MsgText);
 
     for (unsigned i = 0; i < numamps; ++i)
     {
@@ -126,70 +152,26 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
         nRows = amp_ysize;
         nColumns = amp_xsize;
-
-        /**************** read and calculate parameters of CTE model ************/
-        if (!headerRead)
-        {
-            headerRead = True;
-           // initCTEParamsFast(&pars, TRAPS, nRows, nColumns);
-           // allocateCTEParamsFast(&pars);
-            if (GetCTEParsFast (acs->pcteTabNameFromCmd, &pars))
-            {
-                freeAll(&ptrReg);
-                return (status);
-            }
-
-            pars.nRows = nRows;
-            pars.nColumns = nColumns;
-            pars.nRowsPerFullFrame = nRows;
-            pars.nColumnsPerFullFrame = nColumns;
-            pars.nColumnsPerChip = pars.nColumnsPerFullFrame/2;
-            pars.nRowsPerChip = pars.nRowsPerFullFrame;
-            pars.nColumnsPerQuad = pars.nColumnsPerFullFrame/4;
-            pars.nRowsPerQuad = pars.nRowsPerFullFrame;
-            pars.isSubarray = acs->subarray;
-            pars.refAndIamgeBinsIdenticle = True;
-            pars.columnOffset = 0;//amp_xbeg;//acs->offsetx;
-            pars.rowOffset = 0;//amp_ybeg;//acs->offsety;
-        }
-
-        //warning remove fabs
-        pars.scale_frac = fabs((acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0));//0.041907;//(acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0);
-        if (!headerWritten)// && (acs->chip == 2 || acs->subarray == YES))
-        {
-            headerWritten = True;
-            if (PutKeyDbl(chipImage->globalhdr, "PCTEFRAC", pars.scale_frac, "CTE scaling factor"))
-            {
-                trlerror("(pctecorr) Error writing PCTEFRAC to image header");
-                freeAll(&ptrReg);
-                return (status = HEADER_PROBLEM);
-            }
-
-            sprintf(MsgText, "(pctecorr) Read noise level PCTERNCL: %f", pars.rn_amp);
-            trlmessage(MsgText);
-            sprintf(MsgText, "(pctecorr) Readout simulation forward modeling iterations PCTENFOR: %i",
-                    pars.n_forward);
-            trlmessage(MsgText);
-            sprintf(MsgText, "(pctecorr) Number of iterations used in the parallel transfer PCTENPAR: %i",
-                    pars.n_par);
-            trlmessage(MsgText);
-            sprintf(MsgText, "(pctecorr) CTE_FRAC: %f", pars.scale_frac);
-            trlmessage(MsgText);
-        }
+        pars.nRows = nRows;
+        pars.nColumns = nColumns;
+        pars.columnOffset = 0;//amp_xbeg;//acs->offsetx;
+        pars.rowOffset = 0;//amp_ybeg;//acs->offsety;
+        pars.razColumnOffset = i*nColumns;
 
         //This is used for the final output
         SingleGroup ampImage;
         initSingleGroup(&ampImage);
         addPtr(&ptrReg, &ampImage, &freeSingleGroup);
-        allocSingleGroupExts(&ampImage, nColumns, nRows, SCIEXT | ERREXT, False);
-
-       // if (ampID != AMP_C)
-         //   continue;
+        if (allocSingleGroupExts(&ampImage, nColumns, nRows, SCIEXT | ERREXT, False) != 0)
+        {
+            freeAll(&ptrReg);
+            return (status = OUT_OF_MEMORY);
+        }
 
         // read data from the SingleGroup into an array containing data from
         // just one amp
         extractAmp(&ampImage, chipImage, ampID);
-        if (alignAmp(&ampImage, ampID))
+        if ((status = alignAmp(&ampImage, ampID)))
         {
             freeAll(&ptrReg);
             return (status);
@@ -199,7 +181,11 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         SingleGroup columnMajorImage;
         initSingleGroup(&columnMajorImage);
         addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-        allocSingleGroupExts(&columnMajorImage, nColumns, nRows, SCIEXT | ERREXT, False);
+        if (allocSingleGroupExts(&columnMajorImage, nColumns, nRows, SCIEXT | ERREXT, False) != 0)
+        {
+            freeAll(&ptrReg);
+            return (status = OUT_OF_MEMORY);
+        }
         assert(!copySingleGroup(&columnMajorImage, &ampImage, COLUMNMAJOR));
 
         //CALCULATE THE SMOOTH READNOISE IMAGE
@@ -207,11 +193,15 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         SingleGroup smoothedImage;
         initSingleGroup(&smoothedImage);
         addPtr(&ptrReg, &smoothedImage, &freeSingleGroup);
-        allocSingleGroupExts(&smoothedImage, nColumns, nRows, SCIEXT | ERREXT, False);
+        if (allocSingleGroupExts(&smoothedImage, nColumns, nRows, SCIEXT | ERREXT, False) != 0)
+        {
+            freeAll(&ptrReg);
+            return (status = OUT_OF_MEMORY);
+        }
         setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
         // do some smoothing on the data so we don't amplify the read noise.
-        if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars, pars.rn_amp, acs->verbose))
+        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, &pars, pars.rn_amp, acs->verbose)))
         {
             freeAll(&ptrReg);
             return (status);
@@ -220,9 +210,13 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
        SingleGroup trapPixelMap;
        initSingleGroup(&trapPixelMap);
        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
-       allocSingleGroupExts(&trapPixelMap, nColumns, nRows, SCIEXT | ERREXT, False);
+       if (allocSingleGroupExts(&trapPixelMap, nColumns, nRows, SCIEXT | ERREXT, False) != 0)
+       {
+           freeAll(&ptrReg);
+           return (status = OUT_OF_MEMORY);
+       }
        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-       if (populateTrapPixelMap(&trapPixelMap, &pars, acs->verbose))
+       if ((status = populateTrapPixelMap(&trapPixelMap, &pars, acs->verbose)))
        {
            freeAll(&ptrReg);
            return status;
@@ -230,7 +224,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
        //perform CTE correction
        SingleGroup * cteCorrectedImage = &columnMajorImage;
-       if (inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, &pars))
+       if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, &pars)))
        {
            freeAll(&ptrReg);
            return status;
@@ -260,7 +254,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         }
 
         // put the CTE corrected data back into the SingleGroup structure
-        if (alignAmp(&ampImage, ampID))//unmake_amp_array(image, &raw, acs, amp, nRows, nColumns, amp_xbeg, amp_ybeg))
+        if ((status = alignAmp(&ampImage, ampID)))//unmake_amp_array(image, &raw, acs, amp, nRows, nColumns, amp_xbeg, amp_ybeg))
         {
             freeAll(&ptrReg);
             return (status);

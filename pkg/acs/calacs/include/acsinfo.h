@@ -26,6 +26,7 @@ typedef struct {
     int verbose;                    /* print additional info? */
     int onecpu;                     /* turn off OpenMP usage if True */
     int gen1cte;                    // revert to using gen1cte algorithm (default to NO - i.e. gen2cte)
+    unsigned nThreads;
 
     /* keywords and file names for reference files */
     RefFileInfo *refnames;

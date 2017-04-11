@@ -25,12 +25,13 @@ int main (int argc, char **argv) {
 	int quiet = NO;		/* suppress STDOUT messages? */
 	int too_many = NO;	/* too many command-line arguments? */
 	int onecpu = NO;  /* suppress openmp usage by using only 1 thread?*/
-    int fastCTE = NO; // Use high performance CTE implementation
+    Bool fastCTE = False; // Use high performance CTE implementation
+    unsigned nThreads = 0;
     int i, j;		/* loop indexes */
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int  CalWf3Run  (char *, int, int, int, int, int, int);
+	int  CalWf3Run  (char *, int, int, int, int, unsigned, Bool);
 	void WhichError (int);
 
 	/* Initialize status to OK and MsgText to null */
@@ -59,6 +60,17 @@ int main (int argc, char **argv) {
 		        fastCTE = YES;
 		        continue;
 		    }
+		    else if (strncmp(argv[i], "-nThreads", 9) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - number of threads not specified\n");
+                    exit(1);
+                }
+                ++i;
+                nThreads = argv[i];
+                continue;
+            }
 		    else
 		    {
                 for (j = 1;  argv[i][j] != '\0';  j++) {
@@ -91,7 +103,7 @@ int main (int argc, char **argv) {
 	}
 
 	if (input[0] == '\0' || too_many) {
-		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--fast] input \n");
+		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--fast-cte [-nThreads <N>]] input \n");
 		exit (ERROR_RETURN);
 	}
 
@@ -101,15 +113,30 @@ int main (int argc, char **argv) {
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode (quiet);
 
-	if (fastCTE)
+    if (fastCTE)
     {
         sprintf (MsgText, "WARNING: using high performance CTE implementation \n"
                 "Best results obtained when built with --O3 configure option");
         trlmessage (MsgText);
     }
+    else if (nThreads)
+    {
+        sprintf(MsgText, "cmd options -nThreads requires --fast");
+        trlerror(MsgText);
+        exit(1);
+    }
+
+    if (onecpu && nThreads != 1)
+    {
+        sprintf(MsgText, "cmd options -1 & -nThreads cannot be used together");
+        trlerror(MsgText);
+        exit(1);
+    }
+    if (!nThreads)
+        nThreads = 1;
 
 	/* Call the CALWF3 main program */
-	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, onecpu, fastCTE)) {
+	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, nThreads, fastCTE)) {
 
 		if (status == NOTHING_TO_DO) {
 			/* If there is just nothing to do, 

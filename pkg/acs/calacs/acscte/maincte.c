@@ -36,6 +36,7 @@ int main (int argc, char **argv) {
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
     int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
+    unsigned nThreads = 0;
     char pcteTabNameFromCmd[255];
     *pcteTabNameFromCmd = '\0';
     int too_many = 0;	/* too many command-line arguments? */
@@ -106,6 +107,17 @@ int main (int argc, char **argv) {
                 gen1cte = YES;
                 continue;
             }
+            else if (strncmp(argv[i], "-nThreads", 9) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - number of threads not specified\n");
+                    exit(1);
+                }
+                ++i;
+                nThreads = argv[i];
+                continue;
+            }
             else if (strncmp(argv[i], "--pctetab", 9) == 0)
             {
                 if (i + 1 > argc - 1)
@@ -113,8 +125,8 @@ int main (int argc, char **argv) {
                     printf("ERROR - no pctetab specified\n");
                     exit(1);
                 }
-                strcpy(pcteTabNameFromCmd, argv[i+1]);
                 ++i;
+                strcpy(pcteTabNameFromCmd, argv[i]);
                 continue;
             }
             else
@@ -143,7 +155,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  acscte [-t] [-v] [-q] [-1] [--gen1cte] [--pctetab <path>] input output\n");
+        printf ("syntax:  acscte [-t] [-v] [-q] [-1] [--gen1cte|-nThreads <N>] [--pctetab <path>] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
