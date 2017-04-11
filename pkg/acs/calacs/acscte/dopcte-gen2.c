@@ -92,9 +92,15 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     CTEParamsFast pars;
     addPtr(&ptrReg, &pars, &freeCTEParamsFast);
     unsigned nScaleTableColumns = 8412;
-    initCTEParamsFast(&pars, TRAPS, 0, 0, nScaleTableColumns);
-    allocateCTEParamsFast(&pars);
-    if (GetCTEParsFast (acs->pcteTabNameFromCmd, &pars))
+    initCTEParamsFast(&pars, TRAPS, 0, 0, nScaleTableColumns, max_threads);
+    if ((status = allocateCTEParamsFast(&pars)))
+    {
+        freeAll(&ptrReg);
+        return (status);
+    }
+    char * cteTabFilename = (acs->pcteTabNameFromCmd && *acs->pcteTabNameFromCmd != '\0') ?
+            acs->pcteTabNameFromCmd : acs->pcte.name;
+    if (GetCTEParsFast (cteTabFilename, &pars))
     {
         freeAll(&ptrReg);
         return (status);
@@ -205,7 +211,7 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
         // do some smoothing on the data so we don't amplify the read noise.
-        if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars, pars.rn_amp, max_threads, acs->verbose))
+        if (cteSmoothImage(&columnMajorImage, &smoothedImage, &pars, pars.rn_amp, acs->verbose))
         {
             freeAll(&ptrReg);
             return (status);

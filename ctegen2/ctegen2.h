@@ -16,12 +16,15 @@ void initPtrRegister(PtrRegister * reg);
 void addPtr(PtrRegister * reg, void * ptr, void * freeFunc);
 void freePtr(PtrRegister * reg, void * ptr);
 void freeAll(PtrRegister * reg);
+void freeReg(PtrRegister * reg);
 
 typedef struct {
+    unsigned maxThreads;
     int noise_mit; /*read noise mitigation algorithm*/
     int cte_len; // max length of cte trail
     int fix_rocr; /*make allowance for readout cosmic rays*/
     unsigned nTraps;
+    unsigned nScaleTableColumns; //length of the arrays iz_data, scale512, scale1024, scale1536, scale2048 (nColumns both chips)
     unsigned nRows;
     unsigned nColumns;
     int n_forward; // number of forward modeling iterations
@@ -33,11 +36,11 @@ typedef struct {
     double cte_date1; /*date of cte model pinning mjd*/
     double scale_frac; /*scaling of cte model relative to ctedate1*/
 
-    unsigned nRowsPerFullFrame; //includes 19 overscan
-    unsigned nColumnsPerFullFrame; //includes 100 pre & 120 post overscan
-    unsigned nColumnsPerChip; //nColumnsPerFullFrame / 2 (includes 50 pre +60 post overscan for fullframe only)
+    unsigned nRowsPerFullFrame; //includes overscan
+    unsigned nColumnsPerFullFrame; //includes pre post overscan
+    unsigned nColumnsPerChip; //nColumnsPerFullFrame / 2
     unsigned nRowsPerChip; //nRowsPerFullFrame
-    unsigned nColumnsPerQuad; //nColumnsPerChip / 2 (includes 25 pre + 30 post overscan for fullframe only)
+    unsigned nColumnsPerQuad; //nColumnsPerChip / 2
     unsigned nRowsPerQuad; //nRowsPerFullFrame
 
     //subarray offset positions within chip
@@ -45,6 +48,9 @@ typedef struct {
     Bool refAndIamgeBinsIdenticle;
     unsigned rowOffset;
     unsigned columnOffset;
+
+    //column alignment relative to old RAZ format, both chips side by side ordered CDAB
+    unsigned razColumnOffset;
 
     //Actual image boundaries, i.e. excluding all overscan. Index is per quad
     //This is in reference to an aligned chip (amps bottom left corners, e.g. C & D or A & B)
@@ -60,7 +66,6 @@ typedef struct {
     unsigned prescanWidth;
     unsigned parallelOverscanWidth;
 
-    unsigned nScaleTableColumns; //length of the arrays iz_data, scale512, scale1024, scale1536, scale2048 (nColumns both chips)
 
     //Bool indicating whether image exists in 1st and/or 2nd quad
     //0 index => A or C quad
@@ -98,14 +103,14 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
         const unsigned nRows, const double threshHold);
 
 int populateTrapPixelMap(SingleGroup * input, CTEParamsFast * params, const int verbose);
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double readNoiseAmp, unsigned maxThreads , int verbose);
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double readNoiseAmp, int verbose);
 double find_dadjFast(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
 
 //helpers
 void * newAndZero(void ** ptr, const size_t count, const size_t size);
 void delete(void ** ptr);
-void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns);
-void allocateCTEParamsFast(CTEParamsFast * pars);
+void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns, const unsigned _nScaleTableColumns, const unsigned maxThreads);
+int allocateCTEParamsFast(CTEParamsFast * pars);
 void freeCTEParamsFast(CTEParamsFast * pars);
 
 int CompareCTEParamsFast(SingleGroup * input, CTEParamsFast * params);

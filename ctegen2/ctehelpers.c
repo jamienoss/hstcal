@@ -13,11 +13,15 @@ MLS 2015: read in the CTE parameters from the PCTETAB file
 #include "wf3.h" //need to remove this dependency
 #include "ctegen2.h"
 
-void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsigned _nRows, const unsigned _nColumns, const unsigned _nScaleTableColumns)
+void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps,
+        const unsigned _nRows, const unsigned _nColumns,
+        const unsigned _nScaleTableColumns, const unsigned _maxThreads)
 {
+    pars->maxThreads = _maxThreads;
     pars->nRows = _nRows;
     pars->nColumns = _nColumns;
     pars->nTraps = _nTraps;
+    pars->nScaleTableColumns = _nScaleTableColumns;
 
     pars->noise_mit=0;
     pars->thresh=0;
@@ -48,6 +52,9 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsig
     pars->prescanWidth = 0;
     pars->parallelOverscanWidth = 0;
 
+    //alignment relative to old RAZ format, both chips side by side ordered CDAB
+    pars->razColumnOffset = 0;
+
     for (unsigned i = 0; i < 2; ++i)
     {
         pars->imageColumnsStart[i] = 0;
@@ -57,7 +64,6 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsig
         pars->quadExists[i] = False;
     }
 
-    pas->nScaleTableColumns = 0;
     pars->iz_data = NULL;
     pars->wcol_data = NULL;
     pars->scale512 = NULL;
@@ -93,25 +99,78 @@ void * newAndZero(void ** ptr, size_t count, size_t size)
     return *ptr;
 }
 
-void allocateCTEParamsFast(CTEParamsFast * pars)
+int allocateCTEParamsFast(CTEParamsFast * pars)
 {
-    newAndZero((void*)&pars->iz_data, pars->nScaleTableColumns, sizeof(*pars->iz_data));
-    newAndZero((void*)&pars->scale512, pars->nScaleTableColumns, sizeof(*pars->scale512));
-    newAndZero((void*)&pars->scale1024, pars->nScaleTableColumns, sizeof(*pars->scale1024));
-    newAndZero((void*)&pars->scale1536, pars->nScaleTableColumns, sizeof(*pars->scale1536));
-    newAndZero((void*)&pars->scale2048, pars->nScaleTableColumns, sizeof(*pars->scale2048));
-    newAndZero((void*)&pars->wcol_data, pars->nTraps, sizeof(*pars->wcol_data));
-    newAndZero((void*)&pars->qlevq_data, pars->nTraps, sizeof(*pars->qlevq_data));
-    newAndZero((void*)& pars->dpdew_data, pars->nTraps, sizeof(*pars->dpdew_data));
+    PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
 
-    assert(pars->iz_data);
-    assert(pars->wcol_data);
-    assert(pars->scale512);
-    assert(pars->scale1024);
-    assert(pars->scale1536);
-    assert(pars->scale2048);
-    assert(pars->qlevq_data);
-    assert(pars->dpdew_data);
+    void * tmp = NULL;
+    tmp = newAndZero((void*)&pars->iz_data, pars->nScaleTableColumns, sizeof(*pars->iz_data));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)&pars->scale512, pars->nScaleTableColumns, sizeof(*pars->scale512));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)&pars->scale1024, pars->nScaleTableColumns, sizeof(*pars->scale1024));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)&pars->scale1536, pars->nScaleTableColumns, sizeof(*pars->scale1536));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)&pars->scale2048, pars->nScaleTableColumns, sizeof(*pars->scale2048));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)&pars->wcol_data, pars->nTraps, sizeof(*pars->wcol_data));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)&pars->qlevq_data, pars->nTraps, sizeof(*pars->qlevq_data));
+    addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+    tmp = newAndZero((void*)& pars->dpdew_data, pars->nTraps, sizeof(*pars->dpdew_data));addPtr(&ptrReg, tmp, &delete);
+    if (!tmp)
+    {
+        freeAll(&ptrReg);
+        trlerror ("Out of memory.\n");
+        return (OUT_OF_MEMORY);
+    }
+
+    freeReg(&ptrReg);
+    return 0;
 }
 
 void freeCTEParamsFast(CTEParamsFast * pars)
@@ -150,7 +209,7 @@ int GetCTEParsFast (char *filename, CTEParamsFast *pars) {
        These are taken from the PCTETAB global header:
        CTE_NAME - name of cte algorithm
        CTE_VER - version number of cte algorithm
-       CTEDATE0 - date of wfc3/uvis installation in HST, in fractional years
+       CTEDATE0 - date of instrument installation in HST, in fractional years
        CTEDATE1 - reference date of CTE model pinning, in fractional years
 
        PCTETLEN - max length of CTE trail
@@ -165,10 +224,10 @@ int GetCTEParsFast (char *filename, CTEParamsFast *pars) {
 Filename: wfc3_cte.fits
 No.    Name         Type      Cards   Dimensions   Format
 0    PRIMARY     PrimaryHDU      21   ()
-1    QPROF       BinTableHDU     16   999R x 3C    ['i', 'i', 'i']
-2    SCLBYCOL    BinTableHDU     20   8412R x 5C   ['i', 'e', 'e', 'e', 'e']
-3    RPROF       ImageHDU        12   (999, 100)   float32
-4    CPROF       ImageHDU        12   (999, 100)   float32
+1    QPROF       BinTableHDU     16   <pars->nTraps>R x 3C    ['i', 'i', 'i']
+2    SCLBYCOL    BinTableHDU     20   <pars->nScaleTableColumns> x 5C   ['i', 'e', 'e', 'e', 'e']
+3    RPROF       ImageHDU        12   (<pars->nTraps>, 100)   float32
+4    CPROF       ImageHDU        12   (<pars->nTraps>, 100)   float32
 
      */
 

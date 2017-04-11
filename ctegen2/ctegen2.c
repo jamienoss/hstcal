@@ -97,6 +97,20 @@ void freeAll(PtrRegister * reg)
     reg->freeFunctions[0](reg->freeFunctions);
     reg->freeFunctions[0] = NULL;
 }
+void freeReg(PtrRegister * reg)
+{
+    if (!reg || reg->length == 0)
+        return;
+
+    reg->cursor = 0;
+    reg->length = 0;
+    // free 'itself'
+    reg->freeFunctions[0](reg->ptrs);
+    reg->ptrs[0] = NULL;
+    reg->freeFunctions[0](reg->freeFunctions);
+    reg->freeFunctions[0] = NULL;
+}
+
 
 int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * cte)
 {
@@ -387,32 +401,22 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
 
 int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const int verbose)
 {
-    /*These are already in the parameter structure
-         int     Ws              the number of traps < 999999, taken from pctetab read
-         int     q_w[TRAPS];     the run of charge with level  cte->qlevq_data[]
-         float   dpde_w[TRAPS];  the run of charge loss with level cte->dpdew_data[]
-
-         float   rprof_wt[TRAPS][100]; the emission probability as fn of downhill pixel, TRAPS=999
-         float   cprof_wt[TRAPS][100]; the cumulative probability cprof_t( 1)  = 1. - rprof_t(1)
-
-         The rprof array gives the fraction of charge that comes out of every parallel serial-shift
-         the cummulative distribution in cprof then tells you what's left
-
-   */
    /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
      THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
      IN THE REFERENCE FILE*/
     /*FOR REFERENCE TO JAY ANDERSON'S CODE, FF_BY_COL IS WHAT'S IN THE SCALE BY COLUMN
 
-          int   iz_data[nRows];  column number in raz format
-          double scale512[nRows];      scaling appropriate at row 512
-          double scale1024[nRows];     scaling appropriate at row 1024
-          double scale1536[nRows];     scaling appropriate at row 1536
-          double scale2048[nRows];     scaling appropriate at row 2048
+          int   iz_data[<cte->nScaleTableColumns>];  column number in raz format
+          double scale512[<cte->nScaleTableColumns>];      scaling appropriate at row 512
+          double scale1024[<cte->nScaleTableColumns>];     scaling appropriate at row 1024
+          double scale1536[<cte->nScaleTableColumns>];     scaling appropriate at row 1536
+          double scale2048[<cte->nScaleTableColumns>];     scaling appropriate at row 2048
      */
 
     //WARNING - assumes column major storage order
     trapPixelMap->sci.data.storageOrder = COLUMNMAJOR;
+
+    clock_t begin = clock();
 
     extern int status;
 
@@ -420,19 +424,6 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
     const unsigned nColumns = trapPixelMap->sci.data.nx;
     const double cteScale = cte->scale_frac;
 
-    //double ff_by_col[nColumns][4];
-
-   /* for (unsigned i = 0; i < nColumns; ++i){
-        ff_by_col[i][0]=1;
-        ff_by_col[i][1]=1;
-        ff_by_col[i][2]=1;
-        ff_by_col[i][3]=1;
-        unsigned column = cte->iz_data[i]; //which column to scale
-        ff_by_col[column][0]=cte->scale512[i];
-        ff_by_col[column][1]=cte->scale1024[i];
-        ff_by_col[column][2]=cte->scale1536[i];
-        ff_by_col[column][3]=cte->scale2048[i];
-    }*/
 
 #ifdef _OPENMP
     #pragma omp parallel shared(trapPixelMap, cte)
@@ -447,40 +438,45 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
 #ifdef _OPENMP
     #pragma omp for schedule(static)
 #endif
-    //this should only act on image pixels!!! Change loop boundaries
-    for (unsigned i = 0; i < nColumns; ++i)
+    for (unsigned i = 0; i < cte->nScaleTableColumns; ++i)
     {
-        unsigned column = cte->iz_data[cte->columnOffset + i]; /*which column to scale*/
-        //should check 'column' within bounds(?)
-        //this needs to account for offsets etc!!!
-        trapColumnScale[0] = cte->scale512[column];
-        trapColumnScale[1] = cte->scale1024[column];
-        trapColumnScale[2] = cte->scale1536[column];
-        trapColumnScale[3] = cte->scale2048[column];
+        unsigned column = cte->iz_data[i] - cte->razColumnOffset; //which column to scale
+        if (column < 0 || column >= nColumns)
+            continue;
+        trapColumnScale[0] = cte->scale512[i];
+        trapColumnScale[1] = cte->scale1024[i];
+        trapColumnScale[2] = cte->scale1536[i];
+        trapColumnScale[3] = cte->scale2048[i];
         /*CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
           Index is figured on the final size of the image
           not the current size. Moved above
          */
         for (unsigned j = 0; j < nRows; ++j)
         {
-            unsigned jj = cte->columnOffset + j;
-            ro = jj / 512.0; /*ro can be zero, it's an index*/
+            ro = j / 512.0; /*ro can be zero, it's an index*/
             if (ro > 2.999)
             	ro = 2.999; // only 4 quads, 0 to 3
             else if (ro < 0)
             	ro = 0;
             io = (int) floor(ro); /*force truncation towards 0 for pos numbers*/
-            cte_j = (jj+1) / 2048.0;
+            cte_j = (j+1) / 2048.0;
             cte_i = trapColumnScale[io] + (trapColumnScale[io+1] - trapColumnScale[io]) * (ro - io);
-            //cte_i = ff_by_col[i][io] + (ff_by_col[i][io+1] - ff_by_col[i][io]) * (ro-io);
-            PixColumnMajor(trapPixelMap->sci.data,j,i) = cte_i * cte_j * cteScale;
+            PixColumnMajor(trapPixelMap->sci.data, j, column) = cte_i * cte_j * cteScale;
         }
     }
     } // end parallel block
+
+    if (verbose)
+    {
+        double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
+        sprintf(MsgText,"Time taken to populate pixel trap map image: %.2f(s) with %i threads\n",timeSpent/cte->maxThreads, cte->maxThreads);
+        trlmessage(MsgText);
+    }
+
     return(status);
 }
 
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double ampReadNoise, unsigned maxThreads, int verbose)
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double ampReadNoise, int verbose)
 {
     /*
        This routine will read in a RAZ image and will output the smoothest
@@ -651,7 +647,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
     if (verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads\n",timeSpent/maxThreads,maxThreads);
+        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads\n", timeSpent/ctePars->maxThreads, ctePars->maxThreads);
         trlmessage(MsgText);
     }
 

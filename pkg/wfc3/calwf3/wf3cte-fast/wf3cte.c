@@ -198,9 +198,13 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     /*READ IN THE CTE PARAMETER TABLE*/
     CTEParamsFast cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
-    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS);
+    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, max_threads);
     addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
-    allocateCTEParamsFast(&cte_pars);
+    if ((status = allocateCTEParamsFast(&cte_pars)))
+    {
+        freeAll(&ptrReg);
+        return (status);
+    }
     if (GetCTEParsFast (wf3.pctetab.name, &cte_pars))
     {
         freeAll(&ptrReg);
@@ -254,6 +258,13 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         {
             cte_pars.columnOffset = 0;
             cte_pars.rowOffset = 0;
+            if (chip == 1)
+                cte_pars.razColumnOffset = 0;
+            else if (chip == 2)
+                cte_pars.razColumnOffset = cte_pars.nColumnsPerChip;
+            else
+                assert(0);//unimplemented
+
             getSingleGroup(wf3.input, chip, &raw);
             if (hstio_err())
             {
@@ -344,7 +355,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         if (cte_pars.noise_mit == 0)
         {
             //printf("smooth clipping level: %f\n",cte_pars.rn_amp);
-            if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, max_threads, wf3.verbose))
+            if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, wf3.verbose))
             {
                 freeAll(&ptrReg);
                 return (status);
