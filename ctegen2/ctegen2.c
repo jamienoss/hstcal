@@ -9,108 +9,11 @@
 # endif
 
 #include "ctegen2.h"
+#include "err.h"
 
 char MsgText[256];
 extern void trlmessage (char *message);
-
-//move these elsewhere
-void initPtrRegister(PtrRegister * reg)
-{
-    reg->cursor = 0; //points to last ptr NOT next slot
-    reg->length = PTR_REGISTER_LENGTH;
-    reg->ptrs = calloc(reg->length+1, sizeof(*reg->ptrs));
-    assert(reg->ptrs);
-    reg->freeFunctions = calloc(reg->length+1, sizeof(*reg->freeFunctions));
-    if (!reg->freeFunctions)
-    {
-        free(reg->ptrs);
-        assert(0);
-    }
-    reg->ptrs[0] = reg; //this ptr
-    reg->freeFunctions[0] = &free;
-}
-void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
-{
-    if (!reg || !ptr || !freeFunc)
-        return;
-
-    //check ptr isn't already registered?
-
-    if (++reg->cursor >= reg->length)
-    {
-        reg->length += 10;
-        assert(realloc(&reg->ptrs, reg->length*sizeof(*reg->ptrs)));
-        assert(realloc(reg->freeFunctions, reg->length*sizeof(*reg->freeFunctions)));
-    }
-    reg->ptrs[reg->cursor] = ptr;
-    reg->freeFunctions[reg->cursor] = freeFunc;
-}
-void freePtr(PtrRegister * reg, void * ptr)
-{
-    if (!reg || !ptr)
-        return;
-
-    unsigned i;
-    for (i = reg->cursor; i > 0 ; --i)
-    {
-        if (reg->ptrs[i] == ptr)
-            break;
-    }
-
-    //call function to free ptr
-    reg->freeFunctions[i](ptr);
-
-    if (i == reg->cursor)
-    {
-        reg->ptrs[i] = NULL;
-        reg->freeFunctions[i] = NULL;
-    }
-    else
-    {
-        //move last one into gap to close - not a stack so who cares
-        reg->ptrs[i] = reg->ptrs[reg->cursor];
-        reg->ptrs[reg->cursor] = NULL;
-        reg->freeFunctions[i] = reg->freeFunctions[reg->cursor];
-        reg->freeFunctions[reg->cursor] = NULL;
-    }
-    --reg->cursor;
-}
-void freeAll(PtrRegister * reg)
-{
-    if (!reg || reg->length == 0)
-        return;
-
-    for (unsigned i = 1; i < reg->cursor; ++i)
-    {
-        if (reg->freeFunctions[i] && reg->ptrs[i])
-        {
-            reg->freeFunctions[i](reg->ptrs[i]);
-            reg->ptrs[i] = NULL;
-            reg->freeFunctions[i] = NULL;
-        }
-    }
-    reg->cursor = 0;
-    reg->length = 0;
-    // free 'itself'
-    reg->freeFunctions[0](reg->ptrs);
-    reg->ptrs[0] = NULL;
-    reg->freeFunctions[0](reg->freeFunctions);
-    reg->freeFunctions[0] = NULL;
-}
-void freeReg(PtrRegister * reg)
-{
-    if (!reg || reg->length == 0)
-        return;
-
-    reg->cursor = 0;
-    reg->length = 0;
-    // free 'itself'
-    reg->freeFunctions[0](reg->ptrs);
-    reg->ptrs[0] = NULL;
-    reg->freeFunctions[0](reg->freeFunctions);
-    reg->freeFunctions[0] = NULL;
-}
-
+extern void trlerror (char *message);
 
 int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * cte)
 {
@@ -131,84 +34,100 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 #pragma omp parallel shared(input, output, cte, cteRprof, cteCprof, trapPixelMap)
 #endif
 {
+    //Thread local pointer register
+    PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
+
     //get rid of asserts
-    double * model       = malloc(sizeof(*model)*nRows);
-    assert(model);
+    double * model = malloc(sizeof(*model)*nRows);
+    addPtr(&ptrReg, model, &free);
+    if (!model)
+        status = OUT_OF_MEMORY;
+
     double * tempModel   = malloc(sizeof(*tempModel)*nRows);
-    assert(tempModel);
+    addPtr(&ptrReg, tempModel, &free);
+    if (!tempModel)
+        status = OUT_OF_MEMORY;
+
     double * observed = malloc(sizeof(*observed)*nRows);
-    assert(observed);
+    addPtr(&ptrReg, observed, &free);
+    if (!observed)
+        status = OUT_OF_MEMORY;
     float * traps = NULL;
 
-#ifdef _OPENMP
-    #pragma omp for schedule(static)
-#endif
-    for (unsigned j = 0; j < nColumns; ++j)
+    if (!status)
     {
-        // Can't use memcpy as diff types
-        for (unsigned i = 0; i < nRows; ++i)
-            observed[i] = PixColumnMajor(input->sci.data,i,j);
-
-        traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
-        unsigned NREDO = 0;
-        Bool REDO;
-        do
+#ifdef _OPENMP
+        #pragma omp for schedule(static)
+#endif
+        for (unsigned j = 0; j < nColumns; ++j)
         {
-            REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-            /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-            memcpy(model, observed, nRows*sizeof(*observed));
-
-            /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
-              IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-            for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
-            {
-                memcpy(tempModel, model, nRows*sizeof(*model));
-                simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
-
-                //Now that the updated readout has been simulated, subtract this from the model
-                //to reproduce the actual image, without the CTE trails.
-                //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
-                //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
-                for (unsigned i = 0; i < nRows; ++i)
-                {
-                    double delta = model[i] - observed[i];
-                    double delta2 = delta * delta;
-
-                    //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
-                    delta *= delta2 / (delta2 + rnAmp2);
-
-                    //Now subtract the simulated readout
-                    model[i] = tempModel[i] - delta;
-                }
-            }
-
-            //Do the last forward iteration but don't dampen... no idea why???
-            memcpy(tempModel, model, sizeof(*model)*nRows);
-            simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
-            //Now subtract the simulated readout
+            // Can't use memcpy as diff types
             for (unsigned i = 0; i < nRows; ++i)
-                model[i] = tempModel[i] - (model[i] - observed[i]);
+                observed[i] = PixColumnMajor(input->sci.data,i,j);
 
-            REDO = cte->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
-                    cte->thresh) : False;
+            traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
+            unsigned NREDO = 0;
+            Bool REDO;
+            do
+            {
+                REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
+                /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
+                memcpy(model, observed, nRows*sizeof(*observed));
 
-           // if (REDO)
-             //   printf("Readout cosmic ray detected, redoing computation\n");
-        } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
+                /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
+                  IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
+                for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
+                {
+                    memcpy(tempModel, model, nRows*sizeof(*model));
+                    simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
 
-        // Update source array
-        // Can't use memcpy as arrays of diff types
-        for (unsigned i = 0; i < nRows; ++i)
-            PixColumnMajor(output->sci.data, i, j) = model[i];
-    } //end loop over columns
+                    //Now that the updated readout has been simulated, subtract this from the model
+                    //to reproduce the actual image, without the CTE trails.
+                    //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
+                    //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
+                    for (unsigned i = 0; i < nRows; ++i)
+                    {
+                        double delta = model[i] - observed[i];
+                        double delta2 = delta * delta;
 
+                        //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
+                        delta *= delta2 / (delta2 + rnAmp2);
 
-    delete((void*)&tempModel);
-    delete((void*)&observed);
-    delete((void*)&model);
+                        //Now subtract the simulated readout
+                        model[i] = tempModel[i] - delta;
+                    }
+                }
+
+                //Do the last forward iteration but don't dampen... no idea why???
+                memcpy(tempModel, model, sizeof(*model)*nRows);
+                simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
+                //Now subtract the simulated readout
+                for (unsigned i = 0; i < nRows; ++i)
+                    model[i] = tempModel[i] - (model[i] - observed[i]);
+
+                REDO = cte->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
+                        cte->thresh) : False;
+
+               // if (REDO)
+                 //   printf("Readout cosmic ray detected, redoing computation\n");
+            } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
+
+            // Update source array
+            // Can't use memcpy as arrays of diff types
+            for (unsigned i = 0; i < nRows; ++i)
+                PixColumnMajor(output->sci.data, i, j) = model[i];
+        } //end loop over columns
+    }
+    else if (status == OUT_OF_MEMORY)
+    {
+        sprintf(MsgText, "Out of memory in inverseCTEBlur()");
+        trlerror(MsgText);
+    }
+    freeOnExit(&ptrReg);
 }// close scope for #pragma omp parallel
 
-    return(status);
+    return (status);
 }
 
 /*This is the workhorse subroutine; it simulates the readout

@@ -93,7 +93,6 @@
 ** Section 6.
 **      Functions to manipulate the header array.
 */
-# include "hstio.h"
 # include <fitsio.h>
 # include <ctype.h>
 # include <stdio.h>
@@ -105,11 +104,118 @@
 # include <assert.h>
 # include <stdlib.h>
 
+# include "hstio.h"
+# include "err.h"
 /*
 ** String defined to allow determination of the HSTIO library version
 ** from the library file (*.a) or the executable using the library.
 */
 const char *hstio_version = HSTIO_VERSION;
+
+void initPtrRegister(PtrRegister * reg)
+{
+    reg->cursor = 0; //points to last ptr NOT next slot
+    reg->length = PTR_REGISTER_LENGTH;
+    reg->ptrs = calloc(reg->length+1, sizeof(*reg->ptrs));
+    assert(reg->ptrs);
+    reg->freeFunctions = calloc(reg->length+1, sizeof(*reg->freeFunctions));
+    if (!reg->freeFunctions)
+    {
+        free(reg->ptrs);
+        assert(0);
+    }
+    reg->ptrs[0] = reg; //this ptr
+    reg->freeFunctions[0] = &free;
+}
+void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
+{
+    if (!reg || !ptr || !freeFunc)
+        return;
+
+    //check ptr isn't already registered? - go on then.
+    for (int i = reg->cursor; i >= 0 ; --i)// i >= 0 prevents adding self again
+    {
+        if (reg->ptrs[i] == ptr)
+            return;
+    }
+
+    if (++reg->cursor >= reg->length)
+    {
+        reg->length += 10;
+        assert(realloc(&reg->ptrs, reg->length*sizeof(*reg->ptrs)));
+        assert(realloc(reg->freeFunctions, reg->length*sizeof(*reg->freeFunctions)));
+    }
+    reg->ptrs[reg->cursor] = ptr;
+    reg->freeFunctions[reg->cursor] = freeFunc;
+}
+void freePtr(PtrRegister * reg, void * ptr)
+{
+    //Can't be used to free itself, use freeReg(), use of i > 0 in below for is reason.
+    if (!reg || !ptr)
+        return;
+
+    unsigned i;
+    for (i = reg->cursor; i > 0 ; --i)
+    {
+        if (reg->ptrs[i] == ptr)
+            break;
+    }
+
+    //call function to free ptr
+    reg->freeFunctions[i](ptr);
+
+    if (i == reg->cursor)
+    {
+        reg->ptrs[i] = NULL;
+        reg->freeFunctions[i] = NULL;
+    }
+    else
+    {
+        //move last one into gap to close - not a stack so who cares
+        reg->ptrs[i] = reg->ptrs[reg->cursor];
+        reg->ptrs[reg->cursor] = NULL;
+        reg->freeFunctions[i] = reg->freeFunctions[reg->cursor];
+        reg->freeFunctions[reg->cursor] = NULL;
+    }
+    --reg->cursor;
+}
+void freeAll(PtrRegister * reg)
+{
+    if (!reg || reg->length == 0)
+        return;
+
+    for (unsigned i = 1; i < reg->cursor; ++i)
+    {
+        if (reg->freeFunctions[i] && reg->ptrs[i])
+        {
+            reg->freeFunctions[i](reg->ptrs[i]);
+            reg->ptrs[i] = NULL;
+            reg->freeFunctions[i] = NULL;
+        }
+    }
+    reg->cursor = 0;
+    reg->length = 0;
+}
+void freeReg(PtrRegister * reg)
+{
+    if (!reg || reg->length == 0)
+        return;
+
+    reg->cursor = 0;
+    reg->length = 0;
+    // free 'itself'
+    reg->freeFunctions[0](reg->ptrs);
+    reg->ptrs[0] = NULL;
+    reg->freeFunctions[0](reg->freeFunctions);
+    reg->freeFunctions[0] = NULL;
+}
+void freeOnExit(PtrRegister * reg)
+{
+    //Free everything registered
+    freeAll(reg);
+    //Free itself
+    freeReg(reg);
+}
 
 /*
 ** Section 1.
@@ -829,7 +935,7 @@ int allocSingleGroup(SingleGroup *x, int i, int j, Bool zeroInitialize)
             allocFloatHdrData(&(x->sci),i,j, zeroInitialize)  ||
             allocShortHdrData(&(x->dq),i,j, zeroInitialize)   ||
             allocFloatHdrData(&(x->err),i,j, zeroInitialize))
-        return -1;
+        return ALLOCATION_PROBLEM;
     return 0;
 }
 
@@ -843,7 +949,7 @@ int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize)
             *hdr = malloc(sizeof(*hdr));
 
         if (*hdr == NULL)
-            return -1;
+            return ALLOCATION_PROBLEM;
         initHdr(*hdr);
     }
     return 0;
@@ -852,22 +958,22 @@ int allocSingleGroupHeader(Hdr ** hdr, Bool zeroInitialize)
 int allocSingleGroupExts(SingleGroup *x, int i, int j, unsigned extension, Bool zeroInitialize)
 {
     if (allocSingleGroupHeader(&x->globalhdr, zeroInitialize))
-        return -1;
+        return ALLOCATION_PROBLEM;
 
     if (extension & SCIEXT)
     {
         if (allocFloatHdrData(&(x->sci),i,j, zeroInitialize))
-            return -1;
+            return ALLOCATION_PROBLEM;
     }
     if (extension & ERREXT)
     {
         if (allocFloatHdrData(&(x->err),i,j, zeroInitialize))
-            return -1;
+            return ALLOCATION_PROBLEM;
     }
     if (extension & DQEXT)
     {
         if (allocShortHdrData(&(x->dq),i,j, zeroInitialize))
-            return -1;
+            return ALLOCATION_PROBLEM;
     }
     return 0;
 }
@@ -885,8 +991,8 @@ void setStorageOrder(SingleGroup * group, enum StorageOrder storageOrder)
 
 void copyOffsetFloatData(float * output, const float * input,
         unsigned nRows, unsigned nColumns,
-		unsigned outputOffset, unsigned inputOffset,
-		unsigned outputSkipLength, unsigned inputSkipLength)
+        unsigned outputOffset, unsigned inputOffset,
+        unsigned outputSkipLength, unsigned inputSkipLength)
 {
     //WARNING - assumes row major storage
 #ifdef _OPENMP
@@ -897,8 +1003,8 @@ void copyOffsetFloatData(float * output, const float * input,
 }
 void copyOffsetShortData(short * output, const short * input,
         unsigned nRows, unsigned nColumns,
-		unsigned outputOffset, unsigned inputOffset,
-		unsigned outputSkipLength, unsigned inputSkipLength)
+        unsigned outputOffset, unsigned inputOffset,
+        unsigned outputSkipLength, unsigned inputSkipLength)
 {
     //WARNING - assumes row major storage
 #ifdef _OPENMP
@@ -937,7 +1043,7 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
     //NOTE: If structs contained total size we could just use malloc & memcpy and be done with it.
 
     if (!target || !source)
-        return -1;
+        return ALLOCATION_PROBLEM;
 
     setStorageOrder(target, targetStorageOrder);
 
@@ -953,7 +1059,7 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
         if (!target->filename)
         {
             initSingleGroup(target);
-            return -1;
+            return ALLOCATION_PROBLEM;
         }
         memcpy(target->filename, source->filename, filenameLength);
     }
@@ -968,7 +1074,7 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
         if (copyFloatHdrData(&target->sci, &source->sci, targetStorageOrder))
         {
             initSingleGroup(target);
-            return -1;
+            return ALLOCATION_PROBLEM;
         }
     }
     if (source->err.data.data)
@@ -976,7 +1082,7 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
         if (copyFloatHdrData(&target->err, &source->err, targetStorageOrder))
         {
             initSingleGroup(target);
-            return -1;
+            return ALLOCATION_PROBLEM;
         }
     }
     if (source->dq.data.data)
@@ -984,7 +1090,7 @@ int copySingleGroup(SingleGroup * target, const SingleGroup * source, enum Stora
         if (copyShortHdrData(&target->dq, &source->dq, targetStorageOrder))
         {
             initSingleGroup(target);
-            return -1;
+            return ALLOCATION_PROBLEM;
         }
     }
     return 0;

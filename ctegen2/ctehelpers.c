@@ -109,7 +109,7 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
@@ -117,7 +117,7 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
@@ -125,7 +125,7 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
@@ -133,7 +133,7 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
@@ -141,7 +141,7 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
@@ -149,7 +149,7 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
@@ -157,14 +157,14 @@ int allocateCTEParamsFast(CTEParamsFast * pars)
     addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }
     tmp = newAndZero((void*)& pars->dpdew_data, pars->nTraps, sizeof(*pars->dpdew_data));addPtr(&ptrReg, tmp, &delete);
     if (!tmp)
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         trlerror ("Out of memory.\n");
         return (OUT_OF_MEMORY);
     }

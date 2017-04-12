@@ -24,7 +24,7 @@
 # include "hstio.h"
 # include "wf3.h"
 # include "wf3info.h"
-# include "wf3err.h"
+# include "err.h"
 # include "wf3corr.h"
 # include "cte-fast.h"
 # include "../../../../ctegen2/ctegen2.h"
@@ -79,29 +79,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);
 
-    /*check if this is a subarray image.
-      This is necessary because the CTE routine will start with the raw images
-      from scratch and read them in so that both chips can be used. CTE is
-      outside of the normal processing where one chip goes through the pipeline
-      at a time, both chips are used at the same time for the correction.
-
-      For the case of subarrays, a fake second chip needs to be created.
-      The subarray is also placed inside the confines of a full size image
-      and a mask is created to ignore pixels not associated with the original
-      data during the cte correction. This is necessary because the pixel location
-      itself is used as part of the correction. A secondary option would be to set
-      the looping arrays to variable sizes and make sure all array references were
-      consistent with the current data being processed. I decided on masking which
-      might allow for other considerations in future updates.
-
-      Only subarrays which were taken with physical overscan pixels are currently valid
-      This distinction can be made with the CRDS ruleset for PCTECORR but it
-      should also be checked here incase users update the header themselves for
-      local runs. In order to check for overscan pixels I'm using the array start
-      location instead of the APERTURE keyword information (there are known user
-      apertures which do not have overscan pixels, but this gets around string
-      comparisons and any future name changes or aperture additions in the future)
-     */
     clock_t begin = (double)clock();
 
 #ifdef _OPENMP
@@ -133,7 +110,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     /* CHECK WHETHER THE OUTPUT FILE ALREADY EXISTS. */
     if (FileExists (wf3.output)){
         WhichError(status);
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return (ERROR_RETURN);
     }
 
@@ -150,17 +127,17 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     if (wf3.biascorr == COMPLETE){
         trlmessage("BIASCORR complete for input image, CTE can't be performed");
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return(ERROR_RETURN);
     }
     if (wf3.darkcorr == COMPLETE){
         trlmessage("DARKCORR complete for input image, CTE can't be performed");
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return(ERROR_RETURN);
     }
     if (wf3.blevcorr == COMPLETE){
         trlmessage("BLEVCORR complete for input image, CTE can't be performed");
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return(ERROR_RETURN);
     }
 
@@ -170,7 +147,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
        */
     if (initCTETrl (input, output))
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return (status);
     }
 
@@ -180,18 +157,18 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     addPtr(&ptrReg, &phdr, &freeHdr);
     if (LoadHdr (wf3.input, &phdr) ){
         WhichError(status);
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return (ERROR_RETURN);
     }
 
     /* GET KEYWORD VALUES FROM PRIMARY HEADER. */
-    if (GetKeys (&wf3, &phdr)) {
-        freeAll(&ptrReg);
+    if ((status = GetKeys (&wf3, &phdr))) {
+        freeOnExit(&ptrReg);
         return (status);
     }
 
-    if (GetCTEFlags (&wf3, &phdr)) {
-        freeAll(&ptrReg);
+    if ((status = GetCTEFlags (&wf3, &phdr))) {
+        freeOnExit(&ptrReg);
         return (status);
     }
 
@@ -201,12 +178,12 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
     if ((status = allocateCTEParamsFast(&cte_pars)))
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return (status);
     }
-    if (GetCTEParsFast (wf3.pctetab.name, &cte_pars))
+    if ((status = GetCTEParsFast (wf3.pctetab.name, &cte_pars)))
     {
-        freeAll(&ptrReg);
+        freeOnExit(&ptrReg);
         return (status);
     }
     //Compute scale fraction
@@ -246,10 +223,14 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         //Load image into 'raw' one chip at a time
         if (wf3.subarray)
         {
-            if (getCCDChipId(&wf3.chip, wf3.input, "SCI", 1) ||
-                    getSubarray(&raw, &cte_pars, &wf3))
+            if ((status = getCCDChipId(&wf3.chip, wf3.input, "SCI", 1)))
             {
-                freeAll(&ptrReg);
+                freeOnExit(&ptrReg);
+                return status;
+            }
+            if ((status = getSubarray(&raw, &cte_pars, &wf3)))
+            {
+                freeOnExit(&ptrReg);
                 return status;
             }
         }
@@ -267,7 +248,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             getSingleGroup(wf3.input, chip, &raw);
             if (hstio_err())
             {
-                freeAll(&ptrReg);
+                freeOnExit(&ptrReg);
                 return (status = OPEN_FAILED);
             }
         }
@@ -280,7 +261,13 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup rowMajorImage;
         initSingleGroup(&rowMajorImage);
         addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
-        allocSingleGroupExts(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, SCIEXT, False);
+        if ((status = allocSingleGroupExts(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, SCIEXT, False)))
+        {
+            sprintf(MsgText, "Allocation problem with 'rowMajorImage' in 'WF3cteFast()'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return status;
+        }
         SingleGroup * image = &rowMajorImage;
         copySingleGroup(image, &raw, raw.sci.data.storageOrder);
         //align raw image for later comparison with aligned corrected image
@@ -289,7 +276,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         //biac bias subtraction
         if (doCteBias(&wf3, image))
         {
-            freeAll(&ptrReg);
+            freeOnExit(&ptrReg);
             return(status);
         }
         alignAmps(image, &cte_pars);
@@ -305,7 +292,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
                     sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",
                             cte_pars.columnOffset, cte_pars.columnOffset + cte_pars.nColumns);
                     trlmessage(MsgText);
-                    freeAll(&ptrReg);
+                    freeOnExit(&ptrReg);
                     return(ERROR_RETURN);
                 }
             }
@@ -319,14 +306,26 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup columnMajorImage;
         initSingleGroup(&columnMajorImage);
         addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
-        allocSingleGroupExts(&columnMajorImage, nColumns, nRows, SCIEXT, False);
-        assert(!copySingleGroup(&columnMajorImage, image, COLUMNMAJOR));
+        if ((status = allocSingleGroupExts(&columnMajorImage, nColumns, nRows, SCIEXT, False)))
+        {
+            sprintf(MsgText, "Allocation problem with 'columnMajorImage' in 'WF3cteFast()'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return status;
+        }
+        if ((status = copySingleGroup(&columnMajorImage, image, COLUMNMAJOR)))
+        {
+            sprintf(MsgText, "Allocation problem with 'copySingleGroup(columnMajorImage)' in 'WF3cteFast()'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return status;
+        }
         image = &columnMajorImage;
 
         //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
         if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
         {
-            freeAll(&ptrReg);
+            freeOnExit(&ptrReg);
             return (status);
         }
 
@@ -356,25 +355,31 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             //printf("smooth clipping level: %f\n",cte_pars.rn_amp);
             if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, wf3.verbose))
             {
-                freeAll(&ptrReg);
+                freeOnExit(&ptrReg);
                 return (status);
             }
         }
         else
         {
             trlmessage("Only noise model 0 implemented!");
-            freeAll(&ptrReg);
+            freeOnExit(&ptrReg);
             return (status=ERROR_RETURN);
         }
 
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
-        allocSingleGroupExts(&trapPixelMap, nColumns, nRows, SCIEXT, False);
+        if ((status = allocSingleGroupExts(&trapPixelMap, nColumns, nRows, SCIEXT, False)))
+        {
+           sprintf(MsgText, "Allocation problem with 'trapPixelMap' in 'WF3cteFast()'");
+           trlerror(MsgText);
+           freeOnExit(&ptrReg);
+           return status;
+       }
         setStorageOrder(&trapPixelMap, COLUMNMAJOR);
         if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose))
         {
-            freeAll(&ptrReg);
+            freeOnExit(&ptrReg);
             return status;
         }
 
@@ -392,7 +397,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         // MAIN CORRECTION LOOP IN HERE
         if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
         {
-            freeAll(&ptrReg);
+            freeOnExit(&ptrReg);
             return status;
         }
         freePtr(&ptrReg, &trapPixelMap);
@@ -449,7 +454,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         */
         if (outputImage(output, &raw, &cte_pars))//needs to pop status
         {
-            freeAll(&ptrReg);
+            freeOnExit(&ptrReg);
             return status;
         }
 
@@ -458,7 +463,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         {
             if (cteHistory(&wf3, raw.globalhdr))
             {
-                freeAll(&ptrReg);
+                freeOnExit(&ptrReg);
                 return status;
             }
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
@@ -479,7 +484,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     if (wf3.printtime)
         TimeStamp("PCTECORR Finished", wf3.rootname);
 
-    freeAll(&ptrReg);
+    freeOnExit(&ptrReg);
     return (status);
 }
 
@@ -555,6 +560,9 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 
     extern int status;
 
+    PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
+
     for (unsigned nthAmp = 0; nthAmp < 2; ++nthAmp)
     {
         if (!ctePars->quadExists[nthAmp])
@@ -589,12 +597,18 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
         //If we didn't need to skip the 19 rows of parallel virtual overscan, this array would
         //not be needed and a pointer to the data could be passed directly to resistmean instead.
         float * overscanPixels = malloc(nOverscanPixels*sizeof(*overscanPixels));
+        addPtr(&ptrReg, overscanPixels, &free);
+        if (!overscanPixels)
+        {
+            sprintf(MsgText, "Out of memory for 'overscanPixels' in 'findOverscanBias'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return (status = OUT_OF_MEMORY);
+        }
+
         assert(overscanPixels);
         for (unsigned column = 0; column < overscanWidth; ++column)
-        {
-            //memcpy(overscanPixels, imageOverscanPixels, nOverscanPixels*sizeof(*overscanPixels));
             memcpy(overscanPixels + column*nOverscanRows, imageOverscanPixels + column*ctePars->nRows, nOverscanRows*sizeof(*overscanPixels));
-        }
 
         float rmean = 0;
         float rsigma = 0;
@@ -606,10 +620,10 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
 
         printf("npix=%i\nmean[%i]=%f\nsigma[%i] = %f\n", nOverscanPixels, nthAmp+1, rmean, nthAmp+1, rsigma);
 
-        if (overscanPixels)
-            free(overscanPixels);
+        freePtr(&ptrReg, overscanPixels);
     }
 
+    freeOnExit(&ptrReg);
     return status;
 }
 

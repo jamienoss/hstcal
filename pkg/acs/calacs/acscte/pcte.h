@@ -21,7 +21,7 @@
 
 #define NAMPS 4
 #define AMP_COLS 2048
-#define N_COLUMNS_PER_FULLFRAME AMP_COLS
+#define N_COLUMNS_FOR_RAZ_CDAB_ALIGNED_IMAGE 8412 //This includes the 24 cols of overscan per amp, (2048 + 24)*4 = 8412
 
 //New params needed for second gen CTE correction algorithm
 #define TRAPS 999//6675 //max number of traps per column = rows in pctetab[1]
