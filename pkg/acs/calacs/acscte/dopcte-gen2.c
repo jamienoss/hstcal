@@ -48,19 +48,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     initPtrRegister(&ptrReg);
     unsigned nThreads = acs->nThreads;
 #ifdef _OPENMP
-    trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
-    omp_set_dynamic(0);
-    unsigned ompMaxThreads = omp_get_num_procs();
-    if (nThreads > ompMaxThreads)
-    {
-        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
-        nThreads = ompMaxThreads;
-    }
-    else
-        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
-
-    omp_set_num_threads(nThreads);
-    trlmessage(MsgText);
+    if (nThreads > 1)
+        trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
 #endif
 
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */

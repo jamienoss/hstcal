@@ -1,3 +1,6 @@
+#ifndef ACSINFO_INCL
+#define ACSINFO_INCL
+
 /* acsinfo.h
 
     Warren Hack, 1998 June 10:
@@ -10,6 +13,8 @@
     2001-12-04 WJH: Added expstart and expend.
     2017-02-21 PLL: Added SINKCORR varibles.
 */
+
+#include "hstio.h"
 
 # define NAMPS  4    /* Maximum number of amps for a single readout */
 
@@ -24,9 +29,8 @@ typedef struct {
     /* command-line flags */
     int printtime;                  /* print time after each step? */
     int verbose;                    /* print additional info? */
-    int onecpu;                     /* turn off OpenMP usage if True */
     int gen1cte;                    // revert to using gen1cte algorithm (default to NO - i.e. gen2cte)
-    unsigned nThreads;
+    unsigned nThreads;              // turn off OpenMP usage if 0|1
 
     /* keywords and file names for reference files */
     RefFileInfo *refnames;
@@ -136,6 +140,46 @@ typedef struct {
     RefImage shad;      /* shutter shading correction image */
     RefTab mlin;        /* MAMA nonlinearity info table */
     RefTab phot;        /* photometry table (processed from pysynphot) */
+
+    //members that belonged in another struct, also called ACSInfo, located in calacs/acsinfo.h
+    /* name of association table exposure comes from */
+   char asn_table[ACS_LINE];
+   char crj_root[ACS_LINE];
+
+   /* input, outroot, and temporary file names */
+   char rawfile[ACS_LINE];  /* uncalibrated science data */
+   char outroot[ACS_LINE];  /* file name _raw for output product */
+   char crjfile[ACS_LINE];  /* CR rejected, flat fielded science */
+   char crcfile[ACS_LINE];  /* crjfile + CTE correction */
+   char fltfile[ACS_LINE];  /* flat fielded science */
+   char flcfile[ACS_LINE];  /* fltfile + CTE correction */
+   char blv_tmp[ACS_LINE];  /* blevcorr, then CR flagged */
+   char blc_tmp[ACS_LINE];  /* blv_tmp + CTE correction */
+   char crj_tmp[ACS_LINE];  /* CR rejected, summed */
+   char crc_tmp[ACS_LINE];  /* crj_tmp + CTE correction */
+   char dthfile[ACS_LINE];  /* dither combined science data */
+   //char mtype[SZ_STRKWVAL+1];  /* Role of exposure in association */
+
+   //char rootname[ACS_LINE];  /* root name for set of obs */
+
+   /* info about input science file */
+  // int detector;  /* integer code for detector */
+   int nchips;    /* number of IMSETs in file */
+   int nimages;   /* number of images in this set */
+
+   /* Info on the binning and gain of the science file. */
+   int scibin[2];  /* binning factors */
+   int scigain;    /* ccdgain values */
+   int samebin;
+   int newbias;
+
+   /* calibration switches */
+   int sci_basic_ccd;  /* do acsccd? (dqicorr or blevcorr) */
+   int sci_basic_cte;  /* do acscte? (PCTECORR) */
+   int sci_basic_2d;   /* do acs2d for science file? */
+   int sci_crcorr;     /* do cosmic-ray rejection for science file? */
+   int sci_rptcorr;    /* combine repeatobs science data? */
+   int sci_dthcorr;    /* dither combine science data? */
 } ACSInfo;
 
 /* This contains the throughput curve (from _pht table) and the aperture
@@ -164,3 +208,5 @@ typedef struct {
     ErrHdrLine *err;    /* Array of error data lines */
     DQHdrLine *dq;      /* Array of DQ data lines */
 } ACSsect;
+
+#endif

@@ -212,9 +212,10 @@ int doPCTEGen1 (ACSInfo *acs, SingleGroup *x) {
         }
 
         /* perform CTE correction */
+        int onecpu = acs->nThreads <= 1 ? YES : NO;
         if (FixYCte(amp_arr1, amp_arr2, amp_sig_arr, amp_cor_arr, pars.sim_nit,
                     pars.shft_nit, pars.sub_thresh, cte_frac_arr, pars.levels,
-                    dpde_l, chg_leak_lt, chg_open_lt, acs->onecpu)) {
+                    dpde_l, chg_leak_lt, chg_open_lt, onecpu)) {
             return (status);
         }
 

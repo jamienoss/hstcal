@@ -31,7 +31,6 @@ void ACSInit (ACSInfo *acs) {
     acs->rootname[0] = '\0';
     acs->printtime = 0;
     acs->verbose = 0;
-    acs->onecpu = 0;
 
     acs->det[0] = '\0';
     acs->aperture[0] = '\0';

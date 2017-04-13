@@ -5,7 +5,7 @@
 # include <time.h>
 # include "acs.h"
 # include "acscorr.h"
-# include "calacs.h"
+# include "acsinfo.h"
 # include "err.h"
 
 /* This routine gets info from the primary header of the science file,

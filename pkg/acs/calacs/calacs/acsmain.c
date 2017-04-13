@@ -6,6 +6,10 @@
 # include "err.h"
 # include "acsversion.h"
 
+# ifdef _OPENMP
+#  include <omp.h>
+# endif
+
 /* CALACS driver: retrieves input table name and calls pipeline
 */
 
@@ -26,10 +30,11 @@ int main(int argc, char **argv) {
     *pcteTabNameFromCmd = '\0';
 	int too_many = NO;	/* too many command-line arguments? */
 	int i, j;		/* loop indexes */
+    unsigned nThreads = 1;
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int CalAcsRun (char *, int, int, int, int, int, int, const char * pcteTabNameFromCmd);
+	int CalAcsRun (char *, int, int, int, int, const unsigned nThreads, int, const char * pcteTabNameFromCmd);
     void WhichError (int);
     
 	/* Initialize status to OK and MsgText to null */
@@ -55,12 +60,12 @@ int main(int argc, char **argv) {
 		    printf("%s\n",ACS_CAL_VER);
 		    exit(0);
 		}
-		if (argv[i] && strcmp(argv[i], "--gen1cte") == 0)
+        if (argv[i] && strcmp(argv[i], "--gen1cte") == 0)
         {
             gen1cte = YES;
             continue;
         }
-		else if (strncmp(argv[i], "--pctetab", 9) == 0)
+        else if (strncmp(argv[i], "--pctetab", 9) == 0)
         {
             if (i + 1 > argc - 1)
             {
@@ -70,6 +75,23 @@ int main(int argc, char **argv) {
             strcpy(pcteTabNameFromCmd, argv[i+1]);
             printf("WARNING: using pcteTab file '%s'\n", pcteTabNameFromCmd);
             ++i;
+            continue;
+        }
+        else if (strncmp(argv[i], "-nThreads", 9) == 0)
+        {
+            if (i + 1 > argc - 1)
+            {
+                printf("ERROR - number of threads not specified\n");
+                exit(1);
+            }
+            ++i;
+            nThreads = (unsigned)atoi(argv[i]);
+            if (nThreads < 1)
+                nThreads = 1;
+#ifndef _OPENMP
+            printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+            nThreads = 1;
+#endif
             continue;
         }
         if (argv[i][0] == '-')
@@ -102,7 +124,7 @@ int main(int argc, char **argv) {
 	
 	if (input[0] == '\0' || too_many) {
         printf ("CALACS Version %s\n",ACS_CAL_VER_NUM);
-	    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-1] [--gen1cte] [--pctetab <path>] input \n");
+	    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-1|--nthreads <N>] [--gen1cte] [--pctetab <path>] [input \n");
 	    exit (ERROR_RETURN);
 	}
 
@@ -112,19 +134,43 @@ int main(int argc, char **argv) {
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);
 	
-	if (gen1cte == YES)
+    if (gen1cte == YES)
     {
         sprintf(MsgText, "WARNING: using older gen1 CTE algorithm");
         trlwarn(MsgText);
     }
-	if (*pcteTabNameFromCmd != '\0')
+    if (*pcteTabNameFromCmd != '\0')
     {
         sprintf(MsgText, "WARNING: using cmd line specified PCTETAB file: '%s'", pcteTabNameFromCmd);
         trlwarn(MsgText);
     }
+    if (onecpu)
+    {
+        if (nThreads > 1)
+        {
+            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+            trlwarn(MsgText);
+        }
+        nThreads = 1;
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    unsigned ompMaxThreads = omp_get_num_procs();
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
 
 	/* Call the CALACS main program */
-	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, onecpu, gen1cte, pcteTabNameFromCmd)) {
+	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, nThreads, gen1cte, pcteTabNameFromCmd)) {
 
         if (status == NOTHING_TO_DO){
             /* If there is just nothing to do, 

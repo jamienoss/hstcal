@@ -49,7 +49,7 @@ Update for version 8.2.0 - 12-Aug-13 (PLL)
     acscte/getctesw.c
     calacs/acsinit.c
     calacs/calacs.c
-    calacs/calacs.h
+    calacs/acsinfo.h
     calacs/sciflags.c
     include/acscorr.h
     lib/acsinfo.c
@@ -124,7 +124,7 @@ Update for version 7.0.0 - 21-Jun-11 (MRD)
         Added CTE correction flag.
     calacs/acsasn.h
         Added structure members to track temporary CTE corrected products.
-    calacs/calacs.h
+    calacs/acsinfo.h
         Added structure members for the names of CTE corrected products.
     include/acsinfo.h
         Added structure members for CTE correction flag and CTE related

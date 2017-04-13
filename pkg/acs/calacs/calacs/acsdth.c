@@ -14,7 +14,7 @@
 # include "xtables.h"
 
 # include "acs.h"
-# include "calacs.h"
+# include "acsinfo.h"
 # include "err.h"
 
 /* Custom HSTIO-based routines for creating a SingleGroup without arrays

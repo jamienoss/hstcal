@@ -29,7 +29,7 @@
 # include "acs.h"    /* defines ACS data structures */
 # include "acsasn.h"    /* defines ACS Association data structures */
 # include "err.h"
-# include "calacs.h"
+# include "acsinfo.h"
 
 # define CRLEN    2
 # define RPTLEN 2

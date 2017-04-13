@@ -1,7 +1,7 @@
 /* calwf3 -- integrated calwf3 reduction
 
 	Howard Bushouse, 2000 August 22: Initial version (adapted from
-                         calacs.h by W. Hack)
+                         acsinfo.h by W. Hack)
 
 	H.Bushouse, 2000-Sep-28: Added "sci_basic_ir" calib switches for IR chip
 	H.Bushouse, 2002-Nov-26: Removed "sflfile" char string.

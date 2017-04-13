@@ -3,7 +3,7 @@
 # include "acs.h"
 # include "acscorr.h"
 # include "err.h"
-# include "calacs.h"
+# include "acsinfo.h"
 
 static int GetSw (Hdr *, char *, int *);
 

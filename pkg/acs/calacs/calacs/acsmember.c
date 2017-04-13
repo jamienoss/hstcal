@@ -7,7 +7,7 @@
 # include "acs.h"	/* defines ACS data structures */
 # include "acsasn.h"	/* defines ACS Association data structures */
 # include "err.h"
-# include "calacs.h"	/* defines ACS observation data structures */
+# include "acsinfo.h"	/* defines ACS observation data structures */
 
 /* GETASNMEMBER: Copy information from association table structure
 **	to a single image structure for use by the remainder of the 

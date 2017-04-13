@@ -34,14 +34,12 @@ int main (int argc, char **argv) {
     int printtime = NO;	/* print time after each step? */
     int verbose = NO;	/* print additional info? */
     int quiet = NO;	/* print additional info? */
-    int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
     int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
     unsigned nThreads = 0;
     char pcteTabNameFromCmd[255];
     *pcteTabNameFromCmd = '\0';
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
-    int k;
 
     IRAFPointer i_imt, o_imt;	/* imt list pointers */
     char *input;		/* name of input science file */
@@ -240,7 +238,7 @@ int main (int argc, char **argv) {
 
         /* Calibrate the current input file. */
         if (ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
-                    onecpu, gen1cte, pcteTabNameFromCmd)) {
+                    nThreads, gen1cte, pcteTabNameFromCmd)) {
             sprintf (MsgText, "Error processing %s.", input);
             trlerror (MsgText);
             WhichError (status);

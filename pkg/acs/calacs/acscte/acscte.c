@@ -26,7 +26,7 @@ void InitCTETrl (char *, char *);
  */
 int ACScte (char *input, char *output, CalSwitch *cte_sw,
             RefFileInfo *refnames, int printtime, int verbose,
-            int onecpu, int gen1cte, const char * pcteTabNameFromCmd) {
+            const unsigned nThreads, int gen1cte, const char * pcteTabNameFromCmd) {
 
     extern int status;
 
@@ -79,7 +79,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
     acs.pctecorr = cte_sw->pctecorr;
     acs.printtime = printtime;
     acs.verbose = verbose;
-    acs.onecpu = onecpu;
+    acs.nThreads = nThreads;
     acs.gen1cte = gen1cte;
 
     /* For debugging...
