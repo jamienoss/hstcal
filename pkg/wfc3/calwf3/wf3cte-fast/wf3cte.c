@@ -181,7 +181,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freeOnExit(&ptrReg);
         return (status);
     }
-    if ((status = GetCTEParsFast (wf3.pctetab.name, &cte_pars)))
+    if ((status = GetCTEParsFast(wf3.pctetab.name, &cte_pars)))
     {
         freeOnExit(&ptrReg);
         return (status);
@@ -213,12 +213,14 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     cte_pars.refAndIamgeBinsIdenticle = True;
 
     unsigned nChips = wf3.subarray ? 1 : 2;
+    PtrRegister chipLoopReg;
+    addPtr(&ptrReg, &chipLoopReg, &freeOnExit);
     for(unsigned chip = 1; chip <= nChips; ++chip)
     {
         //This is used for the final output
         SingleGroup raw;
         initSingleGroup(&raw);
-        addPtr(&ptrReg, &raw, &freeSingleGroup);
+        addPtr(&chipLoopReg, &raw, &freeSingleGroup);
 
         //Load image into 'raw' one chip at a time
         if (wf3.subarray)
@@ -260,7 +262,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         //leave raw as pre-biased image, clone and use copy from here on out
         SingleGroup rowMajorImage;
         initSingleGroup(&rowMajorImage);
-        addPtr(&ptrReg, &rowMajorImage, &freeSingleGroup);
+        addPtr(&chipLoopReg, &rowMajorImage, &freeSingleGroup);
         if ((status = allocSingleGroupExts(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, SCIEXT, False)))
         {
             sprintf(MsgText, "Allocation problem with 'rowMajorImage' in 'WF3cteFast()'");
@@ -269,7 +271,11 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             return status;
         }
         SingleGroup * image = &rowMajorImage;
-        copySingleGroup(image, &raw, raw.sci.data.storageOrder);
+        if ((status = copySingleGroup(image, &raw, raw.sci.data.storageOrder)))
+        {
+            freeOnExit(&ptrReg);
+            return status;
+        }
         //align raw image for later comparison with aligned corrected image
         alignAmps(&raw, &cte_pars);
 
@@ -305,7 +311,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         //copy to column major storage
         SingleGroup columnMajorImage;
         initSingleGroup(&columnMajorImage);
-        addPtr(&ptrReg, &columnMajorImage, &freeSingleGroup);
+        addPtr(&chipLoopReg, &columnMajorImage, &freeSingleGroup);
         if ((status = allocSingleGroupExts(&columnMajorImage, nColumns, nRows, SCIEXT, False)))
         {
             sprintf(MsgText, "Allocation problem with 'columnMajorImage' in 'WF3cteFast()'");
@@ -368,7 +374,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
-        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
+        addPtr(&chipLoopReg, &trapPixelMap, &freeSingleGroup);
         if ((status = allocSingleGroupExts(&trapPixelMap, nColumns, nRows, SCIEXT, False)))
         {
            sprintf(MsgText, "Allocation problem with 'trapPixelMap' in 'WF3cteFast()'");
@@ -400,7 +406,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             freeOnExit(&ptrReg);
             return status;
         }
-        freePtr(&ptrReg, &trapPixelMap);
+        freePtr(&chipLoopReg, &trapPixelMap);
 
         const double scaleFraction = cte_pars.scale_frac;
         //freePtr(&ptrReg, &cte_pars);
@@ -442,8 +448,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         cteCorrectedImage = NULL;
         smoothedImage = NULL;
-        freePtr(&ptrReg, &rowMajorImage);
-        freePtr(&ptrReg, &columnMajorImage);
+        freePtr(&chipLoopReg, &rowMajorImage);
+        freePtr(&chipLoopReg, &columnMajorImage);
 
      /*   //Put back this alteration before calling alignAmps again (in outputImage())
         if (wf3.subarray)
@@ -470,15 +476,14 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             PutKeyDbl(raw.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
             trlmessage("PCTEFRAC saved to header");
         }
-        freePtr(&ptrReg, &raw);
 
         double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
         if (verbose){
             sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/nThreads,nThreads);
             trlmessage(MsgText);
         }
-
-        }//end of chip for loop
+        freeAll(&chipLoopReg);
+    }//end of chip for loop
 
     PrSwitch("pctecorr", COMPLETE);
     if (wf3.printtime)
@@ -695,17 +700,25 @@ int unalignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 
 int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 {
+    //NOTE: There is a similar version of this in acs - code changes should be reflected in both.
+
+    if (!image || !image->sci.data.data)
+        return status;
+
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);
+
+    PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
 
     //Align amps such that they are at the bottom left
     extern int status;
 
-    unsigned columnOffset = ctePars->columnOffset;
-    unsigned nColumns = ctePars->nColumns;
-    unsigned nRows = ctePars->nRows;
+    const unsigned columnOffset = ctePars->columnOffset;
+    const unsigned nColumns = ctePars->nColumns;
+    const unsigned nRows = ctePars->nRows;
 
-    Bool isCDAmp = image->group_num == 1 ? True : False;
+    const Bool isCDAmp = image->group_num == 1 ? True : False;
     if (ctePars->isSubarray)
     {
         if (isCDAmp)
@@ -715,8 +728,11 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
     }
 
     //If subarray only in c quad do nothing as this is already bottom left aligned
-    if (isCDAmp && !ctePars->quadExists[1])//columnOffset + nColumns < ctePars->nColumnsPerQuad)
+    if (isCDAmp && !ctePars->quadExists[1])
+    {
+        freeOnExit(&ptrReg);
         return status;
+    }
 
     //Find if subarray extends into either b or d quad and flip right to left
     if (ctePars->quadExists[1])//  &columnOffset + nColumns > ctePars->nColumnsPerQuad)
@@ -726,11 +742,13 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
         //grab a row, flip it, put it back
         unsigned rowLength = columnOffset + nColumns - ctePars->nColumnsPerQuad;
         unsigned quadBoundary = nColumns - rowLength;
-        float * row = NULL;
+#ifdef _OPENMP
+        #pragma omp parallel for shared(image, ctePars) schedule(static)
+#endif
         for (unsigned i = 0; i < nRows; ++i)
         {
             //find row
-            row = image->sci.data.data + i*nColumns + quadBoundary;
+            float * row = image->sci.data.data + i*nColumns + quadBoundary;
             //flip right to left
             float tempPixel;
             for (unsigned j = 0; j < rowLength/2; ++j)
@@ -751,12 +769,22 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
         float * tempRow = NULL;
         size_t rowSize = nColumns*sizeof(*tempRow);
         tempRow = malloc(rowSize);
-        float * topRow = NULL;
-        float * bottomRow = NULL;
+        addPtr(&ptrReg, tempRow, &free);
+        if (!tempRow)
+        {
+            sprintf(MsgText, "Out of memory for 'tempRow' in 'alignAmpData'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return (status = OUT_OF_MEMORY);
+        }
+
+#ifdef _OPENMP
+        #pragma omp parallel for shared(image, ctePars) schedule(static)
+#endif
         for (unsigned i = 0; i < nRows/2; ++i)
         {
-            topRow = image->sci.data.data + i*nColumns;
-            bottomRow = image->sci.data.data + (nRows-1-i)*nColumns;
+            float * topRow = image->sci.data.data + i*nColumns;
+            float * bottomRow = image->sci.data.data + (nRows-1-i)*nColumns;
             memcpy(tempRow, topRow, rowSize);
             memcpy(topRow, bottomRow, rowSize);
             memcpy(bottomRow, tempRow, rowSize);
@@ -764,6 +792,7 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
         free(tempRow);
     }
 
+    freeOnExit(&ptrReg);
     return status;
 }
 
@@ -813,19 +842,47 @@ int outputImage(char * fileName, SingleGroup * image, CTEParamsFast * ctePars)
 {
     extern int status;
 
+    PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
+
     SingleGroup temp;
     initSingleGroup(&temp);
     if (image->sci.data.storageOrder == COLUMNMAJOR)
     {
-        allocSingleGroup(&temp, image->sci.data.nx, image->sci.data.ny, False);
-        copySingleGroup(&temp, image, ROWMAJOR);
+        if ((status = allocSingleGroup(&temp, image->sci.data.nx, image->sci.data.ny, False)))
+        {
+            sprintf(MsgText, "Allocation problem with 'temp' in 'outputImage()'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return status;
+        }
+        addPtr(&ptrReg, &temp, &freeSingleGroup);
+        if ((status = copySingleGroup(&temp, image, ROWMAJOR)))
+        {
+            sprintf(MsgText, "Allocation problem with 'copySingleGroup(temp)' in 'outputImage()'");
+            trlerror(MsgText);
+            freeOnExit(&ptrReg);
+            return status;
+        }
         image = &temp;
     }
 
-    unalignAmps(image, ctePars);
+    if ((status = unalignAmps(image, ctePars)))
+    {
+        sprintf(MsgText, "Allocation problem with 'unalignAmps()' in 'outputImage()'");
+        trlerror(MsgText);
+        freeOnExit(&ptrReg);
+        return status;
+    }
 
-    status = putSingleGroup(fileName, image->group_num, image, 0);
-    freeSingleGroup(&temp);
+    if (putSingleGroup(fileName, image->group_num, image, 0))
+    {
+        sprintf(MsgText, "IO failure in 'putSingleGroup()' in 'outputImage()'");
+        trlerror(MsgText);
+        freeOnExit(&ptrReg);
+        return (status = OPEN_FAILED);
+    }
+    freeOnExit(&ptrReg);
     return status;
 }
 

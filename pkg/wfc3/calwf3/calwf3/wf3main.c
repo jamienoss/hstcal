@@ -113,6 +113,8 @@ int main (int argc, char **argv) {
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode (quiet);
 
+
+
     if (fastCTE)
     {
         sprintf (MsgText, "WARNING: using high performance CTE implementation \n"
@@ -132,7 +134,7 @@ int main (int argc, char **argv) {
         trlerror(MsgText);
         exit(1);
     }
-    if (!nThreads)
+    if (nThreads == 0)
         nThreads = 1;
 
 	/* Call the CALWF3 main program */

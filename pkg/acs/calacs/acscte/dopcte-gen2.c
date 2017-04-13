@@ -358,11 +358,20 @@ static int alignAmp(SingleGroup * amp, const unsigned ampID)
 
 static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID)
 {
+    //NOTE: There is a similar version of this in wfc3 - code changes should be reflected in both.
+
     //Align image quadrants such that the amps are at the bottom left, i.e. aligned with amp C.
     extern int status;
 
     if (!amp || !amp->data)
-        return 0;//be silent
+        return status;//be silent
+
+    //Amp C is already correctly aligned
+    if (ampID == AMP_C)
+        return status;
+
+    PtrRegister ptrReg;
+    initPtrRegister(&ptrReg);
 
     //WARNING - assumes row major storage
     assert(amp->storageOrder == ROWMAJOR);
@@ -370,27 +379,18 @@ static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID)
     const unsigned nColumns = amp->nx;
     const unsigned nRows = amp->ny;
 
-    //Amp C is already correctly aligned
-    if (ampID == AMP_C)
-        return status;
-
-#ifdef _OPENMP
-#pragma omp parallel shared(amp)
-#endif
-{
     //Flip about y axis, i.e. about central column
     if (ampID == AMP_B || ampID == AMP_D)
     {
         //grab a row, flip it, put it back
-        unsigned rowLength = nColumns;
-        float * row = NULL;
+        const unsigned rowLength = nColumns;
 #ifdef _OPENMP
-        #pragma omp for schedule(static)
+        #pragma omp parallel for shared(amp) schedule(static)
 #endif
         for (unsigned i = 0; i < nRows; ++i)
         {
             //find row
-            row = amp->data + i*nColumns;
+            float * row = amp->data + i*nColumns;
             //flip right to left
             float tempPixel;
             for (unsigned j = 0; j < rowLength/2; ++j)
@@ -412,31 +412,29 @@ static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID)
         float * tempRow = NULL;
         size_t rowSize = nColumns*sizeof(*tempRow);
         tempRow = malloc(rowSize);
+        addPtr(&ptrReg, tempRow, &free);
         if (!tempRow)
         {
             sprintf(MsgText, "Out of memory for 'tempRow' in 'alignAmpData'");
             trlerror(MsgText);
-            status = OUT_OF_MEMORY;
+            freeOnExit(&ptrReg);
+            return (status = OUT_OF_MEMORY);
         }
-        else
-        {
-            float * topRow = NULL;
-            float * bottomRow = NULL;
-#ifdef _OPENMP
-            #pragma omp for schedule(static)
-#endif
-            for (unsigned i = 0; i < nRows/2; ++i)
-            {
-                topRow = amp->data + i*nColumns;
-                bottomRow = amp->data + (nRows-1-i)*nColumns;
-                memcpy(tempRow, topRow, rowSize);
-                memcpy(topRow, bottomRow, rowSize);
-                memcpy(bottomRow, tempRow, rowSize);
-            }
-            free(tempRow);
-        }
-    }
-}//close scope of omp parallel
 
+#ifdef _OPENMP
+        #pragma omp parallel for shared(amp) schedule(static)
+#endif
+        for (unsigned i = 0; i < nRows/2; ++i)
+        {
+            float * topRow = amp->data + i*nColumns;
+            float * bottomRow = amp->data + (nRows-1-i)*nColumns;
+            memcpy(tempRow, topRow, rowSize);
+            memcpy(topRow, bottomRow, rowSize);
+            memcpy(bottomRow, tempRow, rowSize);
+        }
+        free(tempRow);
+    }
+
+    freeOnExit(&ptrReg);
     return status;
 }
