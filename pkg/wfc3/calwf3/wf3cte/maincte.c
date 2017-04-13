@@ -121,7 +121,7 @@ int main (int argc, char **argv) {
                     exit(1);
                 }
                 ++i;
-                nThreads = argv[i];
+                nThreads = (unsigned)atoi(argv[i]);
                 continue;
             }
             else
