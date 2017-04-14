@@ -10,7 +10,7 @@
 # include "err.h"
 # include "acscorr.h"
 # include "acsasn.h"    /* Contains association table structures */
-# include "acsinfo.h"
+# include "calacs.h"
 
 # include "acsrej.h"    /* For ACSRej_0 */
 

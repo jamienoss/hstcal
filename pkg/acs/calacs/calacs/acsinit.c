@@ -1,7 +1,7 @@
 # include <stdio.h>
 
 # include "acs.h"
-# include "acsinfo.h"
+# include "calacs.h"
 # include "err.h"
 # include "acscorr.h"
 

@@ -2,7 +2,7 @@
 # include "hstio.h"
 # include "acs.h"
 # include "acscorr.h"
-# include "acsinfo.h"
+# include "calacs.h"
 
 
 static void CCDSanity (int, char *);
