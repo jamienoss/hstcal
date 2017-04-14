@@ -6,7 +6,7 @@
 # include "hstio.h"
 
 # include "acs.h"
-# include "acsinfo.h"
+//# include "acsinfo.h"
 # include "err.h"
 # include "acscorr.h"
 # include "acsasn.h"    /* Contains association table structures */

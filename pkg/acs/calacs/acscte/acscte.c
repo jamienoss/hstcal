@@ -163,7 +163,6 @@ void InitCTETrl (char *input, char *output) {
 
     char trl_in[ACS_LINE+1]; 	/* trailer filename for input */
     char trl_out[ACS_LINE+1]; 	/* output trailer filename */
-    int exist;
 
     char isuffix[] = "_blv_tmp";
     char osuffix[] = "_blc_tmp";
@@ -177,7 +176,6 @@ void InitCTETrl (char *input, char *output) {
     /* Initialize internal variables */
     trl_in[0] = '\0';
     trl_out[0] = '\0';
-    exist = EXISTS_UNKNOWN;
 
     /* Start by stripping off suffix from input/output filenames */
     if (MkName (input, isuffix, trlsuffix, TRL_EXTN, trl_in, ACS_LINE)) {

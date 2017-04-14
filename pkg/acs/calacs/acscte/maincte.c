@@ -16,6 +16,10 @@ int status = 0;			/* zero is OK */
 # include "err.h"
 # include "acscorr.h"		/* calibration switch names for acsccd */
 
+# ifdef _OPENMP
+#  include <omp.h>
+# endif
+
 static void FreeNames (char *, char *, char *, char *);
 
 /* This is the main module for ACSCTE.  It gets the input and output
@@ -33,13 +37,15 @@ int main (int argc, char **argv) {
     /*int switch_on = 0;*/	/* was any switch specified? */
     int printtime = NO;	/* print time after each step? */
     int verbose = NO;	/* print additional info? */
+    int onecpu = NO; /* Use OpenMP (multi vs single CPU mode), if available? */
     int quiet = NO;	/* print additional info? */
     int gen1cte = NO; //Use gen1cte algorithm rather than gen2 (default)
-    unsigned nThreads = 0;
+    unsigned nThreads = 1;
     char pcteTabNameFromCmd[255];
     *pcteTabNameFromCmd = '\0';
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
+    int k;
 
     IRAFPointer i_imt, o_imt;	/* imt list pointers */
     char *input;		/* name of input science file */
@@ -114,6 +120,12 @@ int main (int argc, char **argv) {
                 }
                 ++i;
                 nThreads = (unsigned)atoi(argv[i]);
+                if (nThreads < 1)
+                    nThreads = 1;
+#ifndef _OPENMP
+                printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+                nThreads = 1;
+#endif
                 continue;
             }
             else if (strncmp(argv[i], "--pctetab", 9) == 0)
@@ -153,7 +165,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  acscte [-t] [-v] [-q] [-1] [--gen1cte|-nThreads <N>] [--pctetab <path>] input output\n");
+        printf ("syntax:  acscte [-t] [-v] [-q] [-1|--nThreads <N>] [--gen1cte] [--pctetab <path>] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -173,6 +185,30 @@ int main (int argc, char **argv) {
         sprintf (MsgText, "Using cmd line specified PCTETAB file: '%s'", pcteTabNameFromCmd);
         trlwarn (MsgText);
     }
+    if (onecpu)
+    {
+    if (nThreads != 1)
+        {
+            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+            trlwarn(MsgText);
+        }
+        nThreads = 1;
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    unsigned ompMaxThreads = omp_get_num_procs();
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
 
     /* Was no calibration switch specified on command line?
        default values (mostly PERFORM)

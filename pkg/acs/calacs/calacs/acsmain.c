@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
     }
     if (onecpu)
     {
-        if (nThreads > 1)
+        if (nThreads != 1)
         {
             sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
             trlwarn(MsgText);
