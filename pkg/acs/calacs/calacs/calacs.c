@@ -62,7 +62,7 @@ static void SetACSSw (CalSwitch *, CalSwitch *, CalSwitch *, CalSwitch *);
 static void ResetACSSw (CalSwitch *, CalSwitch *);
 
 
-int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug, const unsigned nThreads, int gen1cte, const char * pcteTabNameFromCmd) {
+int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd) {
 
     /* arguments:
        char *input     i: name of the FITS file/table to be processed
@@ -76,8 +76,6 @@ int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug,
     extern int status;
 
     ACSInfo acshdr;        /* calibration switches, etc */
-    acshdr.nThreads = nThreads;
-    acshdr.gen1cte = gen1cte;
     AsnInfo    asn;        /* association table data    */
 
     char *acsdth_input;    /* Input list for ACSDTH */
@@ -92,7 +90,7 @@ int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug,
     void initAsnInfo (AsnInfo *);
     void freeAsnInfo (AsnInfo *);
     int LoadAsn (AsnInfo *);
-    int ProcessACSCCD (AsnInfo *, ACSInfo *, int *, int, const char * pcteTabNameFromCmd);
+    int ProcessACSCCD (AsnInfo *, ACSInfo *, int *, int, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd);
     int ProcessMAMA (AsnInfo *, ACSInfo *, int);
     int AcsDth (char *, char *, int, int, int);
     char *BuildDthInput (AsnInfo *, int);
@@ -161,7 +159,7 @@ int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug,
         if (asn.verbose) {
             trlmessage ("CALACS: processing a CCD product");
         }
-        if (ProcessACSCCD(&asn, &acshdr, &save_tmp, printtime, pcteTabNameFromCmd)) {
+        if (ProcessACSCCD(&asn, &acshdr, &save_tmp, printtime, nThreads, gen1cte, pcteTabNameFromCmd)) {
             if (status == NOTHING_TO_DO) {
                 trlwarn ("No processing desired for CCD data.");
             } else {
@@ -344,7 +342,7 @@ char *BuildDthInput (AsnInfo *asn, int prod) {
 }
 
 
-int ProcessACSCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, const char * pcteTabNameFromCmd) {
+int ProcessACSCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd) {
 
     extern int status;
 
@@ -538,7 +536,7 @@ int ProcessACSCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, 
                 if (acshdr->sci_basic_cte == PERFORM) {
                     if (ACScte(acshdr->blv_tmp, acshdr->blc_tmp,
                                &acscte_sci_sw, &sciref, printtime,
-                               asn->verbose, acshdr->nThreads, acshdr->gen1cte, pcteTabNameFromCmd)) {
+                               asn->verbose, nThreads, gen1cte, pcteTabNameFromCmd)) { //this is the line
                         return (status);
                     }
                 }
