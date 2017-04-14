@@ -218,6 +218,9 @@ def configure(conf):
         if conf.check_cc(cflags='-fstack-protector-all'):
             conf.env.append_value('CFLAGS','-fstack-protector-all')
 
+    if conf.check_cc(cflags='-std=c99'):
+        conf.env.append_value('CFLAGS','-std=c99')
+
     conf.start_msg('C compiler flags (CFLAGS)')
     conf.end_msg(' '.join(conf.env['CFLAGS']) or None)
 
