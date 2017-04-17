@@ -228,8 +228,8 @@ def configure(conf):
                 conf.env.append_value('CFLAGS','-O3')
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
-        #if conf.check_cc(cflags='-fstack-protector-all'):
-        #   conf.env.append_value('CFLAGS','-fstack-protector-all')
+        if conf.check_cc(cflags='-fstack-protector-all'):
+           conf.env.append_value('CFLAGS','-fstack-protector-all')
 
     if conf.options.releaseWithSymbols and not conf.options.debug:
         if conf.check_cc(cflags='-g'):

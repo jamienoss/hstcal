@@ -181,7 +181,7 @@ void freePtr(PtrRegister * reg, void * ptr)
 }
 void freeAll(PtrRegister * reg)
 {
-    if (!reg || reg->length == 0)
+    if (!reg || reg->length == 0 || reg->cursor == 0)
         return;
 
     for (unsigned i = 1; i < reg->cursor; ++i)
@@ -199,6 +199,9 @@ void freeReg(PtrRegister * reg)
 {
     if (!reg || reg->length == 0)
         return;
+
+    if (reg->cursor > 0)
+        freeAll(reg);
 
     reg->cursor = 0;
     reg->length = 0;
