@@ -203,7 +203,7 @@ void freeCTEParamsFast(CTEParamsFast * pars)
 
 /************ HELPER SUBROUTINES ****************************/
 
-int GetCTEParsFast (char *filename, CTEParamsFast *pars) {
+int getCTEParsFast (char *filename, CTEParamsFast *pars) {
     /* Read the cte parameters from the reference table PCTETAB
 
        These are taken from the PCTETAB global header:
@@ -631,7 +631,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
  */
 
-int CompareCTEParamsFast(SingleGroup *group, CTEParamsFast *pars) {
+int compareCTEParamsFast(SingleGroup *group, CTEParamsFast *pars) {
 
     extern int status;
 

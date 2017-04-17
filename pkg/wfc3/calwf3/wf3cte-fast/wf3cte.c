@@ -81,23 +81,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     clock_t begin = (double)clock();
 
-#ifdef _OPENMP
-    trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
-    omp_set_dynamic(0);
-    unsigned ompMaxThreads = omp_get_num_procs();
-    if (nThreads > ompMaxThreads)
-    {
-        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
-        nThreads = ompMaxThreads;
-    }
-    else
-        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
-
-    omp_set_num_threads(nThreads);
-    trlmessage(MsgText);
-#endif
-
-
     /* COPY COMMAND-LINE ARGUMENTS INTO WF3. */
     WF3Init (&wf3); /*sets default information*/
     strcpy (wf3.input, input);
@@ -181,11 +164,12 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freeOnExit(&ptrReg);
         return (status);
     }
-    if ((status = GetCTEParsFast(wf3.pctetab.name, &cte_pars)))
+    if ((status = getCTEParsFast(wf3.pctetab.name, &cte_pars)))
     {
         freeOnExit(&ptrReg);
         return (status);
     }
+    cte_pars.maxThreads = nThreads;
     //Compute scale fraction
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
           APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
@@ -214,6 +198,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     unsigned nChips = wf3.subarray ? 1 : 2;
     PtrRegister chipLoopReg;
+    initPtrRegister(&chipLoopReg);
     addPtr(&ptrReg, &chipLoopReg, &freeOnExit);
     for(unsigned chip = 1; chip <= nChips; ++chip)
     {
@@ -683,7 +668,7 @@ int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
       AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
       CTE CODE VARIABLES.
       */
-    if (CompareCTEParamsFast(image, ctePars))
+    if (compareCTEParamsFast(image, ctePars))
     {
         freeSingleGroup(image);
         return (status);

@@ -97,11 +97,13 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     }
     //NOTE: The char * below should be const but this would require a massive refactoring.
     char * cteTabFilename = (acs->pcteTabNameFromCmd && *acs->pcteTabNameFromCmd != '\0') ? acs->pcteTabNameFromCmd : acs->pcte.name;
-    if (GetCTEParsFast (cteTabFilename, &pars))
+    if (getCTEParsFast (cteTabFilename, &pars) || compareCTEParamsFast(chipImage, &pars))
     {
         freeOnExit(&ptrReg);
         return (status);
     }
+
+
     //warning remove fabs
     pars.scale_frac = fabs((acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0));//0.041907;
 

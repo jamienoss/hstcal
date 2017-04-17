@@ -98,8 +98,8 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps, const unsig
 int allocateCTEParamsFast(CTEParamsFast * pars);
 void freeCTEParamsFast(CTEParamsFast * pars);
 
-int CompareCTEParamsFast(SingleGroup * input, CTEParamsFast * params);
-int GetCTEParsFast (char *filename, CTEParamsFast * params);
+int compareCTEParamsFast(SingleGroup * input, CTEParamsFast * params);
+int getCTEParsFast (char *filename, CTEParamsFast * params);
 void ctewarn (char *message);
 void cteerror (char *message);
 void ctemessage (char *message);

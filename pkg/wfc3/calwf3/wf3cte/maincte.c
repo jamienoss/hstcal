@@ -57,7 +57,7 @@ int main (int argc, char **argv) {
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP with onely one thread, if available? */
     int fastCTE = NO; // Use high performance CTE implementation
-    unsigned nThreads = 1;
+    unsigned nThreads = 0;
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -113,7 +113,7 @@ int main (int argc, char **argv) {
                 fastCTE = YES;
                 continue;
             }
-            else if (strncmp(argv[i], "--nThreads", 10) == 0)
+            else if (strncmp(argv[i], "--nthreads", 10) == 0)
             {
                 if (i + 1 > argc - 1)
                 {
@@ -132,6 +132,11 @@ int main (int argc, char **argv) {
             }
             else
             {
+                if (argv[i][1] == '-')
+                {
+                    printf ("Unrecognized option %s\n", argv[i]);
+                    exit (ERROR_RETURN);
+                }
                 for (j = 1;  argv[i][j] != '\0';  j++) {
                     if (argv[i][j] == 't') {
                         printtime = YES;
@@ -182,24 +187,34 @@ int main (int argc, char **argv) {
     }
     else if (nThreads)
     {
-        sprintf(MsgText, "cmd options -nThreads requires --fast");
+        sprintf(MsgText, "cmd options --nthreads requires --fast");
         trlerror(MsgText);
         exit(1);
     }
 
+#ifdef _OPENMP
+    unsigned ompMaxThreads = omp_get_num_procs();
+#endif
     if (onecpu)
     {
-        if (nThreads != 1)
+        if (nThreads )
         {
             sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
             trlwarn(MsgText);
         }
         nThreads = 1;
     }
+    else if (!nThreads)//unset
+    {
+#ifdef _OPENMP
+        nThreads = ompMaxThreads;
+#else
+        nThreads = 1;
+#endif
+    }
 
 #ifdef _OPENMP
     omp_set_dynamic(0);
-    unsigned ompMaxThreads = omp_get_num_procs();
     if (nThreads > ompMaxThreads)
     {
         sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
