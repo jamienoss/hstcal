@@ -49,7 +49,7 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
   int high_location;
 
   /* track how many times we run the column. */
-  short int redo_col;
+  short int redo_col = 0;
   int num_redo;
 
   /* Only use OpenMP, if specified by user and OpenMP was available for compilation */
