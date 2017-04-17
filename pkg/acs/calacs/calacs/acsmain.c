@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
             ++i;
             continue;
         }
-        else if (strncmp(argv[i], "-nThreads", 9) == 0)
+        else if (strncmp(argv[i], "--nThreads", 10) == 0)
         {
             if (i + 1 > argc - 1)
             {

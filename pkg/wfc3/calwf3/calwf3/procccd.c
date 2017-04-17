@@ -265,12 +265,14 @@ int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, uns
 
                      */
 
-                    int onecpu = nThreads == 1 ? YES : NO;
                     int ret = status;
                     if (fastCTE)
                         ret = WF3cteFast(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, nThreads);
                     else
+                    {
+                        int onecpu = nThreads <= 1 ? YES : NO;
                         ret = WF3cte(wf3hdr->rawfile, wf3hdr->rac_tmp, &sci_sw, &sciref, printtime, asn->verbose, onecpu);
+                    }
                     if (ret)
                         return status;
 

@@ -57,7 +57,7 @@ int main (int argc, char **argv) {
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP with onely one thread, if available? */
     int fastCTE = NO; // Use high performance CTE implementation
-    unsigned nThreads = 0;
+    unsigned nThreads = 1;
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -113,7 +113,7 @@ int main (int argc, char **argv) {
                 fastCTE = YES;
                 continue;
             }
-            else if (strncmp(argv[i], "-nThreads", 9) == 0)
+            else if (strncmp(argv[i], "--nThreads", 10) == 0)
             {
                 if (i + 1 > argc - 1)
                 {
@@ -122,6 +122,12 @@ int main (int argc, char **argv) {
                 }
                 ++i;
                 nThreads = (unsigned)atoi(argv[i]);
+                if (nThreads < 1)
+                    nThreads = 1;
+#ifndef _OPENMP
+                printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+                nThreads = 1;
+#endif
                 continue;
             }
             else
@@ -152,7 +158,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  WF3cte [-v] [-1] [--fast [-nThreads <N>]] input output\n");
+        printf ("syntax:  WF3cte [-v] [-1] [--fast [--nthreads <N>]] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -181,14 +187,30 @@ int main (int argc, char **argv) {
         exit(1);
     }
 
-    if (onecpu && nThreads != 1)
+    if (onecpu)
     {
-        sprintf(MsgText, "cmd options -1 & -nThreads cannot be used together");
-        trlerror(MsgText);
-        exit(1);
-    }
-    if (!nThreads)
+        if (nThreads != 1)
+        {
+            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+            trlwarn(MsgText);
+        }
         nThreads = 1;
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    unsigned ompMaxThreads = omp_get_num_procs();
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
 
     /* The number of input and output files must be the same. */
     if (CompareNumbers (n_in, n_out, "output"))

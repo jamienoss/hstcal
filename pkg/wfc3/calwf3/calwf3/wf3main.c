@@ -6,6 +6,10 @@
 # include "err.h"
 # include "wf3version.h"
 
+# ifdef _OPENMP
+#  include <omp.h>
+# endif
+
 /* H. Bushouse	07-Sep-2011	Implemented new "--version" command line argument. */
 /* M. Sosey     added a -r to also print the version (-v is used, so warren chose r for revision */
 
@@ -26,7 +30,7 @@ int main (int argc, char **argv) {
 	int too_many = NO;	/* too many command-line arguments? */
 	int onecpu = NO;  /* suppress openmp usage by using only 1 thread?*/
     Bool fastCTE = False; // Use high performance CTE implementation
-    unsigned nThreads = 0;
+    unsigned nThreads = 1;
     int i, j;		/* loop indexes */
 
 	/* Function definitions */
@@ -60,7 +64,7 @@ int main (int argc, char **argv) {
 		        fastCTE = YES;
 		        continue;
 		    }
-		    else if (strncmp(argv[i], "-nThreads", 9) == 0)
+		    else if (strncmp(argv[i], "--nThreads", 10) == 0)
             {
                 if (i + 1 > argc - 1)
                 {
@@ -69,6 +73,12 @@ int main (int argc, char **argv) {
                 }
                 ++i;
                 nThreads = (unsigned)atoi(argv[i]);
+                if (nThreads < 1)
+                    nThreads = 1;
+#ifndef _OPENMP
+                printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+                nThreads = 1;
+#endif
                 continue;
             }
 		    else
@@ -103,7 +113,7 @@ int main (int argc, char **argv) {
 	}
 
 	if (input[0] == '\0' || too_many) {
-		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--fast-cte [-nThreads <N>]] input \n");
+		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--fast-cte [--nthreads <N>]] input \n");
 		exit (ERROR_RETURN);
 	}
 
@@ -123,19 +133,36 @@ int main (int argc, char **argv) {
     }
     else if (nThreads)
     {
-        sprintf(MsgText, "cmd options -nThreads requires --fast");
+        sprintf(MsgText, "cmd options -nThreads requires --fast-cte");
         trlerror(MsgText);
         exit(1);
     }
 
-    if (onecpu && nThreads != 1)
+    if (onecpu)
     {
-        sprintf(MsgText, "cmd options -1 & -nThreads cannot be used together");
-        trlerror(MsgText);
-        exit(1);
-    }
-    if (nThreads == 0)
+        if (nThreads != 1)
+        {
+            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+            trlwarn(MsgText);
+        }
         nThreads = 1;
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    unsigned ompMaxThreads = omp_get_num_procs();
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
+
 
 	/* Call the CALWF3 main program */
 	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, nThreads, fastCTE)) {
