@@ -194,7 +194,6 @@ void freeAll(PtrRegister * reg)
         }
     }
     reg->cursor = 0;
-    reg->length = 0;
 }
 void freeReg(PtrRegister * reg)
 {

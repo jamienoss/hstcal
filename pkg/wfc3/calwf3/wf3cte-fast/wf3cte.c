@@ -332,14 +332,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
         setStorageOrder(smoothedImage, COLUMNMAJOR);
 
-
-
-
-        //WARNING TEST CODE ONLY
-       // copySingleGroup(smoothedImage, image, COLUMNMAJOR);
-
-
-
         /***CREATE THE NOISE MITIGATION MODEL ***/
         if (cte_pars.noise_mit == 0)
         {
@@ -376,14 +368,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
         image = NULL;
-
-
-
-        //TESTcode only
-       // copySingleGroup(cteCorrectedImage, smoothedImage, COLUMNMAJOR);
-
-
-
 
         // MAIN CORRECTION LOOP IN HERE
         if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
