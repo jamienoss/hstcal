@@ -97,16 +97,13 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     }
     //NOTE: The char * below should be const but this would require a massive refactoring.
     char * cteTabFilename = (acs->pcteTabNameFromCmd && *acs->pcteTabNameFromCmd != '\0') ? acs->pcteTabNameFromCmd : acs->pcte.name;
-    if (getCTEParsFast (cteTabFilename, &pars) || compareCTEParamsFast(chipImage, &pars))
+    if (getCTEParsFast (cteTabFilename, &pars))// || compareCTEParamsFast(chipImage, &pars))
     {
         freeOnExit(&ptrReg);
         return (status);
     }
 
-
-    //warning remove fabs
-    pars.scale_frac = fabs((acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0));//0.041907;
-
+    pars.scale_frac = (acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0);
     if (PutKeyDbl(chipImage->globalhdr, "PCTEFRAC", pars.scale_frac, "CTE scaling factor"))
     {
         trlerror("(pctecorr) Error writing PCTEFRAC to image header");
@@ -184,6 +181,12 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
         //CALCULATE THE SMOOTH READNOISE IMAGE
         trlmessage("CTE: Calculating smooth readnoise image");
+        if (pars.noise_mit != 0)
+        {
+            trlerror("Only noise model 0 implemented!");
+            freeOnExit(&ptrReg);
+            return (status = ERROR_RETURN);
+        }
         SingleGroup smoothedImage;
         initSingleGroup(&smoothedImage);
         addPtr(&ptrReg, &smoothedImage, &freeSingleGroup);

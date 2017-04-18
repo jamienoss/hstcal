@@ -15,10 +15,10 @@
 # include <stdlib.h>
 # include <stdio.h>
 # include <float.h>
-#include <assert.h>
+# include <assert.h>
 
 # ifdef _OPENMP
-#  include <omp.h>
+# include <omp.h>
 # endif
 
 # include "hstio.h"
@@ -239,6 +239,15 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
                 return (status = OPEN_FAILED);
             }
         }
+        /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
+              AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
+              CTE CODE VARIABLES.
+              */
+        if ((status = compareCTEParamsFast(&raw, &cte_pars)))
+        {
+            freeOnExit(&ptrReg);
+            return (status);
+        }
 
         cte_pars.nRows = raw.sci.data.ny;
         cte_pars.nColumns = raw.sci.data.nx;
@@ -349,6 +358,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             return (status=ERROR_RETURN);
         }
 
+        trlmessage("CTE: creating charge trap image");
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&chipLoopReg, &trapPixelMap, &freeSingleGroup);
@@ -370,6 +380,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         image = NULL;
 
         // MAIN CORRECTION LOOP IN HERE
+        trlmessage("CTE: Running correction algorithm");
         if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
         {
             freeOnExit(&ptrReg);
@@ -651,16 +662,6 @@ int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
     ctePars->refAndIamgeBinsIdenticle = ref_bin[0] == sci_bin[0] && ref_bin[1] == sci_bin[1] ? True : False;
     ctePars->columnOffset = sci_corner[0] - ref_corner[0];
     ctePars->rowOffset = sci_corner[1] - ref_corner[1];
-
-    /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
-      AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
-      CTE CODE VARIABLES.
-      */
-    if (compareCTEParamsFast(image, ctePars))
-    {
-        freeSingleGroup(image);
-        return (status);
-    }
 
     return status;
 }
