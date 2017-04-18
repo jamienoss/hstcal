@@ -427,23 +427,27 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             cte_pars.nColumnsPerQuad += cte_pars.postscanWidth;
         }
         */
-        if (outputImage(output, &raw, &cte_pars))//needs to pop status
-        {
-            freeOnExit(&ptrReg);
-            return status;
-        }
 
-        // SAVE USEFUL HEADER INFORMATION
-        if (chip == 2)
+        // SAVE USEFUL HEADER INFORMATION to header object
+        if (chip == 1)
         {
-            if (cteHistory(&wf3, raw.globalhdr))
+            if ((status = cteHistory(&wf3, raw.globalhdr)))
             {
                 freeOnExit(&ptrReg);
                 return status;
             }
             /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-            PutKeyDbl(raw.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
+            if ((status = PutKeyDbl(raw.globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart")))
+            {
+                freeOnExit(&ptrReg);
+                return status;
+            }
             trlmessage("PCTEFRAC saved to header");
+        }
+        if ((status = outputImage(output, &raw, &cte_pars)))
+        {
+            freeOnExit(&ptrReg);
+            return status;
         }
 
         double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
@@ -765,29 +769,13 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
     return status;
 }
 
-
-int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction)
-{
-    /*** SAVE USEFUL HEADER INFORMATION ***/
-    if (cteHistory(wf3, image->globalhdr))
-        return status;
-
-    /*UPDATE THE OUTPUT HEADER ONE FINAL TIME*/
-    PutKeyDbl(image->globalhdr, "PCTEFRAC", scaleFraction,"CTE scaling fraction based on expstart");
-    trlmessage("PCTEFRAC saved to header");
-
-    //Full2Sub(wf3, subChip, fullChip, 0, 1, 1);
-    putSingleGroup(fileName, 1, image, 0);
-    //freeSingleGroup(subChip);
-    return status;
-}
-
 int getCCDChipId(int * value, char * fileName, char * ename, int ever)
 {
     extern int status;
     // OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER.
     IODescPtr ip = openInputImage (fileName, "SCI", ever);
-    if (hstio_err()) {
+    if (hstio_err())
+    {
         sprintf (MsgText, "Image: \"%s\" is not present", fileName);
         trlerror (MsgText);
         return (status = OPEN_FAILED);
@@ -798,7 +786,8 @@ int getCCDChipId(int * value, char * fileName, char * ename, int ever)
     if (ip)
         closeImage (ip);
     /* Get CCD-specific parameters. */
-    if (GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, ever, value)){
+    if ((status = GetKeyInt (&scihdr, "CCDCHIP", USE_DEFAULT, ever, value)))
+    {
         freeHdr(&scihdr);
         return (status);
     }
