@@ -290,8 +290,8 @@ int main (int argc, char **argv) {
         }
 
         /* Calibrate the current input file. */
-        if (ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
-                    nThreads, gen1cte, pcteTabNameFromCmd)) {
+        if ((status = ACScte (input, output, &ccd_sw, &refnames, printtime, verbose,
+                    nThreads, gen1cte, pcteTabNameFromCmd))) {
             sprintf (MsgText, "Error processing %s.", input);
             trlerror (MsgText);
             WhichError (status);
