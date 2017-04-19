@@ -407,7 +407,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
     if (verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to populate pixel trap map image: %.2f(s) with %i threads\n",timeSpent/cte->maxThreads, cte->maxThreads);
+        sprintf(MsgText,"Time taken to populate pixel trap map image: %.2f(s) with %i threads",timeSpent/cte->maxThreads, cte->maxThreads);
         trlmessage(MsgText);
     }
 
@@ -585,7 +585,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
     if (verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads\n", timeSpent/ctePars->maxThreads, ctePars->maxThreads);
+        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads", timeSpent/ctePars->maxThreads, ctePars->maxThreads);
         trlmessage(MsgText);
     }
 

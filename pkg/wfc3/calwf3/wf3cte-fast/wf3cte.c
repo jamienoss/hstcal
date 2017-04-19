@@ -29,7 +29,6 @@
 # include "cte-fast.h"
 # include "../../../../ctegen2/ctegen2.h"
 
-
 int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         RefFileInfo *refnames, int printtime, int verbose, unsigned nThreads) {
 
@@ -156,6 +155,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     }
 
     /*READ IN THE CTE PARAMETER TABLE*/
+    sprintf(MsgText, "Reading CTE parameters from PCTETAB file: '%s'...", wf3.pctetab.name);
+    trlmessage(MsgText);
     CTEParamsFast cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, nThreads);
     addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
@@ -169,6 +170,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freeOnExit(&ptrReg);
         return (status);
     }
+    trlmessage("PCTETAB read.");
+
     cte_pars.maxThreads = nThreads;
     //Compute scale fraction
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
@@ -343,7 +346,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
                 }
 */
         /***CALCULATE THE SMOOTH READNOISE IMAGE***/
-        trlmessage("CTE: Calculating smooth readnoise image");
+        trlmessage("CTE: Calculating smooth readnoise image...");
         SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
         setStorageOrder(smoothedImage, COLUMNMAJOR);
 
@@ -362,8 +365,9 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             freeOnExit(&ptrReg);
             return (status=ERROR_RETURN);
         }
+        trlmessage("CTE: ...complete.");
 
-        trlmessage("CTE: creating charge trap image");
+        trlmessage("CTE: Creating charge trap image");
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&chipLoopReg, &trapPixelMap, &freeSingleGroup);
@@ -380,6 +384,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             freeOnExit(&ptrReg);
             return status;
         }
+        trlmessage("CTE: ...complete.");
 
         SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
         image = NULL;
@@ -392,6 +397,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             return status;
         }
         freePtr(&chipLoopReg, &trapPixelMap);
+        trlmessage("CTE: ...complete.");
 
         const double scaleFraction = cte_pars.scale_frac;
 

@@ -27,7 +27,7 @@ static int insertAmp(SingleGroup * amp, const const SingleGroup * image, const u
 static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID);
 static int alignAmp(SingleGroup * amp, const unsigned ampID);
 
-int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
+int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
 {
 
     /* arguments:
@@ -84,44 +84,6 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     /* loop over amps on this chip and do CTE correction */
     numamps = strlen(ccdamp);
 
-    //Get parameters from CTETAB reference file
-    CTEParamsFast pars;
-    addPtr(&ptrReg, &pars, &freeCTEParamsFast);
-    unsigned nScaleTableColumns = N_COLUMNS_FOR_RAZ_CDAB_ALIGNED_IMAGE;
-    initCTEParamsFast(&pars, TRAPS, 0, 0, nScaleTableColumns, nThreads);
-    pars.refAndIamgeBinsIdenticle = True;
-    if ((status = allocateCTEParamsFast(&pars)))
-    {
-        freeOnExit(&ptrReg);
-        return (status);
-    }
-    //NOTE: The char * below should be const but this would require a massive refactoring.
-    char * cteTabFilename = (acs->pcteTabNameFromCmd && *acs->pcteTabNameFromCmd != '\0') ? acs->pcteTabNameFromCmd : acs->pcte.name;
-    if (getCTEParsFast (cteTabFilename, &pars))// || compareCTEParamsFast(chipImage, &pars))
-    {
-        freeOnExit(&ptrReg);
-        return (status);
-    }
-
-    pars.scale_frac = (acs->expstart - pars.cte_date0) / (pars.cte_date1 - pars.cte_date0);
-    if (PutKeyDbl(chipImage->globalhdr, "PCTEFRAC", pars.scale_frac, "CTE scaling factor"))
-    {
-        trlerror("(pctecorr) Error writing PCTEFRAC to image header");
-        freeOnExit(&ptrReg);
-        return (status = HEADER_PROBLEM);
-    }
-
-    sprintf(MsgText, "(pctecorr) Read noise level PCTERNCL: %f", pars.rn_amp);
-    trlmessage(MsgText);
-    sprintf(MsgText, "(pctecorr) Readout simulation forward modeling iterations PCTENFOR: %i",
-            pars.n_forward);
-    trlmessage(MsgText);
-    sprintf(MsgText, "(pctecorr) Number of iterations used in the parallel transfer PCTENPAR: %i",
-            pars.n_par);
-    trlmessage(MsgText);
-    sprintf(MsgText, "(pctecorr) CTE_FRAC: %f", pars.scale_frac);
-    trlmessage(MsgText);
-
     //Now loop over each amp and compute cte correction
     for (unsigned nthAmp = 0; nthAmp < numamps; ++nthAmp)
     {
@@ -143,11 +105,11 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
         nRows = amp_ysize;
         nColumns = amp_xsize;
-        pars.nRows = nRows;
-        pars.nColumns = nColumns;
-        pars.columnOffset = 0;//amp_xbeg;//acs->offsetx;
-        pars.rowOffset = 0;//amp_ybeg;//acs->offsety;
-        pars.razColumnOffset = nthAmp*nColumns;
+        pars->nRows = nRows;
+        pars->nColumns = nColumns;
+        pars->columnOffset = 0;//amp_xbeg;//acs->offsetx;
+        pars->rowOffset = 0;//amp_ybeg;//acs->offsety;
+        pars->razColumnOffset = nthAmp*nColumns;
 
         //This is used for the final output
         SingleGroup ampImage;
@@ -184,8 +146,8 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         assert(!copySingleGroup(&columnMajorImage, &ampImage, COLUMNMAJOR));
 
         //CALCULATE THE SMOOTH READNOISE IMAGE
-        trlmessage("CTE: Calculating smooth readnoise image");
-        if (pars.noise_mit != 0)
+        trlmessage("CTE: Calculating smooth readnoise image...");
+        if (pars->noise_mit != 0)
         {
             trlerror("Only noise model 0 implemented!");
             freeOnExit(&ptrReg);
@@ -202,12 +164,14 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
         setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
         // do some smoothing on the data so we don't amplify the read noise.
-        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, &pars, pars.rn_amp, acs->verbose)))
+        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, pars, pars->rn_amp, acs->verbose)))
         {
             freeOnExit(&ptrReg);
             return (status);
        }
+       trlmessage("CTE: ...complete.");
 
+       trlmessage("CTE: Creating charge trap image");
        SingleGroup trapPixelMap;
        initSingleGroup(&trapPixelMap);
        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
@@ -217,20 +181,23 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
            return (status = OUT_OF_MEMORY);
        }
        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-       if ((status = populateTrapPixelMap(&trapPixelMap, &pars, acs->verbose)))
+       if ((status = populateTrapPixelMap(&trapPixelMap, pars, acs->verbose)))
        {
            freeOnExit(&ptrReg);
            return status;
        }
+       trlmessage("CTE: ...complete.");
 
+       trlmessage("CTE: Running correction algorithm");
        //perform CTE correction
        SingleGroup * cteCorrectedImage = &columnMajorImage;
-       if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, &pars)))
+       if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, pars)))
        {
            freeOnExit(&ptrReg);
            return status;
        }
        freePtr(&ptrReg, &trapPixelMap);
+       trlmessage("CTE: ...complete.");
 
         // add 10% correction to error in quadrature.
         double temp_err;
