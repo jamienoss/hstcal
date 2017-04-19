@@ -22,8 +22,8 @@ int get_amp_array_size_acs_cte(const ACSInfo *acs, SingleGroup *amp,
                               int *xsize, int *ysize, int *xbeg,
                               int *xend, int *ybeg, int *yend);
 
-static void extractAmp(SingleGroup * amp, const const SingleGroup * image, const unsigned ampID);
-static void insertAmp(SingleGroup * amp, const const SingleGroup * image, const unsigned ampID);
+static int extractAmp(SingleGroup * amp, const const SingleGroup * image, const unsigned ampID);
+static int insertAmp(SingleGroup * amp, const const SingleGroup * image, const unsigned ampID);
 static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID);
 static int alignAmp(SingleGroup * amp, const unsigned ampID);
 
@@ -161,8 +161,12 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
 
         // read data from the SingleGroup into an array containing data from
         // just one amp
-        extractAmp(&ampImage, chipImage, ampID);
-        if ((status = alignAmp(&ampImage, ampID)))
+        if ((status = extractAmp(&ampImage, chipImage, ampID)))
+        {
+            freeOnExit(&ptrReg);
+            return (status);
+        }
+       if ((status = alignAmp(&ampImage, ampID)))
         {
             freeOnExit(&ptrReg);
             return (status);
@@ -256,9 +260,14 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
             freeOnExit(&ptrReg);
             return (status);
         }
-        insertAmp(chipImage, &ampImage, ampID);
 
-        /* free space used by our amp arrays */
+        if ((status = insertAmp(chipImage, &ampImage, ampID)))
+        {
+            freeOnExit(&ptrReg);
+            return (status);
+        }
+
+        // free mem used by our amp arrays
         freePtr(&ptrReg, &ampImage);
         freePtr(&ptrReg, &columnMajorImage);
         freePtr(&ptrReg, &smoothedImage);
@@ -271,11 +280,12 @@ int doPCTEGen2 (ACSInfo *acs, SingleGroup * chipImage)
     return (status);
 }
 
-
-static void extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsigned ampID)
+static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsigned ampID)
 {
+    extern int status;
+
     if (!amp || !amp->sci.data.data || !image || !image->sci.data.data)
-        return;
+        return status;
 
     //WARNING - assumes row major storage
     assert(amp->sci.data.storageOrder == ROWMAJOR && image->sci.data.storageOrder == ROWMAJOR);
@@ -286,23 +296,23 @@ static void extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsi
     unsigned rowSkipLength = image->sci.data.nx;
     unsigned offset = 0;
     if (ampID == AMP_B || ampID == AMP_D)
-    	offset = nColumns;
+        offset = nColumns;
     else if (ampID != AMP_A && ampID != AMP_C)
     {
         trlerror("Amp number not recognized, must be 0-3.");
-        status = ERROR_RETURN;
-        return;
+        return (status = ERROR_RETURN);
     }
 
     copyOffsetSingleGroup(amp, image, nRows, nColumns, 0, offset, nColumns, rowSkipLength);
-
-    return;
+    return status;
 }
 
-static void insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigned ampID)
+static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigned ampID)
 {
+    extern int status;
+
     if (!amp || !amp->sci.data.data || !image || !image->sci.data.data)
-        return;
+        return status;
 
     //WARNING - assumes row major storage
     assert(amp->sci.data.storageOrder == ROWMAJOR && image->sci.data.storageOrder == ROWMAJOR);
@@ -317,13 +327,11 @@ static void insertAmp(SingleGroup * image, const SingleGroup * amp, const unsign
     else if (ampID != AMP_A && ampID != AMP_C)
     {
         trlerror("Amp number not recognized, must be 0-3.");
-        status = ERROR_RETURN;
-        return;
+        return (status = ERROR_RETURN);
     }
 
     copyOffsetSingleGroup(image, amp, nRows, nColumns, offset, 0, rowSkipLength, nColumns);
-
-    return;
+    return status;
 }
 
 static int alignAmp(SingleGroup * amp, const unsigned ampID)
@@ -403,32 +411,51 @@ static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID)
         //either physically align all or propagate throughout a mechanism to work on the array upside down (flip b quad though)
         //we'll just flip all for now. See if there's info in the header specifying amp location rel to pix in file,
         //i.e. a way to know whether the chip is 'upside down'. Could then reverse cte corr trail walk direction
-        float * tempRow = NULL;
-        size_t rowSize = nColumns*sizeof(*tempRow);
-        tempRow = malloc(rowSize);
-        addPtr(&ptrReg, tempRow, &free);
-        if (!tempRow)
+        Bool allocationFail = False;
+#ifdef _OPENMP
+    #pragma omp parallel shared(amp, allocationFail)
+#endif
+        {
+            float * tempRow = NULL;
+            size_t rowSize = nColumns*sizeof(*tempRow);
+            tempRow = malloc(rowSize);
+            if (!tempRow)
+            {
+#ifdef _OPENMP
+                #pragma omp critical(allocationCheck) // This really isn't needed
+#endif
+                {
+                    allocationFail = True;
+                }
+            }
+
+#ifdef _OPENMP
+            #pragma omp barrier
+#endif
+            if (!allocationFail)
+            {
+#ifdef _OPENMP
+                #pragma omp for schedule(static)
+#endif
+                for (unsigned i = 0; i < nRows/2; ++i)
+                {
+                    float * topRow = amp->data + i*nColumns;
+                    float * bottomRow = amp->data + (nRows-1-i)*nColumns;
+                    memcpy(tempRow, topRow, rowSize);
+                    memcpy(topRow, bottomRow, rowSize);
+                    memcpy(bottomRow, tempRow, rowSize);
+                }
+            }
+            if (tempRow)
+                free(tempRow);
+        }//close parallel block
+        if (allocationFail)
         {
             sprintf(MsgText, "Out of memory for 'tempRow' in 'alignAmpData'");
             trlerror(MsgText);
-            freeOnExit(&ptrReg);
             return (status = OUT_OF_MEMORY);
         }
-
-#ifdef _OPENMP
-        #pragma omp parallel for shared(amp) schedule(static)
-#endif
-        for (unsigned i = 0; i < nRows/2; ++i)
-        {
-            float * topRow = amp->data + i*nColumns;
-            float * bottomRow = amp->data + (nRows-1-i)*nColumns;
-            memcpy(tempRow, topRow, rowSize);
-            memcpy(topRow, bottomRow, rowSize);
-            memcpy(bottomRow, tempRow, rowSize);
-        }
-        free(tempRow);
     }
 
-    freeOnExit(&ptrReg);
     return status;
 }

@@ -239,10 +239,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
                 return (status = OPEN_FAILED);
             }
         }
-        /*SAVE THE PCTETABLE INFORMATION TO THE HEADER OF THE SCIENCE IMAGE
-              AFTER CHECKING TO SEE IF THE USER HAS SPECIFIED ANY CHANGES TO THE
-              CTE CODE VARIABLES.
-              */
+
+        //Look for CTE parameters in the image file and use this instead of those from PCTETAB
         if ((status = compareCTEParamsFast(&raw, &cte_pars)))
         {
             freeOnExit(&ptrReg);
@@ -271,15 +269,23 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             return status;
         }
         //align raw image for later comparison with aligned corrected image
-        alignAmps(&raw, &cte_pars);
-
-        //biac bias subtraction
-        if (doCteBias(&wf3, image))
+        if ((status = alignAmps(&raw, &cte_pars)))
         {
             freeOnExit(&ptrReg);
             return(status);
         }
-        alignAmps(image, &cte_pars);
+
+        //biac bias subtraction
+        if ((status = doCteBias(&wf3, image)))
+        {
+            freeOnExit(&ptrReg);
+            return(status);
+        }
+        if ((status = alignAmps(image, &cte_pars)))
+        {
+            freeOnExit(&ptrReg);
+            return(status);
+        }
 
         //CTE correction not sensitive enough to work without amp bias and gain correction
         //which require vertical overscan
@@ -323,7 +329,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         image = &columnMajorImage;
 
         //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-        if (correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars))
+        if ((status = correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars)))
         {
             freeOnExit(&ptrReg);
             return (status);
@@ -344,7 +350,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         /***CREATE THE NOISE MITIGATION MODEL ***/
         if (cte_pars.noise_mit == 0)
         {
-            //printf("smooth clipping level: %f\n",cte_pars.rn_amp);
             if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, wf3.verbose))
             {
                 freeOnExit(&ptrReg);
@@ -389,7 +394,6 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freePtr(&chipLoopReg, &trapPixelMap);
 
         const double scaleFraction = cte_pars.scale_frac;
-        //freePtr(&ptrReg, &cte_pars);
 
         // CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT
         const float ccdgain = wf3.ccdgain;
@@ -455,6 +459,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             }
             trlmessage("PCTEFRAC saved to header");
         }
+
         if ((status = outputImage(output, &raw, &cte_pars)))
         {
             freeOnExit(&ptrReg);
@@ -682,9 +687,6 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);
 
-    PtrRegister ptrReg;
-    initPtrRegister(&ptrReg);
-
     //Align amps such that they are at the bottom left
     extern int status;
 
@@ -703,10 +705,7 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 
     //If subarray only in c quad do nothing as this is already bottom left aligned
     if (isCDAmp && !ctePars->quadExists[1])
-    {
-        freeOnExit(&ptrReg);
         return status;
-    }
 
     //Find if subarray extends into either b or d quad and flip right to left
     if (ctePars->quadExists[1])//  &columnOffset + nColumns > ctePars->nColumnsPerQuad)
@@ -717,7 +716,7 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
         unsigned rowLength = columnOffset + nColumns - ctePars->nColumnsPerQuad;
         unsigned quadBoundary = nColumns - rowLength;
 #ifdef _OPENMP
-        #pragma omp parallel for shared(image, ctePars) schedule(static)
+        #pragma omp parallel for shared(image) schedule(static)
 #endif
         for (unsigned i = 0; i < nRows; ++i)
         {
@@ -740,33 +739,52 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
         //either physically align all or propagate throughout a mechanism to work on the array upside down (flip b quad though)
         //we'll just flip all for now. See if there's info in the header specifying amp location rel to pix in file,
         //i.e. a way to know whether the chip is 'upside down'. Could then reverse cte corr trail walk direction
-        float * tempRow = NULL;
-        size_t rowSize = nColumns*sizeof(*tempRow);
-        tempRow = malloc(rowSize);
-        addPtr(&ptrReg, tempRow, &free);
-        if (!tempRow)
+        Bool allocationFail = False;
+#ifdef _OPENMP
+        #pragma omp parallel shared(image, allocationFail)
+#endif
+        {
+            float * tempRow = NULL;
+            size_t rowSize = nColumns*sizeof(*tempRow);
+            tempRow = malloc(rowSize);
+            if (!tempRow)
+            {
+#ifdef _OPENMP
+                #pragma omp critical(allocationCheck) // This really isn't needed
+#endif
+                {
+                    allocationFail = True;
+                }
+            }
+
+#ifdef _OPENMP
+            #pragma omp barrier
+#endif
+            if (!allocationFail)
+            {
+#ifdef _OPENMP
+                #pragma omp for schedule(static)
+#endif
+                for (unsigned i = 0; i < nRows/2; ++i)
+                {
+                    float * topRow = image->sci.data.data + i*nColumns;
+                    float * bottomRow = image->sci.data.data + (nRows-1-i)*nColumns;
+                    memcpy(tempRow, topRow, rowSize);
+                    memcpy(topRow, bottomRow, rowSize);
+                    memcpy(bottomRow, tempRow, rowSize);
+                }
+            }
+            if (tempRow)
+                free(tempRow);
+        }//close parallel block
+        if (allocationFail)
         {
             sprintf(MsgText, "Out of memory for 'tempRow' in 'alignAmpData'");
             trlerror(MsgText);
-            freeOnExit(&ptrReg);
             return (status = OUT_OF_MEMORY);
         }
-
-#ifdef _OPENMP
-        #pragma omp parallel for shared(image, ctePars) schedule(static)
-#endif
-        for (unsigned i = 0; i < nRows/2; ++i)
-        {
-            float * topRow = image->sci.data.data + i*nColumns;
-            float * bottomRow = image->sci.data.data + (nRows-1-i)*nColumns;
-            memcpy(tempRow, topRow, rowSize);
-            memcpy(topRow, bottomRow, rowSize);
-            memcpy(bottomRow, tempRow, rowSize);
-        }
-        free(tempRow);
     }
 
-    freeOnExit(&ptrReg);
     return status;
 }
 
