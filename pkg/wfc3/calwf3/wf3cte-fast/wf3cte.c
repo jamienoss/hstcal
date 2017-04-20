@@ -434,7 +434,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             totalRawCounts += threadRawCounts;
         }
         }//end omp threads
-        printf("\nTotal count difference (rac-raw) incurred from correction: %f (%f%%)\n\n", totalCounts, totalCounts/totalRawCounts*100);
+        sprintf(MsgText, "CTE: Total count difference (corrected-raw) incurred from correction: %f (%f%%)", totalCounts, totalCounts/totalRawCounts*100);
+        trlmessage(MsgText);
 
         cteCorrectedImage = NULL;
         smoothedImage = NULL;

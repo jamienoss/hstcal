@@ -207,26 +207,47 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
        trlmessage("(pctecorr) ...complete.");
 
         // add 10% correction to error in quadrature.
-        double temp_err;
+        float totalCounts = 0;
+        float totalRawCounts = 0;
 #ifdef _OPENMP
-        #pragma omp parallel for shared(nRows, nColumns, cteCorrectedImage, smoothedImage, ampImage) schedule(static)
+        #pragma omp parallel shared(nRows, nColumns, cteCorrectedImage, smoothedImage, ampImage)
 #endif
-        //This loop order is row major as more row major storage is accessed than column.
-        //MORE: look into worth splitting out ops, prob needs a order swap (copy) so perhaps not worth it.
-        for (unsigned k = 0; k < nRows; ++k)
         {
-            for (unsigned m = 0; m < nColumns; ++m)
+            double temp_err;
+            float threadCounts = 0;
+            float threadRawCounts = 0;
+            float delta;
+#ifdef _OPENMP
+            #pragma omp for schedule(static)
+#endif
+            //This loop order is row major as more row major storage is accessed than column.
+            //MORE: look into worth splitting out ops, prob needs a order swap (copy) so perhaps not worth it.
+            for (unsigned k = 0; k < nRows; ++k)
             {
-                float delta = (PixColumnMajor(cteCorrectedImage->sci.data,k,m) - PixColumnMajor(smoothedImage.sci.data,k,m));
+                for (unsigned m = 0; m < nColumns; ++m)
+                {
+                    delta = (PixColumnMajor(cteCorrectedImage->sci.data,k,m) - PixColumnMajor(smoothedImage.sci.data,k,m));
+                    threadCounts += delta;
+                    threadRawCounts += Pix(ampImage.sci.data, m, k);
+                    temp_err = 0.1 * fabs(delta - Pix(ampImage.sci.data, m, k));
+                    Pix(ampImage.sci.data, m, k) += delta;
 
-                temp_err = 0.1 * fabs(delta - Pix(ampImage.sci.data, m, k));
-                Pix(ampImage.sci.data, m, k) += delta;
-
-                float err2 = Pix(ampImage.err.data, m, k);
-                err2 *= err2;
-                Pix(ampImage.err.data, m, k) = sqrt(err2 + temp_err*temp_err);
+                    float err2 = Pix(ampImage.err.data, m, k);
+                    err2 *= err2;
+                    Pix(ampImage.err.data, m, k) = sqrt(err2 + temp_err*temp_err);
+                }
             }
-        }
+
+#ifdef _OPENMP
+            #pragma omp critical(deltaAggregate)
+#endif
+           {
+               totalCounts += threadCounts;
+               totalRawCounts += threadRawCounts;
+           }
+        }//close parallel block
+        sprintf(MsgText, "(pctecorr) Total count difference (corrected-raw) incurred from correction: %f (%f%%)", totalCounts, totalCounts/totalRawCounts*100);
+        trlmessage(MsgText);
 
         // put the CTE corrected data back into the SingleGroup structure
         if ((status = alignAmp(&ampImage, ampID)))
