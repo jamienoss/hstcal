@@ -155,7 +155,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     }
 
     /*READ IN THE CTE PARAMETER TABLE*/
-    sprintf(MsgText, "Reading CTE parameters from PCTETAB file: '%s'...", wf3.pctetab.name);
+    sprintf(MsgText, "(pctecorr) Reading CTE parameters from PCTETAB file: '%s'...", wf3.pctetab.name);
     trlmessage(MsgText);
     CTEParamsFast ctePars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
     initCTEParamsFast(&ctePars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, nThreads);
@@ -170,7 +170,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freeOnExit(&ptrReg);
         return (status);
     }
-    trlmessage("PCTETAB read.");
+    trlmessage("(pctecorr) PCTETAB read.");
 
     ctePars.maxThreads = nThreads;
     //Compute scale fraction
@@ -346,7 +346,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
                 }
 */
         /***CALCULATE THE SMOOTH READNOISE IMAGE***/
-        trlmessage("CTE: Calculating smooth readnoise image...");
+        trlmessage("(pctecorr) Calculating smooth readnoise image...");
         SingleGroup * smoothedImage = &rowMajorImage; //reuse rowMajorImage memory space
         setStorageOrder(smoothedImage, COLUMNMAJOR);
 
@@ -365,9 +365,9 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             freeOnExit(&ptrReg);
             return (status=ERROR_RETURN);
         }
-        trlmessage("CTE: ...complete.");
+        trlmessage("(pctecorr) ...complete.");
 
-        trlmessage("CTE: Creating charge trap image...");
+        trlmessage("(pctecorr) Creating charge trap image...");
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&chipLoopReg, &trapPixelMap, &freeSingleGroup);
@@ -384,20 +384,20 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             freeOnExit(&ptrReg);
             return status;
         }
-        trlmessage("CTE: ...complete.");
+        trlmessage("(pctecorr) ...complete.");
 
         SingleGroup * cteCorrectedImage = image; // reuse columnMajorImage
         image = NULL;
 
         // MAIN CORRECTION LOOP IN HERE
-        trlmessage("CTE: Running correction algorithm...");
+        trlmessage("(pctecorr) Running correction algorithm...");
         if ((status = inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return status;
         }
         freePtr(&chipLoopReg, &trapPixelMap);
-        trlmessage("CTE: ...complete.");
+        trlmessage("(pctecorr) ...complete.");
 
         const double scaleFraction = ctePars.scale_frac;
 
@@ -434,7 +434,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             totalRawCounts += threadRawCounts;
         }
         }//end omp threads
-        sprintf(MsgText, "CTE: Total count difference (corrected-raw) incurred from correction: %f (%f%%)", totalCounts, totalCounts/totalRawCounts*100);
+        sprintf(MsgText, "(pctecorr) Total count difference (corrected-raw) incurred from correction: %f (%f%%)", totalCounts, totalCounts/totalRawCounts*100);
         trlmessage(MsgText);
 
         cteCorrectedImage = NULL;
@@ -475,7 +475,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
         if (verbose){
-            sprintf(MsgText,"CTE run time: %.2f(s) with %i procs/threads\n",time_spent/nThreads,nThreads);
+            sprintf(MsgText,"CTE run time: %.2f(s) with %i threads\n",time_spent/nThreads,nThreads);
             trlmessage(MsgText);
         }
         freeAll(&chipLoopReg);
