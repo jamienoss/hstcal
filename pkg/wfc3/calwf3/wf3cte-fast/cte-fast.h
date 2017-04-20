@@ -64,7 +64,7 @@ void findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned prescanWid
 int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3);
 int getCCDChipId(int * value, char * fileName, char * ename, int ever);
 int putChip(char * fileName, SingleGroup * image, WF3Info * wf3, double const scaleFraction);
-int doNewCTEBias( SingleGroup * image, char * filename, CTEParamsFast * ctePars, Bool verbose);
+int doNewCTEBias( SingleGroup * image, char * filename, CTEParamsFast * ctePars);
 int doCteBias (WF3Info * wf3, SingleGroup * image);
 int GetCTEFlags (WF3Info * wf3, Hdr * hdr);
 int a2d_raz(WF3Info * wf3);

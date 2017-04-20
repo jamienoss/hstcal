@@ -164,7 +164,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
         setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
         // do some smoothing on the data so we don't amplify the read noise.
-        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, pars, pars->rn_amp, acs->verbose)))
+        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, pars, pars->rn_amp)))
         {
             freeOnExit(&ptrReg);
             return (status);
@@ -181,7 +181,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
            return (status = OUT_OF_MEMORY);
        }
        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-       if ((status = populateTrapPixelMap(&trapPixelMap, pars, acs->verbose)))
+       if ((status = populateTrapPixelMap(&trapPixelMap, pars)))
        {
            freeOnExit(&ptrReg);
            return status;

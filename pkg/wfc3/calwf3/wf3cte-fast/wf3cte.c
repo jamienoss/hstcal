@@ -157,47 +157,48 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
     /*READ IN THE CTE PARAMETER TABLE*/
     sprintf(MsgText, "Reading CTE parameters from PCTETAB file: '%s'...", wf3.pctetab.name);
     trlmessage(MsgText);
-    CTEParamsFast cte_pars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
-    initCTEParamsFast(&cte_pars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, nThreads);
-    addPtr(&ptrReg, &cte_pars, &freeCTEParamsFast);
-    if ((status = allocateCTEParamsFast(&cte_pars)))
+    CTEParamsFast ctePars; /*STRUCTURE HOLDING THE MODEL PARAMETERS*/
+    initCTEParamsFast(&ctePars, TRAPS, RAZ_ROWS, RAZ_COLS, RAZ_COLS, nThreads);
+    addPtr(&ptrReg, &ctePars, &freeCTEParamsFast);
+    if ((status = allocateCTEParamsFast(&ctePars)))
     {
         freeOnExit(&ptrReg);
         return (status);
     }
-    if ((status = getCTEParsFast(wf3.pctetab.name, &cte_pars)))
+    if ((status = getCTEParsFast(wf3.pctetab.name, &ctePars)))
     {
         freeOnExit(&ptrReg);
         return (status);
     }
     trlmessage("PCTETAB read.");
 
-    cte_pars.maxThreads = nThreads;
+    ctePars.maxThreads = nThreads;
     //Compute scale fraction
     /*USE EXPSTART YYYY-MM-DD TO DETERMINE THE CTE SCALING
           APPROPRIATE FOR THE GIVEN DATE. WFC3/UVIS WAS
           INSTALLED AROUND MAY 11,2009 AND THE MODEL WAS
           CONSTRUCTED TO BE VALID AROUND SEP 3, 2012, A LITTLE
           OVER 3 YEARS AFTER INSTALLATION*/
-    cte_pars.scale_frac = (wf3.expstart - cte_pars.cte_date0)/(cte_pars.cte_date1 - cte_pars.cte_date0);
+    ctePars.scale_frac = (wf3.expstart - ctePars.cte_date0)/(ctePars.cte_date1 - ctePars.cte_date0);
 
     if (verbose){
         PrRefInfo ("pctetab", wf3.pctetab.name, wf3.pctetab.pedigree,
                 wf3.pctetab.descrip, wf3.pctetab.descrip2);
 
-        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g", cte_pars.scale_frac);
+        sprintf(MsgText,"CTE_FF (scaling fraction by date) = %g", ctePars.scale_frac);
         trlmessage(MsgText);
     }
 
     //Store sizes - these are corrected for subarrays in getSubarray()
-    cte_pars.nRowsPerFullFrame = RAZ_ROWS;
-    cte_pars.nColumnsPerFullFrame = RAZ_COLS;
-    cte_pars.nColumnsPerChip = cte_pars.nColumnsPerFullFrame/2;
-    cte_pars.nRowsPerChip = cte_pars.nRowsPerFullFrame;
-    cte_pars.nColumnsPerQuad = cte_pars.nColumnsPerFullFrame/4;
-    cte_pars.nRowsPerQuad = cte_pars.nRowsPerFullFrame;
-    cte_pars.isSubarray = wf3.subarray;
-    cte_pars.refAndIamgeBinsIdenticle = True;
+    ctePars.nRowsPerFullFrame = RAZ_ROWS;
+    ctePars.nColumnsPerFullFrame = RAZ_COLS;
+    ctePars.nColumnsPerChip = ctePars.nColumnsPerFullFrame/2;
+    ctePars.nRowsPerChip = ctePars.nRowsPerFullFrame;
+    ctePars.nColumnsPerQuad = ctePars.nColumnsPerFullFrame/4;
+    ctePars.nRowsPerQuad = ctePars.nRowsPerFullFrame;
+    ctePars.isSubarray = wf3.subarray;
+    ctePars.refAndIamgeBinsIdenticle = True;
+    ctePars.verbose = verbose == 0 ? False : True;
 
     unsigned nChips = wf3.subarray ? 1 : 2;
     PtrRegister chipLoopReg;
@@ -213,12 +214,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         //Load image into 'raw' one chip at a time
         if (wf3.subarray)
         {
-            if ((status = getCCDChipId(&wf3.chip, wf3.input, "SCI", 1)))
-            {
-                freeOnExit(&ptrReg);
-                return status;
-            }
-            if ((status = getSubarray(&raw, &cte_pars, &wf3)))
+            if ((status = getSubarray(&raw, &ctePars, &wf3)))
             {
                 freeOnExit(&ptrReg);
                 return status;
@@ -226,12 +222,12 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         }
         else
         {
-            cte_pars.columnOffset = 0;
-            cte_pars.rowOffset = 0;
+            ctePars.columnOffset = 0;
+            ctePars.rowOffset = 0;
             if (chip == 1)
-                cte_pars.razColumnOffset = 0;
+                ctePars.razColumnOffset = 0;
             else if (chip == 2)
-                cte_pars.razColumnOffset = cte_pars.nColumnsPerChip;
+                ctePars.razColumnOffset = ctePars.nColumnsPerChip;
             else
                 assert(0);//unimplemented
 
@@ -244,21 +240,21 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         }
 
         //Look for CTE parameters in the image file and use this instead of those from PCTETAB
-        if ((status = compareCTEParamsFast(&raw, &cte_pars)))
+        if ((status = compareCTEParamsFast(&raw, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return (status);
         }
 
-        cte_pars.nRows = raw.sci.data.ny;
-        cte_pars.nColumns = raw.sci.data.nx;
-        findAlignedQuadImageBoundaries(&cte_pars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
+        ctePars.nRows = raw.sci.data.ny;
+        ctePars.nColumns = raw.sci.data.nx;
+        findAlignedQuadImageBoundaries(&ctePars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
 
         //leave raw as pre-biased image, clone and use copy from here on out
         SingleGroup rowMajorImage;
         initSingleGroup(&rowMajorImage);
         addPtr(&chipLoopReg, &rowMajorImage, &freeSingleGroup);
-        if ((status = allocSingleGroupExts(&rowMajorImage, cte_pars.nColumns, cte_pars.nRows, SCIEXT, False)))
+        if ((status = allocSingleGroupExts(&rowMajorImage, ctePars.nColumns, ctePars.nRows, SCIEXT, False)))
         {
             sprintf(MsgText, "Allocation problem with 'rowMajorImage' in 'WF3cteFast()'");
             trlerror(MsgText);
@@ -272,7 +268,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             return status;
         }
         //align raw image for later comparison with aligned corrected image
-        if ((status = alignAmps(&raw, &cte_pars)))
+        if ((status = alignAmps(&raw, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return(status);
@@ -284,7 +280,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             freeOnExit(&ptrReg);
             return(status);
         }
-        if ((status = alignAmps(image, &cte_pars)))
+        if ((status = alignAmps(image, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return(status);
@@ -292,14 +288,14 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         //CTE correction not sensitive enough to work without amp bias and gain correction
         //which require vertical overscan
-        if (cte_pars.isSubarray)
+        if (ctePars.isSubarray)
         {
             for (unsigned quad = 0; quad < 2; ++quad)
             {
-                if (cte_pars.quadExists[quad] && !cte_pars.hasPrescan[quad])
+                if (ctePars.quadExists[quad] && !ctePars.hasPrescan[quad])
                 {
                     sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",
-                            cte_pars.columnOffset, cte_pars.columnOffset + cte_pars.nColumns);
+                            ctePars.columnOffset, ctePars.columnOffset + ctePars.nColumns);
                     trlmessage(MsgText);
                     freeOnExit(&ptrReg);
                     return(ERROR_RETURN);
@@ -308,8 +304,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         }
 
         //c++ ref would be good here
-        const unsigned nRows = cte_pars.nRows;
-        const unsigned nColumns = cte_pars.nColumns;
+        const unsigned nRows = ctePars.nRows;
+        const unsigned nColumns = ctePars.nColumns;
 
         //copy to column major storage
         SingleGroup columnMajorImage;
@@ -332,7 +328,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         image = &columnMajorImage;
 
         //SUBTRACT AMP BIAS AND CORRECT FOR GAIN
-        if ((status = correctAmpBiasAndGain(image, wf3.ccdgain, &cte_pars)))
+        if ((status = correctAmpBiasAndGain(image, wf3.ccdgain, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return (status);
@@ -351,9 +347,9 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         setStorageOrder(smoothedImage, COLUMNMAJOR);
 
         /***CREATE THE NOISE MITIGATION MODEL ***/
-        if (cte_pars.noise_mit == 0)
+        if (ctePars.noise_mit == 0)
         {
-            if (cteSmoothImage(image, smoothedImage, &cte_pars, cte_pars.rn_amp, wf3.verbose))
+            if (cteSmoothImage(image, smoothedImage, &ctePars, ctePars.rn_amp))
             {
                 freeOnExit(&ptrReg);
                 return (status);
@@ -379,7 +375,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
            return status;
        }
         setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-        if (populateTrapPixelMap(&trapPixelMap, &cte_pars, wf3.verbose))
+        if (populateTrapPixelMap(&trapPixelMap, &ctePars))
         {
             freeOnExit(&ptrReg);
             return status;
@@ -391,7 +387,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         // MAIN CORRECTION LOOP IN HERE
         trlmessage("CTE: Running correction algorithm");
-        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &cte_pars))
+        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &ctePars))
         {
             freeOnExit(&ptrReg);
             return status;
@@ -399,7 +395,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freePtr(&chipLoopReg, &trapPixelMap);
         trlmessage("CTE: ...complete.");
 
-        const double scaleFraction = cte_pars.scale_frac;
+        const double scaleFraction = ctePars.scale_frac;
 
         // CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT
         const float ccdgain = wf3.ccdgain;
@@ -466,7 +462,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
             trlmessage("PCTEFRAC saved to header");
         }
 
-        if ((status = outputImage(output, &raw, &cte_pars)))
+        if ((status = outputImage(output, &raw, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return status;
@@ -627,7 +623,6 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
     return status;
 }
 
-//NOTE: wf3 * ctePars should be const however this is too large a refactor for this PR
 int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
 {
     extern int status;
@@ -635,14 +630,16 @@ int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
     if (!ctePars->isSubarray)
         return status;
 
+    if ((status = getCCDChipId(&wf3->chip, wf3->input, "SCI", 1)))
+        return status;
+    ctePars->chip = wf3->chip;
+
     // get subarray from first extension
     getSingleGroup(wf3->input, 1, image);
     if (hstio_err()){
         freeSingleGroup(image);
         return (status = OPEN_FAILED);
     }
-    // getSingleGroup will set image->group_num to 1 here so now correct
-    image->group_num = wf3->chip == 2 ? 1 : 2;
 
     ctePars->nRows = image->sci.data.ny;
     ctePars->nColumns = image->sci.data.nx;
@@ -700,13 +697,18 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
     const unsigned nColumns = ctePars->nColumns;
     const unsigned nRows = ctePars->nRows;
 
-    const Bool isCDAmp = image->group_num == 1 ? True : False;
+    Bool isCDAmp = image->group_num == 1 ? True : False;
     if (ctePars->isSubarray)
     {
-        if (isCDAmp)
-            printf("subarray from CD amp\n");
-        else
-            printf("subarray from AB amp\n");
+        assert(ctePars->chip == 1 || ctePars->chip == 2);
+        isCDAmp = ctePars->chip == 2 ? True : False;
+        if (ctePars->verbose)
+        {
+            if (isCDAmp)
+                trlmessage("subarray from CD amp");
+            else
+                trlmessage("subarray from AB amp");
+        }
     }
 
     //If subarray only in c quad do nothing as this is already bottom left aligned

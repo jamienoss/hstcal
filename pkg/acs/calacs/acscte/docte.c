@@ -168,6 +168,7 @@ int DoCTE (ACSInfo *acs_info) {
             unsigned nScaleTableColumns = N_COLUMNS_FOR_RAZ_CDAB_ALIGNED_IMAGE;
             initCTEParamsFast(&ctePars, TRAPS, 0, 0, nScaleTableColumns, acs_info->nThreads);
             ctePars.refAndIamgeBinsIdenticle = True;
+            ctePars.verbose = acs->verbose = 0 ? False : True;
             if ((status = allocateCTEParamsFast(&ctePars)))
             {
                 freeOnExit(&ptrReg);

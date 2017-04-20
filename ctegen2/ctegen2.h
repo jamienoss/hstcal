@@ -5,6 +5,7 @@
 
 typedef struct {
     unsigned maxThreads;
+    Bool verbose;
     int noise_mit; /*read noise mitigation algorithm*/
     int cte_len; // max length of cte trail
     int fix_rocr; /*make allowance for readout cosmic rays*/
@@ -30,6 +31,7 @@ typedef struct {
 
     //subarray offset positions within chip
     Bool isSubarray;
+    unsigned chip;
     Bool refAndIamgeBinsIdenticle;
     unsigned rowOffset;
     unsigned columnOffset;
@@ -87,8 +89,8 @@ int simulateColumnReadout(double * const pixelColumn, const float * const traps,
 Bool correctCROverSubtraction(float * const traps, const double * const pix_model, const double * const pix_observed,
         const unsigned nRows, const double threshHold);
 
-int populateTrapPixelMap(SingleGroup * input, CTEParamsFast * params, const int verbose);
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double readNoiseAmp, int verbose);
+int populateTrapPixelMap(SingleGroup * input, CTEParamsFast * params);
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double readNoiseAmp);
 double find_dadjFast(const unsigned i ,const unsigned j, const unsigned nRows, const float * obsloc[3], const float * rszloc[3], const double readNoiseAmp);
 
 //helpers
@@ -113,12 +115,5 @@ int GetKeyDbl (Hdr *, char *, int , double , double *);
 int PutKeyInt (Hdr *, char *, int , char *);
 int PutKeyDbl (Hdr *, char *, double , char *);
 int PutKeyStr(Hdr *, char *, char *, char *);
-
-# define RAZ_COLS 8412
-# define RAZ_ROWS 2070
-//int inverse_cte_blur(const SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart);
-//int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte);
-//int raz2rsz(const SingleGroup *raz, SingleGroup *rsz, double rnsig, int max_threads);
-//double find_dadj_wf3(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS], double rnsig);
 
 #endif

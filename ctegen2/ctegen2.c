@@ -337,7 +337,7 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
     return redo;
 }
 
-int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const int verbose)
+int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
 {
    /*SCALE BY 1 UNLESS THE PCTETAB SAYS OTHERWISE, I IS THE PACKET NUM
      THIS IS A SAFETY LOOP INCASE NOT ALL THE COLUMNS ARE POPULATED
@@ -360,11 +360,11 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
 
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
-    const double cteScale = cte->scale_frac;
+    const double cteScale = ctePars->scale_frac;
 
 
 #ifdef _OPENMP
-    #pragma omp parallel shared(trapPixelMap, cte)
+    #pragma omp parallel shared(trapPixelMap, ctePars)
 #endif
     {
     double trapColumnScale[4];
@@ -377,15 +377,15 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
     #pragma omp for schedule(static)
 #endif
 
-    for (unsigned i = 0; i < cte->nScaleTableColumns; ++i)
+    for (unsigned i = 0; i < ctePars->nScaleTableColumns; ++i)
     {
-        unsigned column = cte->iz_data[i] - cte->razColumnOffset; //which column to scale
+        unsigned column = ctePars->iz_data[i] - ctePars->razColumnOffset; //which column to scale
         if (column < 0 || column >= nColumns)
             continue;
-        trapColumnScale[0] = cte->scale512[i];
-        trapColumnScale[1] = cte->scale1024[i];
-        trapColumnScale[2] = cte->scale1536[i];
-        trapColumnScale[3] = cte->scale2048[i];
+        trapColumnScale[0] = ctePars->scale512[i];
+        trapColumnScale[1] = ctePars->scale1024[i];
+        trapColumnScale[2] = ctePars->scale1536[i];
+        trapColumnScale[3] = ctePars->scale2048[i];
         //CALCULATE THE CTE CORRECTION FOR EVERY PIXEL
         //  Index is figured on the final size of the image
         //  not the current size.
@@ -404,17 +404,17 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * cte, const 
     }
     } // end parallel block
 
-    if (verbose)
+    if (ctePars->verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to populate pixel trap map image: %.2f(s) with %i threads",timeSpent/cte->maxThreads, cte->maxThreads);
+        sprintf(MsgText,"Time taken to populate pixel trap map image: %.2f(s) with %i threads",timeSpent/ctePars->maxThreads, ctePars->maxThreads);
         trlmessage(MsgText);
     }
 
     return(status);
 }
 
-int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double ampReadNoise, int verbose)
+int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFast * ctePars, double ampReadNoise)
 {
     /*
        This routine will read in a RAZ image and will output the smoothest
@@ -582,7 +582,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
     freeSingleGroup(&adjustment);
     freeSingleGroup(&readNoise);
 
-    if (verbose)
+    if (ctePars->verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
         sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads", timeSpent/ctePars->maxThreads, ctePars->maxThreads);

@@ -9,7 +9,7 @@
 # include "err.h"
 # include "cte-fast.h"
 
-int doNewCTEBias( SingleGroup * image, char * filename, CTEParamsFast * ctePars, Bool verbose)
+int doNewCTEBias( SingleGroup * image, char * filename, CTEParamsFast * ctePars)
 {
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);
@@ -26,7 +26,7 @@ int doNewCTEBias( SingleGroup * image, char * filename, CTEParamsFast * ctePars,
        return (status = SIZE_MISMATCH);
     }
 
-    if (verbose)
+    if (ctePars->verbose)
     {
         sprintf(MsgText,"Image has starting location of %d,%d in the reference image", ctePars->columnOffset, ctePars->rowOffset);
         trlmessage(MsgText);

@@ -18,6 +18,7 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps,
         const unsigned _nScaleTableColumns, const unsigned _maxThreads)
 {
     pars->maxThreads = _maxThreads;
+    pars->verbose = False;
     pars->nRows = _nRows;
     pars->nColumns = _nColumns;
     pars->nTraps = _nTraps;
@@ -43,6 +44,7 @@ void initCTEParamsFast(CTEParamsFast * pars, const unsigned _nTraps,
     pars->nRowsPerQuad = 0;
 
     pars->isSubarray = False;
+    pars->chip = 0;
     pars->refAndIamgeBinsIdenticle = True;
     pars->rowOffset = 0; //from begining of chip
     pars->columnOffset = 0; //from begining of chip
