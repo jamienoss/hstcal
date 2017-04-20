@@ -302,12 +302,11 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
                             ctePars.columnOffset, ctePars.columnOffset + ctePars.nColumns);
                     trlmessage(MsgText);
                     freeOnExit(&ptrReg);
-                    return(ERROR_RETURN);
+                    return (status = ERROR_RETURN);
                 }
             }
         }
 
-        //c++ ref would be good here
         const unsigned nRows = ctePars.nRows;
         const unsigned nColumns = ctePars.nColumns;
 
@@ -353,7 +352,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         /***CREATE THE NOISE MITIGATION MODEL ***/
         if (ctePars.noise_mit == 0)
         {
-            if (cteSmoothImage(image, smoothedImage, &ctePars, ctePars.rn_amp))
+            if ((status = cteSmoothImage(image, smoothedImage, &ctePars, ctePars.rn_amp)))
             {
                 freeOnExit(&ptrReg);
                 return (status);
@@ -505,7 +504,6 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParamsFas
     if (!image || !ctePars)
         return (status = ALLOCATION_PROBLEM);
 
-
     float biasMean[2] = {0, 0};
     float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
 
@@ -513,10 +511,10 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParamsFas
     unsigned nOverscanColumnsToIgnore = ctePars->isSubarray ? 5 : 3;
     findOverscanBias(image, biasMean, biasSigma, overscanType, nOverscanColumnsToIgnore, ctePars);
 
-    unsigned rowsStart = ctePars->imageRowsStart;
-    unsigned rowsEnd = ctePars->imageRowsEnd;
-    unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
-    unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+    unsigned rowsStart = 0;//ctePars->imageRowsStart;
+    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {0, 2103};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {2103, 2103*2};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
 #ifdef _OPENMP
     #pragma omp parallel shared(image, biasMean, biasSigma)

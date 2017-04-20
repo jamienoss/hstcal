@@ -75,8 +75,7 @@ int makeRAZ(const SingleGroup *cd, const SingleGroup *ab, SingleGroup *raz)
     const unsigned nColumnsPerChip = nColumns / 4; /* for looping over quads  */
 
 #ifdef _OPENMP
-    const unsigned nThreads = omp_get_num_procs();
-    #pragma omp parallel for num_threads(nThreads) shared(raz, cd, ab) schedule(static)
+    #pragma omp parallel for shared(raz, cd, ab) schedule(static)
 #endif
 	for (unsigned i = 0; i < nRows; ++i)
 	{
