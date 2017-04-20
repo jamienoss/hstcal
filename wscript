@@ -56,14 +56,18 @@ def options(opt):
     opt.add_option(
         '--debug', action='store_true', default=False,
         help="Create a debug build")
-	
+
     opt.add_option(
         '--release-with-symbols', dest='releaseWithSymbols', action='store_true', default=False,
         help='Create a Release build with debug symbols, i.e. with "-g"')
-        
+
     opt.add_option(
         '--O3', dest='optO3', action='store_true', default=False,
         help='Create a Release build with full optimization, i.e. with "-O3"')
+
+    opt.add_option(
+        '--vec', dest='optVec', action='store_true', default=False,
+        help='Create a Release build with vectorization, i.e. with "-ftree-vectorize -msse2 -ftree-vectorizer-verbose=5"')
 
     opt.recurse('cfitsio')
 
@@ -220,12 +224,20 @@ def configure(conf):
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
     else:
-        if not conf.options.optO3:
-            if conf.check_cc(cflags='-O2'):
-                conf.env.append_value('CFLAGS','-O2')
-        else:
+        if conf.options.optO3:
             if conf.check_cc(cflags='-O3'):
                 conf.env.append_value('CFLAGS','-O3')
+        else if onf.options.optVec
+            if conf.check_cc(cflags='-ftree-vectorize'):
+                conf.env.append_value('CFLAGS','-ftree-vectorize')
+            if conf.check_cc(cflags='-ftree-vectorizer-verbose=5'):
+                conf.env.append_value('CFLAGS','-ftree-vectorizer-verbose=5')
+            if conf.check_cc(cflags='-msse2'):
+                conf.env.append_value('CFLAGS','-msse2')
+        else:
+            if conf.check_cc(cflags='-O2'):
+                conf.env.append_value('CFLAGS','-O2')
+
         if conf.check_cc(cflags='-Wall'):
             conf.env.append_value('CFLAGS','-Wall')
         if conf.check_cc(cflags='-fstack-protector-all'):

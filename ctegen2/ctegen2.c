@@ -264,7 +264,7 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
             if (!isInsideTrailLength && !isAboveChargeThreshold)
                 continue;
 
-            if (pixelColumn[i] >= 0 )//seems a shame to need check this every iteration
+            if (pixelColumn[i] >= 0 )//seems a shame to check this every iteration
             {
                 pixel = pixelColumn[i] + releasedFlux; /*shuffle charge in*/
                 double floored = floor(pixel);
