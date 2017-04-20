@@ -6,6 +6,7 @@
 #define ACS_OK                 0
 #define STIS_OK                0
 #define WF3_OK                 0
+#define HSTCAL_OK              0
 
 #define ERROR_RETURN           2
 

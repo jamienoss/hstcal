@@ -248,7 +248,11 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
         ctePars.nRows = raw.sci.data.ny;
         ctePars.nColumns = raw.sci.data.nx;
-        findAlignedQuadImageBoundaries(&ctePars, 25, 30, 19); //25 prescan, 30 postscan, & 19 parallel overscan
+        if ((status = findAlignedQuadImageBoundaries(&ctePars, 25, 30, 19))) //25 prescan, 30 postscan, & 19 parallel overscan
+        {
+            freeOnExit(&ptrReg);
+            return status;
+        }
 
         //leave raw as pre-biased image, clone and use copy from here on out
         SingleGroup rowMajorImage;
@@ -363,7 +367,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         }
         trlmessage("CTE: ...complete.");
 
-        trlmessage("CTE: Creating charge trap image");
+        trlmessage("CTE: Creating charge trap image...");
         SingleGroup trapPixelMap;
         initSingleGroup(&trapPixelMap);
         addPtr(&chipLoopReg, &trapPixelMap, &freeSingleGroup);
@@ -386,8 +390,8 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         image = NULL;
 
         // MAIN CORRECTION LOOP IN HERE
-        trlmessage("CTE: Running correction algorithm");
-        if (inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &ctePars))
+        trlmessage("CTE: Running correction algorithm...");
+        if ((status = inverseCTEBlur(smoothedImage, cteCorrectedImage, &trapPixelMap, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return status;
@@ -497,6 +501,10 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParamsFas
 
     extern int status;
 
+    if (!image || !ctePars)
+        return (status = ALLOCATION_PROBLEM);
+
+
     float biasMean[2] = {0, 0};
     float biasSigma[2]= {0, 0}; // This is not actually used (dummy to pass to findOverScanBias)
 
@@ -504,11 +512,10 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParamsFas
     unsigned nOverscanColumnsToIgnore = ctePars->isSubarray ? 5 : 3;
     findOverscanBias(image, biasMean, biasSigma, overscanType, nOverscanColumnsToIgnore, ctePars);
 
-    //used to vary for dev purposes
-    unsigned rowsStart = 0;//ctePars->imageRowsStart;
-    unsigned rowsEnd = image->sci.data.ny;//ctePars->imageRowsEnd;
-    unsigned columnsStart[2] = {0, 2103};//{ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
-    unsigned columnsEnd[2] = {2103, 2103*2};//{ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
+    unsigned rowsStart = ctePars->imageRowsStart;
+    unsigned rowsEnd = ctePars->imageRowsEnd;
+    unsigned columnsStart[2] = {ctePars->imageColumnsStart[0], ctePars->imageColumnsStart[1]};
+    unsigned columnsEnd[2] = {ctePars->imageColumnsEnd[0], ctePars->imageColumnsEnd[1]};
 
 #ifdef _OPENMP
     #pragma omp parallel shared(image, biasMean, biasSigma)
@@ -524,7 +531,6 @@ int correctAmpBiasAndGain(SingleGroup * image, const float ccdGain, CTEParamsFas
 #ifdef _OPENMP
         #pragma omp for schedule(static)
 #endif
-        //NOTE: this nolonger overwrites overscan regions!!!
         for (unsigned i = columnsStart[nthAmp]; i < columnsEnd[nthAmp]; ++i)
         {
             for (unsigned j = rowsStart; j < rowsEnd; ++j)
@@ -555,6 +561,8 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
      */
 
     extern int status;
+    if (!image || !mean || !sigma || !ctePars)
+        return (status = ALLOCATION_PROBLEM);
 
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);
@@ -626,6 +634,9 @@ int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
 {
     extern int status;
 
+    if (!image || !ctePars || !wf3)
+        return (status = ALLOCATION_PROBLEM);
+
     if (!ctePars->isSubarray)
         return status;
 
@@ -675,15 +686,15 @@ int unalignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 {
     //NOTE: There is a similar version of this in acs - code changes should be reflected in both.
+    extern int status;
 
-    if (!image || !image->sci.data.data)
-        return status;
+    if (!image || !image->sci.data.data || !ctePars)
+        return (status = ALLOCATION_PROBLEM);
 
     //WARNING - assumes row major storage
     assert(image->sci.data.storageOrder == ROWMAJOR);
 
     //Align amps such that they are at the bottom left
-    extern int status;
 
     const unsigned columnOffset = ctePars->columnOffset;
     const unsigned nColumns = ctePars->nColumns;
@@ -791,6 +802,11 @@ int alignAmps(SingleGroup * image, CTEParamsFast * ctePars)
 int getCCDChipId(int * value, char * fileName, char * ename, int ever)
 {
     extern int status;
+
+    if (!value || !fileName || !ename)
+        return (status = ALLOCATION_PROBLEM);
+
+
     // OPEN INPUT IMAGE IN ORDER TO READ ITS SCIENCE HEADER.
     IODescPtr ip = openInputImage (fileName, "SCI", ever);
     if (hstio_err())
@@ -818,6 +834,9 @@ int getCCDChipId(int * value, char * fileName, char * ename, int ever)
 int outputImage(char * fileName, SingleGroup * image, CTEParamsFast * ctePars)
 {
     extern int status;
+
+    if (!image || !ctePars)
+        return (status = ALLOCATION_PROBLEM);
 
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);
@@ -863,9 +882,13 @@ int outputImage(char * fileName, SingleGroup * image, CTEParamsFast * ctePars)
     return status;
 }
 
-void findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
+int findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned const prescanWidth, unsigned const postscanWidth, unsigned const parallelOverscanWidth)
 {
     //WARNING this assumes quads have already been aligned
+
+    extern int status;
+    if (!ctePars)
+        return (status = ALLOCATION_PROBLEM);
 
     ctePars->prescanWidth = prescanWidth;
     ctePars->postscanWidth = postscanWidth;
@@ -896,7 +919,7 @@ void findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned const pres
         ctePars->imageColumnsEnd[0] = nColumnsPerQuad - postscanWidth;
         ctePars->imageColumnsStart[1] = nColumnsPerQuad + prescanWidth; //skip 30 pixels of previous quads virtual overscan
         ctePars->imageColumnsEnd[1] = ctePars->nColumnsPerChip - postscanWidth;
-        return;
+        return status;
     }
 
     //NOTE: For subarrays nColumnsPerChip & nColumnsPerQuad do NOT include the 60 & 30 extra postscan columns
@@ -948,4 +971,6 @@ void findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned const pres
    }
    else
        assert(0); //image is subarray but exists in neither quad???
+
+    return status;
 }

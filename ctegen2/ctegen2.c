@@ -15,17 +15,29 @@ char MsgText[256];
 extern void trlmessage (char *message);
 extern void trlerror (char *message);
 
-static void setAtomicBool(Bool * atmoicBool, const Bool value)
+static void setAtomicFlag(Bool * atom)
 {
+    if (!atom)
+        return;
 #ifdef _OPENMP
-    #pragma omp critical(critSec)
+    #pragma omp critical(critSecAtomicFlag)
 #endif
     {
-        *atmoicBool = value;
+        *atom = True;
     }
 }
-
-int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * cte)
+static void setAtomicInt(int * atom, const int value)
+{
+    if (!atom)
+        return;
+#ifdef _OPENMP
+    #pragma omp critical(critSecAtomicInt)
+#endif
+    {
+        *atom = value;
+    }
+}
+int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
 {
     //WARNING - assumes column major storage order
     assert(trapPixelMap->sci.data.storageOrder == COLUMNMAJOR);
@@ -34,17 +46,22 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 
     extern int status;
 
+    if (!input || !output || !trapPixelMap || !ctePars)
+        return (status = ALLOCATION_PROBLEM);
+
     const unsigned nRows = output->sci.data.ny;
     const unsigned nColumns = output->sci.data.nx;
-    const double rnAmp2 = cte->rn_amp * cte->rn_amp;
-    const FloatTwoDArray * cteRprof  = &cte->rprof->data;
-    const FloatTwoDArray * cteCprof = &cte->cprof->data;
+    const double rnAmp2 = ctePars->rn_amp * ctePars->rn_amp;
+    const FloatTwoDArray * cteRprof  = &ctePars->rprof->data;
+    const FloatTwoDArray * cteCprof = &ctePars->cprof->data;
 
     Bool allocationFail = False;
+    Bool runtimeFail = False;
 #ifdef _OPENMP
-    #pragma omp parallel shared(input, output, cte, cteRprof, cteCprof, trapPixelMap, allocationFail)
+    #pragma omp parallel shared(input, output, ctePars, cteRprof, cteCprof, trapPixelMap, allocationFail, runtimeFail, status)
 #endif
     {
+        int localStatus = HSTCAL_OK; //Note: used to set extern int status atomically, note global status takes last set value
         //Thread local pointer register
         PtrRegister localPtrReg;
         initPtrRegister(&localPtrReg);
@@ -52,21 +69,21 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
         double * model = malloc(sizeof(*model)*nRows);
         addPtr(&localPtrReg, model, &free);
         if (!model)
-            setAtomicBool(&allocationFail, True);
+            setAtomicFlag(&allocationFail);
 
         double * tempModel = NULL;
         if (!allocationFail)
             tempModel = malloc(sizeof(*tempModel)*nRows);
         addPtr(&localPtrReg, tempModel, &free);
         if (!tempModel)
-            setAtomicBool(&allocationFail, True);
+            setAtomicFlag(&allocationFail);
 
         double * observed = NULL;
         if (!allocationFail)
             observed = malloc(sizeof(*observed)*nRows);
         addPtr(&localPtrReg, observed, &free);
         if (!observed)
-            setAtomicBool(&allocationFail, True);
+            setAtomicFlag(&allocationFail);
 
         float * traps = NULL;
 
@@ -76,6 +93,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 #endif
         if (!allocationFail)
         {
+            Bool localOK = True;
 #ifdef _OPENMP
             #pragma omp for schedule(static)
 #endif
@@ -96,10 +114,16 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 
                     /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                       IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                    for (unsigned NITINV = 1; NITINV <= cte->n_forward - 1; ++NITINV)
+                    for (unsigned NITINV = 1; NITINV <= ctePars->n_forward - 1; ++NITINV)
                     {
                         memcpy(tempModel, model, nRows*sizeof(*model));
-                        simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
+                        if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
+                        {
+                            setAtomicFlag(&runtimeFail);
+                            setAtomicInt(&status, localStatus);
+                            localOK = False;
+                            break;
+                        }
 
                         //Now that the updated readout has been simulated, subtract this from the model
                         //to reproduce the actual image, without the CTE trails.
@@ -117,20 +141,28 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
                             model[i] = tempModel[i] - delta;
                         }
                     }
+                    if (!localOK)
+                        break;
 
                     //Do the last forward iteration but don't dampen... no idea why???
                     memcpy(tempModel, model, sizeof(*model)*nRows);
-                    simulateColumnReadout(model, traps, cte, cteRprof, cteCprof, nRows, cte->n_par);
+                    if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
+                    {
+                        setAtomicFlag(&runtimeFail);
+                        setAtomicInt(&status, localStatus);
+                        localOK = False;
+                        break;
+                    }
                     //Now subtract the simulated readout
                     for (unsigned i = 0; i < nRows; ++i)
                         model[i] = tempModel[i] - (model[i] - observed[i]);
 
-                    REDO = cte->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
-                            cte->thresh) : False;
+                    REDO = ctePars->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
+                            ctePars->thresh) : False;
 
                    // if (REDO)
                      //   printf("Readout cosmic ray detected, redoing computation\n");
-                } while (REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
+                } while (localOK && REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
 
                 // Update source array
                 // Can't use memcpy as arrays of diff types
@@ -145,6 +177,12 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
         sprintf(MsgText, "Out of memory for in inverseCTEBlur()");
         trlerror(MsgText);
         return (status = OUT_OF_MEMORY);
+    }
+    if (runtimeFail)
+    {
+        sprintf(MsgText, "Runtime fail in inverseCTEBlur()");
+        trlerror(MsgText);
+        return status;
     }
     return (status);
 }
@@ -172,10 +210,10 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
   the ttrap reference to the image array has to be -1 for C
   */
 
-int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
+int simulatePixelReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const ctePars,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows)
 {
-    extern int status;
+    //For performance this does not NULL check passed in ptrs
 
     double chargeToAdd;
     double extraChargeToAdd;//rethink name?
@@ -195,10 +233,10 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
         maxPixel = pixelColumn[i] > maxPixel ? pixelColumn[i] : maxPixel; //check assembly (before & after op) to see if actually implemented differently
 
     //Find highest charge trap to not exceed i.e. map pmax to an index
-    unsigned maxChargeTrapIndex = cte->cte_traps-1;
+    unsigned maxChargeTrapIndex = ctePars->cte_traps-1;
     for (int w = maxChargeTrapIndex; w >= 0; --w)//go up or down? (if swap, change below condition)
     {
-        if (cte->qlevq_data[w] <= maxPixel)//is any of this even needed or can we just directly map?
+        if (ctePars->qlevq_data[w] <= maxPixel)//is any of this even needed or can we just directly map?
         {
             maxChargeTrapIndex = w;
             break;
@@ -209,7 +247,7 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
       AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
     for (int w = maxChargeTrapIndex; w >= 0; --w)
     {
-        nTransfersFromTrap = cte->cte_len; //for referencing the image at 0
+        nTransfersFromTrap = ctePars->cte_len; //for referencing the image at 0
         trappedFlux = 0;
         releasedFlux = 0;
 
@@ -220,8 +258,8 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
               //  continue;
 
             pixel = pixelColumn[i];
-            Bool isInsideTrailLength = nTransfersFromTrap < cte->cte_len;
-            Bool isAboveChargeThreshold = pixel >= cte->qlevq_data[w] - 1.;
+            Bool isInsideTrailLength = nTransfersFromTrap < ctePars->cte_len;
+            Bool isAboveChargeThreshold = pixel >= ctePars->qlevq_data[w] - 1.;
 
             if (!isInsideTrailLength && !isAboveChargeThreshold)
                 continue;
@@ -253,10 +291,10 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
 
             extraChargeToAdd = 0;
             chargeToRemove = 0;
-            if (pixel >= cte->qlevq_data[w])
+            if (pixel >= ctePars->qlevq_data[w])
             {
-                chargeToRemove =  cte->dpdew_data[w] / cte->n_par * (double)traps[i];  /*dpdew is 1 in file */
-                if (nTransfersFromTrap < cte->cte_len)
+                chargeToRemove =  ctePars->dpdew_data[w] / ctePars->n_par * (double)traps[i];  /*dpdew is 1 in file */
+                if (nTransfersFromTrap < ctePars->cte_len)
                     extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux; //ttrap-1 may not be the same index as ref'd in rprof???
                 nTransfersFromTrap = 0;
                 trappedFlux = chargeToRemove;
@@ -265,19 +303,23 @@ int simulatePixelReadout(double * const pixelColumn, const float * const traps, 
             pixelColumn[i] += chargeToAdd + extraChargeToAdd - chargeToRemove;
         } //end for i
     } //end for w
-    return status;
+    return HSTCAL_OK;
 }
 
 int simulateColumnReadout(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows, const unsigned nPixelShifts)
 {
-    extern int status;
+    //For performance this does not NULL check passed in ptrs
 
+    int localStatus = HSTCAL_OK;
     //Take each pixel down the detector
     for (unsigned shift = 1; shift <= nPixelShifts; ++shift)
-        simulatePixelReadout(pixelColumn, traps, cte, rprof, cprof, nRows);
+    {
+        if ((localStatus = simulatePixelReadout(pixelColumn, traps, cte, rprof, cprof, nRows)))
+            return localStatus;
+    }
 
-    return status;
+    return localStatus;
 }
 
 Bool correctCROverSubtraction(float * const traps, const double * const pix_model, const double * const pix_observed,
@@ -302,8 +344,7 @@ Bool correctCROverSubtraction(float * const traps, const double * const pix_mode
       THEIR TRAILS TO BE SUBTRACTED DOWN TO -10 RATHER THAN 0.
     */
 
-    if (!pix_model || !pix_observed || !traps)
-        return False;
+    //For performance this does not NULL check passed in ptrs
 
     Bool redo = False;
     for (unsigned i = 10; i < nRows-2; ++i)
@@ -350,7 +391,9 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
           double scale2048[<cte->nScaleTableColumns>];     scaling appropriate at row 2048
      */
 
-    //WARNING - assumes column major storage order
+    //For performance this does not NULL check passed in ptrs
+
+    //WARNING - OUTPUTS column major storage order
     trapPixelMap->sci.data.storageOrder = COLUMNMAJOR;
 
     clock_t begin = clock();
@@ -406,7 +449,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
     if (ctePars->verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to populate pixel trap map image: %.2f(s) with %i threads",timeSpent/ctePars->maxThreads, ctePars->maxThreads);
+        sprintf(MsgText,"CTE: Time taken to populate pixel trap map image: %.2f(s) with %i threads",timeSpent/ctePars->maxThreads, ctePars->maxThreads);
         trlmessage(MsgText);
     }
 
@@ -429,6 +472,10 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
        amplification.  Strategy #2 will be to not iterate when the deblurring
        is less than the readnoise.
 */
+
+    extern int status;
+    if (!input || !output || !ctePars)
+        return (status = ALLOCATION_PROBLEM);
 
     //WARNING - assumes column major storage order
     assert(input->sci.data.storageOrder == COLUMNMAJOR);
@@ -584,7 +631,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
     if (ctePars->verbose)
     {
         double timeSpent = ((double)(clock() - begin))/CLOCKS_PER_SEC;
-        sprintf(MsgText,"Time taken to smooth image: %.2f(s) with %i threads", timeSpent/ctePars->maxThreads, ctePars->maxThreads);
+        sprintf(MsgText,"CTE: Time taken to smooth image: %.2f(s) with %i threads", timeSpent/ctePars->maxThreads, ctePars->maxThreads);
         trlmessage(MsgText);
     }
 
@@ -607,6 +654,8 @@ double find_dadjFast(const unsigned i, const unsigned j, const unsigned nRows, c
        values also pull to keep the pixel where it was.  Some
        accommodation is made for both considerations.
        */
+
+    //For performance this does not NULL check passed in ptrs
 
     const double mval = (double)*(rszloc[i] + j);
     const double dval0  = (double)*(obsloc[i] + j) - mval;

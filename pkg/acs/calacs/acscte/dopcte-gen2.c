@@ -27,7 +27,7 @@ static int insertAmp(SingleGroup * amp, const const SingleGroup * image, const u
 static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID);
 static int alignAmp(SingleGroup * amp, const unsigned ampID);
 
-int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
+int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
 {
 
     /* arguments:
@@ -37,11 +37,14 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
 
     extern int status;
 
+    if (!acs || !ctePars || !chipImage)
+        return (status = ALLOCATION_PROBLEM);
+
     if (acs->subarray != 0)
     {
         sprintf(MsgText, "UNIMPLEMENTED - CTE correction for fullframe images only");
         trlerror(MsgText);
-        return (status = -1);
+        return (status = INTERNAL_ERROR);
     }
 
     PtrRegister ptrReg;
@@ -49,7 +52,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
     unsigned nThreads = acs->nThreads;
 #ifdef _OPENMP
     if (nThreads > 1)
-        trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
+        trlmessage("(pctecorr) Using parallel processing provided by OpenMP inside CTE routine");
 #endif
 
     char ccdamp[strlen(AMPSTR1)+1]; /* string to hold amps on current chip */
@@ -105,11 +108,11 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
 
         nRows = amp_ysize;
         nColumns = amp_xsize;
-        pars->nRows = nRows;
-        pars->nColumns = nColumns;
-        pars->columnOffset = 0;//amp_xbeg;//acs->offsetx;
-        pars->rowOffset = 0;//amp_ybeg;//acs->offsety;
-        pars->razColumnOffset = nthAmp*nColumns;
+        ctePars->nRows = nRows;
+        ctePars->nColumns = nColumns;
+        ctePars->columnOffset = 0;//amp_xbeg;//acs->offsetx;
+        ctePars->rowOffset = 0;//amp_ybeg;//acs->offsety;
+        ctePars->razColumnOffset = nthAmp*nColumns;
 
         //This is used for the final output
         SingleGroup ampImage;
@@ -150,10 +153,10 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
         }
 
         //CALCULATE THE SMOOTH READNOISE IMAGE
-        trlmessage("CTE: Calculating smooth readnoise image...");
-        if (pars->noise_mit != 0)
+        trlmessage("(pctecorr) Calculating smooth readnoise image...");
+        if (ctePars->noise_mit != 0)
         {
-            trlerror("Only noise model 0 implemented!");
+            trlerror("(pctecorr) Only noise model 0 implemented!");
             freeOnExit(&ptrReg);
             return (status = ERROR_RETURN);
         }
@@ -168,14 +171,14 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
         setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
         // do some smoothing on the data so we don't amplify the read noise.
-        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, pars, pars->rn_amp)))
+        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, ctePars, ctePars->rn_amp)))
         {
             freeOnExit(&ptrReg);
             return (status);
        }
-       trlmessage("CTE: ...complete.");
+       trlmessage("(pctecorr) ...complete.");
 
-       trlmessage("CTE: Creating charge trap image");
+       trlmessage("(pctecorr) Creating charge trap image...");
        SingleGroup trapPixelMap;
        initSingleGroup(&trapPixelMap);
        addPtr(&ptrReg, &trapPixelMap, &freeSingleGroup);
@@ -185,23 +188,23 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
            return (status = OUT_OF_MEMORY);
        }
        setStorageOrder(&trapPixelMap, COLUMNMAJOR);
-       if ((status = populateTrapPixelMap(&trapPixelMap, pars)))
+       if ((status = populateTrapPixelMap(&trapPixelMap, ctePars)))
        {
            freeOnExit(&ptrReg);
            return status;
        }
-       trlmessage("CTE: ...complete.");
+       trlmessage("(pctecorr) ...complete.");
 
-       trlmessage("CTE: Running correction algorithm");
+       trlmessage("(pctecorr) Running correction algorithm...");
        //perform CTE correction
        SingleGroup * cteCorrectedImage = &columnMajorImage;
-       if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, pars)))
+       if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, ctePars)))
        {
            freeOnExit(&ptrReg);
            return status;
        }
        freePtr(&ptrReg, &trapPixelMap);
-       trlmessage("CTE: ...complete.");
+       trlmessage("(pctecorr) ...complete.");
 
         // add 10% correction to error in quadrature.
         double temp_err;
@@ -245,7 +248,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
     }
 
     if (acs->printtime)
-        TimeStamp("CTE corrections complete...","");
+        TimeStamp("CTE corrections complete","");
 
     freeOnExit(&ptrReg);
     return (status);
@@ -256,7 +259,7 @@ static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsig
     extern int status;
 
     if (!amp || !amp->sci.data.data || !image || !image->sci.data.data)
-        return status;
+        return (status = ALLOCATION_PROBLEM);
 
     //WARNING - assumes row major storage
     assert(amp->sci.data.storageOrder == ROWMAJOR && image->sci.data.storageOrder == ROWMAJOR);
@@ -283,7 +286,7 @@ static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigne
     extern int status;
 
     if (!amp || !amp->sci.data.data || !image || !image->sci.data.data)
-        return status;
+        return (status = ALLOCATION_PROBLEM);
 
     //WARNING - assumes row major storage
     assert(amp->sci.data.storageOrder == ROWMAJOR && image->sci.data.storageOrder == ROWMAJOR);
@@ -307,8 +310,9 @@ static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigne
 
 static int alignAmp(SingleGroup * amp, const unsigned ampID)
 {
+    extern int status;
     if (!amp)
-        return 0;//be silent
+        return (status = ALLOCATION_PROBLEM);
 
     //sci data
     if (amp->sci.data.data)
@@ -337,7 +341,7 @@ static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID)
     extern int status;
 
     if (!amp || !amp->data)
-        return status;//be silent
+        return (status = ALLOCATION_PROBLEM);
 
     //Amp C is already correctly aligned
     if (ampID == AMP_C)

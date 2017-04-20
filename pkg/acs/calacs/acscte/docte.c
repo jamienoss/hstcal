@@ -161,7 +161,7 @@ int DoCTE (ACSInfo *acs_info) {
             //NOTE: The char * below should be const but this would require a massive refactoring.
             char * cteTabFilename = (acs->pcteTabNameFromCmd && *acs->pcteTabNameFromCmd != '\0') ? acs->pcteTabNameFromCmd : acs->pcte.name;
 
-            sprintf(MsgText, "Reading CTE parameters from PCTETAB file: '%s'...", cteTabFilename);
+            sprintf(MsgText, "(pctecorr) Reading CTE parameters from PCTETAB file: '%s'...", cteTabFilename);
             trlmessage(MsgText);
             //Get parameters from PCTETAB reference file
             addPtr(&ptrReg, &ctePars, &freeCTEParamsFast);
@@ -199,7 +199,7 @@ int DoCTE (ACSInfo *acs_info) {
             sprintf(MsgText, "(pctecorr) CTE_FRAC: %f", ctePars.scale_frac);
             trlmessage(MsgText);
 
-            trlmessage("PCTETAB read.");
+            trlmessage("(pctecorr) PCTETAB read");
         }
 
         for (i = 0; i < acs_info->nimsets; i++)
@@ -216,7 +216,7 @@ int DoCTE (ACSInfo *acs_info) {
                     return status;
             }
             double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;
-            sprintf(MsgText,"CTE run time for this amp: %.2f(s) with %i procs/threads\n", time_spent/acs_info->nThreads, acs_info->nThreads);
+            sprintf(MsgText,"(pctecorr) CTE run time for current amp: %.2f(s) with %i procs/threads\n", time_spent/acs_info->nThreads, acs_info->nThreads);
             trlmessage(MsgText);
         }
         freeOnExit(&ptrReg);

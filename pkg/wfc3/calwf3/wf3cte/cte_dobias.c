@@ -53,7 +53,6 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	initSingleGroupLine (&y);
 	scilines = x->sci.data.ny;
 
-
 	/* Initialize local variables */
 	rx = 1;
 	ry = 1;
