@@ -143,7 +143,11 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * pars, SingleGroup * chipImage)
             freeOnExit(&ptrReg);
             return (status = OUT_OF_MEMORY);
         }
-        assert(!copySingleGroup(&columnMajorImage, &ampImage, COLUMNMAJOR));
+        if ((status = copySingleGroup(&columnMajorImage, &ampImage, COLUMNMAJOR)))
+        {
+            freeOnExit(&ptrReg);
+            return (status = ALLOCATION_PROBLEM);
+        }
 
         //CALCULATE THE SMOOTH READNOISE IMAGE
         trlmessage("CTE: Calculating smooth readnoise image...");

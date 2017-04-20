@@ -186,21 +186,10 @@ void freeCTEParamsFast(CTEParamsFast * pars)
     delete((void*)&pars->qlevq_data);
     delete((void*)&pars->dpdew_data);
 
-    assert(pars->iz_data == NULL);
-    assert(pars->wcol_data == NULL);
-    assert(pars->scale512 == NULL);
-    assert(pars->scale1024 == NULL);
-    assert(pars->scale1536 == NULL);
-    assert(pars->scale2048 == NULL);
-    assert(pars->qlevq_data == NULL);
-    assert(pars->dpdew_data == NULL);
-
     freeFloatHdrData(pars->rprof);
     freeFloatHdrData(pars->cprof);
     delete((void*)&pars->rprof);
     delete((void*)&pars->cprof);
-    assert(pars->rprof == NULL);
-    assert(pars->cprof == NULL);
 }
 
 /************ HELPER SUBROUTINES ****************************/

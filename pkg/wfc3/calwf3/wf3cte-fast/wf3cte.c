@@ -602,7 +602,6 @@ int findOverscanBias(SingleGroup *image, float *mean, float *sigma, enum Oversca
             return (status = OUT_OF_MEMORY);
         }
 
-        assert(overscanPixels);
         for (unsigned column = 0; column < overscanWidth; ++column)
             memcpy(overscanPixels + column*nOverscanRows, imageOverscanPixels + column*ctePars->nRows, nOverscanRows*sizeof(*overscanPixels));
 
@@ -636,10 +635,8 @@ int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
 
     // get subarray from first extension
     getSingleGroup(wf3->input, 1, image);
-    if (hstio_err()){
-        freeSingleGroup(image);
+    if (hstio_err())
         return (status = OPEN_FAILED);
-    }
 
     ctePars->nRows = image->sci.data.ny;
     ctePars->nColumns = image->sci.data.nx;
@@ -651,20 +648,15 @@ int getSubarray(SingleGroup * image, CTEParamsFast * ctePars, WF3Info * wf3)
     int ref_corner[2];
     int rsize = 1;          // reference pixel size
 
-    if (GetCorner(&image->sci.hdr, rsize, sci_bin, sci_corner))
-    {
-        freeSingleGroup(image);
+    if ((status = GetCorner(&image->sci.hdr, rsize, sci_bin, sci_corner)))
         return (status);
-    }
+
     //Create a dummy header to represent the full chip (both amps) and populate via initChipMetaData
     {
         Hdr fullChipHdr;
         initChipMetaData(wf3, &fullChipHdr, image->group_num);
-        if (GetCorner (&fullChipHdr, rsize, ref_bin, ref_corner))
-        {
-            freeSingleGroup(image);
-            return (status);
-        }
+        if ((status = GetCorner (&fullChipHdr, rsize, ref_bin, ref_corner)))
+            return status;
     }
 
     ctePars->refAndIamgeBinsIdenticle = ref_bin[0] == sci_bin[0] && ref_bin[1] == sci_bin[1] ? True : False;
@@ -926,8 +918,6 @@ void findAlignedQuadImageBoundaries(CTEParamsFast * ctePars, unsigned const pres
         {
             //NOTE: This code assumes that the extension into the 2nd quad does so beyond the prescan
             //i.e. there is actually an image in the 2nd quad
-            assert(columnOffset + nColumns > nColumnsPerQuad + prescanWidth);
-
             ctePars->quadExists[1] = True;
             ctePars->hasPrescan[1] = True;
             ctePars->imageColumnsEnd[0] = nColumnsPerQuad - columnOffset;

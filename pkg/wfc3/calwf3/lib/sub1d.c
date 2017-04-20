@@ -30,6 +30,8 @@ SingleGroupLine *b	 i: second input data
 
     extern int status;
 
+    // These asserts should really be null checks & returns.
+    // However, that requires a more substantial refactoring and investigating
     assert(a);
     assert(b);
 
@@ -98,6 +100,8 @@ In this case the size of *a does NOT match the size of *b
 
     extern int status;
 
+    // These asserts should really be null checks & returns.
+    // However, that requires a more substantial refactoring and investigating
     assert(a);
     assert(b);
 

@@ -49,7 +49,6 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
         PtrRegister localPtrReg;
         initPtrRegister(&localPtrReg);
 
-        //get rid of asserts
         double * model = malloc(sizeof(*model)*nRows);
         addPtr(&localPtrReg, model, &free);
         if (!model)
