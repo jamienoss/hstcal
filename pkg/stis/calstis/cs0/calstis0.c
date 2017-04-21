@@ -6,7 +6,7 @@
 
 # include "stis.h"
 # include "calstis0.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /* calstis0 -- integrated calstis processing
 

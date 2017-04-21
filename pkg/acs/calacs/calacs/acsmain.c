@@ -3,7 +3,7 @@
 # include <string.h>
 
 # include "acs.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "acsversion.h"
 
 # ifdef _OPENMP

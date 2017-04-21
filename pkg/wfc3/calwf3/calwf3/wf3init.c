@@ -2,7 +2,7 @@
 
 # include "wf3.h"
 # include "calwf3.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "wf3corr.h"
 
 /* Initialize the CCD_Switch structure.  This includes information about the

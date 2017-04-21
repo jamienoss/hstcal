@@ -5,7 +5,7 @@
 # include   <limits.h>
 
 # include   "acs.h"    /* for message output */
-# include   "err.h"
+# include   "hstcalerr.h"
 
 # define    MINVAL      -15000
 # define    BIN_WIDTH   1

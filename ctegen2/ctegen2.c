@@ -9,7 +9,7 @@
 # endif
 
 #include "ctegen2.h"
-#include "err.h"
+#include "hstcalerr.h"
 
 char MsgText[256];
 extern void trlmessage (char *message);

@@ -1,7 +1,7 @@
 # include <math.h>
 # include <stdio.h>
 # include "hstio.h"
-# include "err.h"	/* SIZE_MISMATCH */
+# include "hstcalerr.h"	/* SIZE_MISMATCH */
 # include "wf3.h"
 # include "assert.h"
 

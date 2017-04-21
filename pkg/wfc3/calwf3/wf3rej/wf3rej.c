@@ -5,7 +5,7 @@
 
 # include "wf3.h"
 # include "wf3rej.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "rej.h"
 # include "wf3info.h"
 

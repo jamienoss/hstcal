@@ -9,7 +9,7 @@
 
 # include "stis.h"
 # include "stisdef.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "calstis6.h"
 # include "idtalg.h"
 

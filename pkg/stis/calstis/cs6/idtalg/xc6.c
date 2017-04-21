@@ -23,7 +23,7 @@
 # include "hstio.h"
 
 # include "stis.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "idtalg.h"
 
 /*static int CDebug (char *, CmplxArray *);*/ /* Not used */

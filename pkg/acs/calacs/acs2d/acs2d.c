@@ -12,7 +12,7 @@
 
 # include "acs.h"
 # include "acsinfo.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "acscorr.h"		/* calibration switch names for calacs */
 
 void Init2DTrl (char *, char *);

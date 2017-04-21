@@ -24,7 +24,7 @@
 # include "hstio.h"
 # include "wf3.h"
 # include "wf3info.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "wf3corr.h"
 # include "cte-fast.h"
 # include "../../../../ctegen2/ctegen2.h"

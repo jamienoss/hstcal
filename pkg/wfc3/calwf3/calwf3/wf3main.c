@@ -3,7 +3,7 @@
 # include <string.h>
 
 # include "wf3.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "wf3version.h"
 
 # ifdef _OPENMP

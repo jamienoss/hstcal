@@ -3,7 +3,7 @@
 # include <string.h>
 # include <ctype.h>
 # include "acs.h"	/* for trlerror & NOT_APPLICABLE */
-# include "err.h"
+# include "hstcalerr.h"
 
 int GotFileName (char *filename) {
 

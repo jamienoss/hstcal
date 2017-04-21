@@ -23,7 +23,7 @@
 
 # include "acs.h"
 # include "acsinfo.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 
 static void dqiMsg (ACSInfo *, int);

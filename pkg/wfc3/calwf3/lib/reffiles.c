@@ -11,7 +11,7 @@
 # include <string.h>
 
 # include "wf3.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /* These routines are for managing a list of keyword & value pairs
    for reference file names.

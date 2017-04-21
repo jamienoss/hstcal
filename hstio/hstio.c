@@ -105,7 +105,7 @@
 # include <stdlib.h>
 
 # include "hstio.h"
-# include "err.h"
+# include "hstcalerr.h"
 /*
 ** String defined to allow determination of the HSTIO library version
 ** from the library file (*.a) or the executable using the library.

@@ -6,7 +6,7 @@
 
 # include "stis.h"
 # include "calstis4.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stisdef.h"
 
 /* This routine gets keyword values from the primary header.

@@ -6,7 +6,7 @@
 
 # include "stis.h"
 # include "calstis12.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stisdef.h"
 
 static int UpdateShift (Hdr *, double, double);

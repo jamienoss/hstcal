@@ -15,7 +15,7 @@
 
 # include "wf3.h"
 # include "calwf3.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /* wf3dth -- produce DTH product (empty)
 

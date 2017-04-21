@@ -2,7 +2,7 @@
 # include "hstio.h"
 # include "wf3.h"
 # include "wf3info.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 # ifdef _OPENMP
 #include <omp.h>

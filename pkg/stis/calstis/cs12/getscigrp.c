@@ -4,7 +4,7 @@
 
 # include "stis.h"
 # include "calstis12.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stisdef.h"
 
 # define SECONDS_IN_A_DAY  86400.

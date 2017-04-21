@@ -6,7 +6,7 @@
 # include "xtables.h"
 
 # include "stis.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stisdef.h"
 
 /* This routine opens the reference table header and gets pedigree and

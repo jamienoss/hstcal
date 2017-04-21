@@ -7,7 +7,7 @@
 #include "hstio.h"
 
 #include "acs.h"
-#include "err.h"
+#include "hstcalerr.h"
 #include "pcte.h"
 
 /*

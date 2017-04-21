@@ -2,7 +2,7 @@
 # include <string.h>
 # include "xtables.h"
 # include "acs.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /* This routine gets pedigree and descrip from the current table row.
 

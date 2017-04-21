@@ -6,7 +6,7 @@
 # include   "acs.h"
 # include   "rej.h"
 # include   "acsrej.h"
-# include   "err.h"
+# include   "hstcalerr.h"
 
 # define    OK          (short)0
 

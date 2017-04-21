@@ -1,6 +1,6 @@
 # include <string.h>
 # include "acs.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 
 /* This function checks that the number of input and output files are

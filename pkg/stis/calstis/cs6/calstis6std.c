@@ -7,7 +7,7 @@
 # include "stis.h"
 # include "stisdef.h"
 # include "calstis6.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /*
    calstis6std -- Standard 1-D spectral extraction and profile generator.

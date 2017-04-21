@@ -1,7 +1,7 @@
 # include <stdio.h>
 
 # include "hstio.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "acsdq.h"
 # include "acs.h"	/* for message output */
 

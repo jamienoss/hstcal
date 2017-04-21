@@ -7,7 +7,7 @@
 # include <c_iraf.h>        /* for c_irafinit */
 
 # include "acs.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "acsrej.h"
 
 static void FreeNames (char *);

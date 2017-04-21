@@ -3,7 +3,7 @@
 # include "hstio.h"
 
 # include "stis.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /* This routine prints the status value and message for HSTIO errors,
    IRAF error, or it prints a generic message depending on the value of

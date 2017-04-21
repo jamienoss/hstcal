@@ -1,7 +1,7 @@
 # include <stdio.h>
 # include "stis.h"
 # include "calstis1.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stissizes.h"	/* detector sizes, overscan sizes */
 
 # define FULL_FRAME_READOUT  1

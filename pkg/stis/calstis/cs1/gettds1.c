@@ -8,7 +8,7 @@
 
 # include "stis.h"
 # include "stisdef.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stistds.h"
 
 

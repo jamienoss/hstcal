@@ -4,7 +4,7 @@
 
 # include "stis.h"
 # include "calstis6.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 /* 
    This routine checks for the existence of both reference files 

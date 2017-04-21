@@ -4,7 +4,7 @@
 # include "hstio.h"
 # include "acs.h"
 # include "acsinfo.h"
-# include "err.h"        /* defines error codes */
+# include "hstcalerr.h"        /* defines error codes */
 
 static int checkAtoD (Hdr *, ACSInfo *, int *, int *);
 static int checkBias (Hdr *, ACSInfo *, int *, int *);

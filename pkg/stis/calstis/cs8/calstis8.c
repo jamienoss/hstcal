@@ -26,7 +26,7 @@
 
 # include "stis.h"
 # include "calstis8.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stisdef.h"
 
 static int FindExtver (int *, int, int, int);

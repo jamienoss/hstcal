@@ -10,7 +10,7 @@
 # include "hstio.h"
 # include "acs.h"
 # include "acsinfo.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "acsdq.h"		/* for SATPIXEL */
 
 static double FindRate (double, double);

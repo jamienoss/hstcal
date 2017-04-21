@@ -7,7 +7,7 @@
 
 #include "acs.h"
 #include "acsinfo.h"
-#include "err.h"
+#include "hstcalerr.h"
 
 /* number of bias cols */
 #define NBIAS_COLS 24

@@ -6,7 +6,7 @@
 
 # include "wf3.h"
 # include "wf3rej.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "wf3version.h"
 
 void rej_reset (clpar *, int []); 

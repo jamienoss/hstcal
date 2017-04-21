@@ -25,7 +25,7 @@ internal:
 
 # include "stis.h"
 # include "calstis6.h"
-# include "err.h"
+# include "hstcalerr.h"
 
 static void CopyProfile (ProfileArray *, ProfileArray *);
 

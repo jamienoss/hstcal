@@ -4,7 +4,7 @@
 # include "hstio.h"
 
 # include "stis.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "calstis6.h"
 
 

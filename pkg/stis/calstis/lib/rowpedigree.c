@@ -5,7 +5,7 @@
 # include "xtables.h"
 
 # include "stis.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "stisdef.h"
 
 /* This routine gets pedigree and descrip from the current table row.

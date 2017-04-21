@@ -8,7 +8,7 @@
 # include "hstio.h"
 
 # include "wf3.h"
-# include "err.h"
+# include "hstcalerr.h"
 # include "wf3rej.h"
 
 int status = 0;             /* zero is OK */
