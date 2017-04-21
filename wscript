@@ -227,7 +227,7 @@ def configure(conf):
         if conf.options.optO3:
             if conf.check_cc(cflags='-O3'):
                 conf.env.append_value('CFLAGS','-O3')
-        else if onf.options.optVec
+        elif conf.options.optVec:
             if conf.check_cc(cflags='-ftree-vectorize'):
                 conf.env.append_value('CFLAGS','-ftree-vectorize')
             if conf.check_cc(cflags='-ftree-vectorizer-verbose=5'):
