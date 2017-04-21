@@ -234,8 +234,7 @@ def configure(conf):
                 conf.env.append_value('CFLAGS','-fopt-info-vec-all')
             if conf.check_cc(cflags='-msse2'):
                 conf.env.append_value('CFLAGS','-msse2')
-            if conf.check_cc(cflags='-ffast-math'):
-                conf.env.append_value('CFLAGS','-ffast-math')
+
         else:
             if conf.check_cc(cflags='-O2'):
                 conf.env.append_value('CFLAGS','-O2')
