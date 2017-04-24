@@ -422,7 +422,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
     for (unsigned i = 0; i < ctePars->nScaleTableColumns; ++i)
     {
         unsigned column = ctePars->iz_data[i] - ctePars->razColumnOffset; //which column to scale
-        if (column < 0 || column >= nColumns)
+        if (column < 0 || column >= nColumns)//vec blocker
             continue;
         trapColumnScale[0] = ctePars->scale512[i];
         trapColumnScale[1] = ctePars->scale1024[i];

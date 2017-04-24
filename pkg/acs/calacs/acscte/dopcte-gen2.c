@@ -318,7 +318,7 @@ static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigne
     unsigned rowSkipLength = image->sci.data.nx;
     unsigned offset = 0;
     if (ampID == AMP_B || ampID == AMP_D)
-    	offset = nColumns;
+        offset = nColumns;
     else if (ampID != AMP_A && ampID != AMP_C)
     {
         trlerror("Amp number not recognized, must be 0-3.");

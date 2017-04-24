@@ -227,17 +227,17 @@ def configure(conf):
         if conf.options.optO3:
             if conf.check_cc(cflags='-O3'):
                 conf.env.append_value('CFLAGS','-O3')
-        elif conf.options.optVec:
-            if conf.check_cc(cflags='-ftree-vectorize'):
-                conf.env.append_value('CFLAGS','-ftree-vectorize')
-            if conf.check_cc(cflags='-fopt-info-vec-all'):
-                conf.env.append_value('CFLAGS','-fopt-info-vec-all')
-            if conf.check_cc(cflags='-msse2'):
-                conf.env.append_value('CFLAGS','-msse2')
-
         else:
             if conf.check_cc(cflags='-O2'):
                 conf.env.append_value('CFLAGS','-O2')
+
+        if conf.options.optVec:
+            if conf.check_cc(cflags='-ftree-vectorize'):
+                conf.env.append_value('CFLAGS','-ftree-vectorize')
+            if conf.check_cc(cflags='-fopt-info-vec-missed'):
+                conf.env.append_value('CFLAGS','-fopt-info-vec-missed')
+            if conf.check_cc(cflags='-msse2'):
+                conf.env.append_value('CFLAGS','-msse2')
 
         if conf.check_cc(cflags='-std=c99'):
             conf.env.append_value('CFLAGS','-std=c99')
