@@ -1,5 +1,4 @@
 # include <c_iraf.h>
-# include <xclio.h>
 # include <ximio.h>
  
 # define	MAX_ITER	20

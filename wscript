@@ -238,6 +238,10 @@ Press any key to continue or Ctrl+c to abort...\033[0m"""
             conf.env.append_value('CFLAGS','-Wall')
         if conf.check_cc(cflags='-fstack-protector-all'):
             conf.env.append_value('CFLAGS','-fstack-protector-all')
+        if conf.check_cc(cflags='-std=c99'):
+            conf.env.append_value('CFLAGS','-std=c99')
+        if conf.check_cc(cflags='-pedantic-errors'):
+            conf.env.append_value('CFLAGS','-pedantic-errors')
 
     if conf.options.releaseWithSymbols and not conf.options.debug:
         if conf.check_cc(cflags='-g'):
