@@ -1,12 +1,12 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   <stdlib.h>
-# include   "hstio.h"
+#include   <stdio.h>
+#include   <string.h>
+#include   <stdlib.h>
+#include   "hstio.h"
 
-# include   "acs.h"
-# include   "rej.h"
-# include   "acsrej.h"
-# include   "hstcalerr.h"
+#include   "acs.h"
+#include   "rej.h"
+#include   "acsrej.h"
+#include   "hstcalerr.h"
 
 # define    OK          (short)0
 

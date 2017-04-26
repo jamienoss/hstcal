@@ -1,15 +1,15 @@
-# include <stdio.h>
-# include <string.h>	/* strcpy */
-# include <stdlib.h>	/* calloc */
+#include <stdio.h>
+#include <string.h>	/* strcpy */
+#include <stdlib.h>	/* calloc */
 
-# include "c_iraf.h"
-# include "xtables.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "hstcalerr.h"
-# include "stistds.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "hstcalerr.h"
+#include "stistds.h"
 
 
 typedef struct {

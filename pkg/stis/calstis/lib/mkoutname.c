@@ -3,12 +3,12 @@
 	DefaultExtn	appends the default filename extension
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "stis.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "hstcalerr.h"
 
 # define FITS_EXTN  ".fits"	/* default extension */
 

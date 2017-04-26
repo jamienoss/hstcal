@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>        /* atoi, atof, strtod, strtol */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>        /* atoi, atof, strtod, strtol */
+#include <string.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "wf3.h"
-# include "wf3rej.h"
-# include "hstcalerr.h"
-# include "wf3version.h"
+#include "wf3.h"
+#include "wf3rej.h"
+#include "hstcalerr.h"
+#include "wf3version.h"
 
 void rej_reset (clpar *, int []); 
 static int syntax_error (char *);

@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>
 
-# include "hstio.h"
-# include "wf3.h"
-# include "calwf3.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"
-# include "wf3asn.h"	/* Contains association table structures */
-# include "trl.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "calwf3.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"
+#include "wf3asn.h"	/* Contains association table structures */
+#include "trl.h"
 
 /* ProcessIR: This routine controls the overall flow of processing
    for IR images.

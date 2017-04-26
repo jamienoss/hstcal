@@ -1,9 +1,9 @@
-# include <stdio.h>
-# include <ctype.h>                 /* for isspace */
-# include <string.h>                /* for strcpy, strlen */
-# include "hstio.h"
-# include "wf3.h"                /* for message output */
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <ctype.h>                 /* for isspace */
+#include <string.h>                /* for strcpy, strlen */
+#include "hstio.h"
+#include "wf3.h"                /* for message output */
+#include "hstcalerr.h"
 
 static void KeyMissing (char *);    /* prints error message */
 

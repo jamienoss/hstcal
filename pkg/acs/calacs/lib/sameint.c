@@ -15,8 +15,8 @@
    rest of the selection criteria determine a valid match.  11 Feb 1999 WJH
 */
 
-# include <string.h>
-# include "acswild.h"	/* defines wildcard values */
+#include <string.h>
+#include "acswild.h"	/* defines wildcard values */
 
 int SameInt (int rowvalue, int value) {
 

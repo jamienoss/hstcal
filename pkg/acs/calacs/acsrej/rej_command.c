@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>        /* atoi, atof, strtod, strtol */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>        /* atoi, atof, strtod, strtol */
+#include <string.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "acs.h"
-# include "acsrej.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acsrej.h"
+#include "hstcalerr.h"
 
 void rej_reset (clpar *, int []);
 static int syntax_error (char *);

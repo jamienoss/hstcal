@@ -3,7 +3,7 @@
 	InterpDQInfo
 */
 
-# include <math.h>		/* sqrt */
+#include <math.h>		/* sqrt */
 
 /* This routine determines the appropriate array index i and weights
    p and q for linear interpolation.  If the array is called a, and ai

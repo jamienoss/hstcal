@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "wf3.h"		/* For USE_DEFAULT */
-# include "hstcalerr.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "wf3.h"		/* For USE_DEFAULT */
+#include "hstcalerr.h"
 
 # define NUM_KEYWORDS 10
 

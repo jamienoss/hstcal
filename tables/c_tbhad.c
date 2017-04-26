@@ -1,6 +1,6 @@
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbhadb (IRAFPointer tp, char *keyword, Bool value) {
 

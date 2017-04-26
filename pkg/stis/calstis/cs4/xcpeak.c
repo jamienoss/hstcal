@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
 
 static int CrossCorr4 (double *, short *, double *, int, short, double *, int);
 

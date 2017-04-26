@@ -1,9 +1,9 @@
-# include <ctype.h>
-# include <stdlib.h>
-# include <stdio.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 char *expandfn (char *filename) {
 /* Expand an environment variable in a file name.  The variable may be

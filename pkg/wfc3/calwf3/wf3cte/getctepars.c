@@ -6,17 +6,17 @@ MLS 2015: read in the CTE parameters from the PCTETAB file
 
 */
 
-# include <time.h>
-# include <string.h>
-# include <math.h>
+#include <time.h>
+#include <string.h>
+#include <math.h>
 
-# include "hstio.h"
-# include "ximio.h"
-# include "xtables.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "cte.h"
+#include "hstio.h"
+#include "ximio.h"
+#include "xtables.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "cte.h"
 
 /************ HELPER SUBROUTINES ****************************/    
 

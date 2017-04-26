@@ -1,8 +1,8 @@
 /* wf3.h generic header for calwf3 */
 
-# include <stdio.h>             /* To insure that FILE is defined for TrlPtr */
-# include "msg.h"
-# include "imphttab.h"
+#include <stdio.h>             /* To insure that FILE is defined for TrlPtr */
+#include "msg.h"
+#include "imphttab.h"
 
 /* Macros for dusing GetKey/PutKey functions.... */
 # define USE_DEFAULT    1       /* Use default if keyword is missing */
@@ -125,4 +125,4 @@ typedef struct {
 */
 # define TRL_PREFIX     "CALWF3BEG"
 
-# include "trl.h"
+#include "trl.h"

@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include "stis.h"
-# include "calstis0.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include "stis.h"
+#include "calstis0.h"
+#include "hstcalerr.h"
 
 static void StisDefaults (StisInfo *);
 static int InsertSuffix (StisInfo *);

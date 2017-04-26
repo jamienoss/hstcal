@@ -1,7 +1,7 @@
-# include <stdlib.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <stdlib.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 /* Data type conversion is supported for most cases.  The following
    are NOT supported:

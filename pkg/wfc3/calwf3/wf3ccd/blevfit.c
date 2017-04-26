@@ -6,10 +6,10 @@
 	BlevEval	evaluate the fit for a given line number
 	BlevResults	returns values for slope and intercept from fit
 */
-# include <float.h>
-# include <stdio.h>
-# include "msg.h"
-# include "trl.h"
+#include <float.h>
+#include <stdio.h>
+#include "msg.h"
+#include "trl.h"
 
 # define NELEM_SUMS  5		/* size of sums array */
 

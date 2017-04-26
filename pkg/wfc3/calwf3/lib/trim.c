@@ -1,11 +1,11 @@
-# include <stdlib.h>		/* calloc */
-# include <string.h>		/* strncmp */
-# include <math.h>		/* sqrt */
+#include <stdlib.h>		/* calloc */
+#include <string.h>		/* strncmp */
+#include <math.h>		/* sqrt */
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "hstcalerr.h"	/* SIZE_MISMATCH */
+#include "wf3.h"
+#include "hstcalerr.h"	/* SIZE_MISMATCH */
 
 /* This routine takes an input data array, bins it in 1d, extracts a subset, 
    and assigns the values to an

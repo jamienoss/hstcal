@@ -1,8 +1,8 @@
-# include "ximio.h"
-# include "hstio.h"
-# include <math.h>
+#include "ximio.h"
+#include "hstio.h"
+#include <math.h>
 
-# include "hstcalerr.h"
+#include "hstcalerr.h"
 # define    PIX(v,i,j,nx)   v[(i) + (j) * (nx)]
 
 int readSpotImage(char *spotname, SingleGroup *inspot, SingleGroupLine *spotline) {

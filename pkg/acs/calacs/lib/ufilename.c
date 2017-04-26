@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <ctype.h>
-# include <string.h>
-# include "hstio.h"
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include "hstio.h"
 
 /* This routine updates the FILENAME primary header keyword, or adds it
    to the header if it's not already present.  If the input file name

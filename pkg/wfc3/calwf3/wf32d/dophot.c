@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>	/* malloc */
-# include <string.h>    /* strchr */
-# include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>	/* malloc */
+#include <string.h>    /* strchr */
+#include <ctype.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 char * replace_str(char *, char *, char *);
 

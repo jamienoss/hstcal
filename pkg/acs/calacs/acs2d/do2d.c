@@ -22,13 +22,13 @@
  Moved FLASHCORR stuff from ACSCCD.
  */
 
-# include <string.h>
-# include <stdio.h>
+#include <string.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 static void DarkMsg (ACSInfo *, int, int);
 static void FlashMsg (ACSInfo *, int, int);

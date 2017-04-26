@@ -1,15 +1,15 @@
 /* mainrej -- Main program for controlling WF3REJ */
 
-# include <stdio.h>
-# include <stdlib.h>        /* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>        /* calloc */
+#include <string.h>
 
-# include "c_iraf.h"        /* for c_irafinit */
-# include "hstio.h"
+#include "c_iraf.h"        /* for c_irafinit */
+#include "hstio.h"
 
-# include "wf3.h"
-# include "hstcalerr.h"
-# include "wf3rej.h"
+#include "wf3.h"
+#include "hstcalerr.h"
+#include "wf3rej.h"
 
 int status = 0;             /* zero is OK */
 

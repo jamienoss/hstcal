@@ -1,14 +1,14 @@
 /* mainrej -- Main program for controlling ACSREJ */
 
-# include <stdio.h>
-# include <stdlib.h>        /* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>        /* calloc */
+#include <string.h>
 
-# include <c_iraf.h>        /* for c_irafinit */
+#include <c_iraf.h>        /* for c_irafinit */
 
-# include "acs.h"
-# include "hstcalerr.h"
-# include "acsrej.h"
+#include "acs.h"
+#include "hstcalerr.h"
+#include "acsrej.h"
 
 static void FreeNames (char *);
 

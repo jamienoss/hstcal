@@ -6,14 +6,14 @@
 	GetMaxPixel
 */
 
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>	/* memcpy */
-# include <math.h>
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>	/* memcpy */
+#include <math.h>
 
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
 
 static int SumSpec (double [], double [], int, int, double [],
 		double, double, double, double, double,

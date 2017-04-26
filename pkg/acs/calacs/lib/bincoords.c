@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "acs.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "acs.h"
+#include "hstcalerr.h"
 
 # define NUM_KEYWORDS 10
 

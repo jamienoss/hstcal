@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "c_iraf.h"
-# include "xtables.h"
+#include "c_iraf.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "calstis0.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis0.h"
+#include "hstcalerr.h"
 
 static int SpecialCheck (char *, char *, int, int *, int *);
 static void MissingFile (char *, char *, int *);

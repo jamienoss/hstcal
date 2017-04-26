@@ -1,7 +1,7 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "stis.h"
-# include "calstis1.h"
+#include "stis.h"
+#include "calstis1.h"
 
 /* This routine resets switches that are inappropriate for the current
    detector.

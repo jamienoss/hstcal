@@ -1,4 +1,4 @@
-# include <c_iraf.h>
+#include <c_iraf.h>
 
 /* These constants do NOT include space for the NULL character */
 # define SZ_KEYWORD 8

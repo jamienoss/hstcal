@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "acs.h"
-# include "acscorr.h"
-# include "calacs.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "acs.h"
+#include "acscorr.h"
+#include "calacs.h"
 
 
 static void CCDSanity (int, char *);

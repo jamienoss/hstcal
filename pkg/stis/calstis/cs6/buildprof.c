@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <string.h>
-# include <math.h>
-# include <float.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 # define DEFAULT_PSTEP  256  /* default pixel range */
 # define MAX_ITER       20   /* maximum iterations in sigma-clip */

@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <math.h>	/* fabs */
+#include <stdio.h>
+#include <math.h>	/* fabs */
 
-# include "stis.h"
-# include "calstis11.h"
+#include "stis.h"
+#include "calstis11.h"
 
 /* This routine finds which imset in the science file is the most
    appropriate to use for subtracting from the wavecal.

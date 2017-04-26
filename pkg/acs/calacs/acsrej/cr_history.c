@@ -1,8 +1,8 @@
-# include   <stdio.h>
-# include   "hstio.h"
+#include   <stdio.h>
+#include   "hstio.h"
 
-# include   "acs.h"
-# include   "acsrej.h"
+#include   "acs.h"
+#include   "acsrej.h"
 
 /*  cr_history -- write the history of crrej to the output file
 

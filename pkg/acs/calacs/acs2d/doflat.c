@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include <stdlib.h>		/* for calloc */
-# include <time.h>
+#include <stdio.h>
+#include <stdlib.h>		/* for calloc */
+#include <time.h>
 
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 static int divFlat (SingleGroup *, char *, ACSInfo *);
 

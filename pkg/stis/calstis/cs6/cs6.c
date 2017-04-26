@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "c_iraf.h"		/* for c_irafinit, IRAFPointer */
-# include "ximio.h"		/* for the imt routines */
+#include "c_iraf.h"		/* for c_irafinit, IRAFPointer */
+#include "ximio.h"		/* for the imt routines */
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "calstis6.h"
 
 /*
    Main entry point for the standalone version of calstis6.

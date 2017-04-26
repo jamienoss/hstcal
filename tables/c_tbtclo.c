@@ -1,5 +1,5 @@
-# include <fitsio.h>
-# include "ctables.h"
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbtclo (IRAFPointer tp) {
 

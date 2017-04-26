@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <string.h>
-# include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /* This routine gets keyword values from the primary header.
 

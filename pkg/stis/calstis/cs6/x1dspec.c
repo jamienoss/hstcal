@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <math.h>
-# include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
+#include "calstis6.h"
 
 # define BOX_LOWER	-1	/* position of current pixel in */
 # define BOX_MID	0	/* the extraction box           */

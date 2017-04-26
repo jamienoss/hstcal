@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <string.h>
-# include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
-# include "ximio.h"
-# include "hstio.h"
+#include "ximio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /* mkNewSpt -- Create a new SPT file for the output file. 
 

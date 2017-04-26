@@ -2,9 +2,9 @@
 ** This version incorporates both UNIX and VMS versions.
 */
 
-# include <stdlib.h>
-# include <string.h>
-# include <c_iraf.h>
+#include <stdlib.h>
+#include <string.h>
+#include <c_iraf.h>
 
 void c_irafinit (int argc, char **argv) {
         ;

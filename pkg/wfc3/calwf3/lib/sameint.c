@@ -17,8 +17,8 @@
    H.Bushouse 16 Oct 2003: Added SameFlt routine.
 */
 
-# include <string.h>
-# include "wf3wild.h"	/* defines wildcard values */
+#include <string.h>
+#include "wf3wild.h"	/* defines wildcard values */
 
 int SameInt (int rowvalue, int value) {
 

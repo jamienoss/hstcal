@@ -1,19 +1,19 @@
 /* calstis12 -- update SHIFTAi keywords in science file extensions */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <string.h>
-# include <ctype.h>		/* isupper, tolower */
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <string.h>
+#include <ctype.h>		/* isupper, tolower */
 
 static int WavOption (char *, int *);
 
-# include "c_iraf.h"		/* for c_irafinit */
-# include "ximio.h"
+#include "c_iraf.h"		/* for c_irafinit */
+#include "ximio.h"
 
-# include "stis.h"
-# include "calstis12.h"
-# include "cs12.h"		/* for interpolation options */
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis12.h"
+#include "cs12.h"		/* for interpolation options */
+#include "hstcalerr.h"
 
 static int CompareNumbers (int, int);
 static void FreeNames (char *, char *, char *, char *, char *);

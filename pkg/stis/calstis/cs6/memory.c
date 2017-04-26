@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
-# include "stispht.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
+#include "stispht.h"
 
 
 /*

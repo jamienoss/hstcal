@@ -4,15 +4,15 @@
  ACScte
  */
 
-# include <time.h>
-# include <string.h>
+#include <time.h>
+#include <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
-# include "acscorr.h"		/* calibration switch names */
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
+#include "acscorr.h"		/* calibration switch names */
 
 
 void InitCTETrl (char *, char *);

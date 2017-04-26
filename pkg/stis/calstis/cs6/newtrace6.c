@@ -29,14 +29,14 @@ internal:
 		"if (current->a1center != previous->a1center != 0) {" (PEH)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "xtables.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 # define MAX(x,y)  ((x) >= (y) ? (x) : (y))
 

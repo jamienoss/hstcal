@@ -26,12 +26,12 @@ int   n           imset number (ignored if <= 0)
 	17-Nov-1998 WJH - Revised to support trailer file comments
 */
 
-# include <stdio.h>
-# include <ctype.h>
-# include <string.h>
-# include <time.h>
-# include "acs.h"
-# include "acsversion.h"		/* ACS_CAL_VER */
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
+#include "acs.h"
+#include "acsversion.h"		/* ACS_CAL_VER */
 
 /* The beginning string will be padded to this many characters, plus one
    to ensure that there's at least one separator.

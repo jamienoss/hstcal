@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <hstio.h>
+#include <stdio.h>
+#include <hstio.h>
 
-# include "xtables.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "xtables.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 /* NOT USED
 # define FULL_FRAME_READOUT  1

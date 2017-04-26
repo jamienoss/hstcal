@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "acs.h"	/* defines ACS data structures */
+#include "acs.h"	/* defines ACS data structures */
 
 # define NSUF	7
 

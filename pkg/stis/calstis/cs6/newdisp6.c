@@ -21,15 +21,15 @@ internal:
    02 Jul 97  -  Fixed logic that zeros coefficients (IB)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 # define MAX(x,y)  ((x) >= (y) ? (x) : (y))
 

@@ -4,15 +4,15 @@
    WF3ccd
  */
 
-# include <time.h>
-# include <string.h>
+#include <time.h>
+#include <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"		/* calibration switch names */
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"		/* calibration switch names */
 
 static int BiasKeywords (WF3Info *);
 

@@ -1,14 +1,14 @@
 /* cs2 -- Reject cosmic rays */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <string.h>
 
-# include "c_iraf.h"		/* for c_irafinit */
+#include "c_iraf.h"		/* for c_irafinit */
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "cs2.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "cs2.h"
 
 int main (int argc, char **argv) {
 

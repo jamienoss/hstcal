@@ -1,4 +1,4 @@
-# include "hstio.h"
+#include "hstio.h"
 
 /* The science data and the error array values are multiplied by k;
    the data quality array is not modified.

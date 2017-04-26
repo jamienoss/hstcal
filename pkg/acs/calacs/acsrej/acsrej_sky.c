@@ -1,11 +1,11 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   <stdlib.h>
-# include   "hstio.h"
-# include   <limits.h>
+#include   <stdio.h>
+#include   <string.h>
+#include   <stdlib.h>
+#include   "hstio.h"
+#include   <limits.h>
 
-# include   "acs.h"    /* for message output */
-# include   "hstcalerr.h"
+#include   "acs.h"    /* for message output */
+#include   "hstcalerr.h"
 
 # define    MINVAL      -15000
 # define    BIN_WIDTH   1

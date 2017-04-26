@@ -1,7 +1,7 @@
 /* acs.h generic header for calacs */
 /*      */
-# include <stdio.h>             /* To insure that FILE is defined for TrlPtr */
-# include "imphttab.h"
+#include <stdio.h>             /* To insure that FILE is defined for TrlPtr */
+#include "imphttab.h"
 
 # define ACS_CBUF           24  /* small buffer for e.g. rootname */
 # define ACS_FNAME          162

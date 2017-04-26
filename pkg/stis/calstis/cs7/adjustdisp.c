@@ -1,15 +1,15 @@
 
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
+#include "stisdef.h"
 
 
 

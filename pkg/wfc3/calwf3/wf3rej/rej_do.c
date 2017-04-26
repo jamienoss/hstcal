@@ -1,14 +1,14 @@
-# include   <stdio.h>
-# include   <stdlib.h>
-# include   <string.h>
+#include   <stdio.h>
+#include   <stdlib.h>
+#include   <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include   "wf3.h"
-# include   "wf3rej.h"
-# include   "hstcalerr.h"
-# include   "wf3info.h"
-# include   "rej.h"
+#include   "wf3.h"
+#include   "wf3rej.h"
+#include   "hstcalerr.h"
+#include   "wf3info.h"
+#include   "rej.h"
 
 static void closeSciDq (int, IODescPtr [], IODescPtr [], clpar *);
 

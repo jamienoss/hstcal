@@ -4,14 +4,14 @@
  */
 
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <math.h>		/* fabs */
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <math.h>		/* fabs */
 
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 /* This routine subtracts the dark image from x (in-place).
  For CCD data, the dark image is multiplied by the dark time

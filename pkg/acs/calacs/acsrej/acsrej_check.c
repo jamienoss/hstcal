@@ -1,12 +1,12 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   "hstio.h"
+#include   <stdio.h>
+#include   <string.h>
+#include   "hstio.h"
 
-# include   "acs.h"
-# include   "acsrej.h"
-# include   "rej.h"
-# include   "hstcalerr.h"
-# include   "acsinfo.h"
+#include   "acs.h"
+#include   "acsrej.h"
+#include   "rej.h"
+#include   "hstcalerr.h"
+#include   "acsinfo.h"
 
 
 static int getACSnsegn (Hdr *, char *, multiamp *, multiamp *);

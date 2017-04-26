@@ -12,16 +12,16 @@
     RptSumLine
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "acs.h"
-# include "acssum.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acssum.h"
+#include "hstcalerr.h"
 
 static int GetSumKeyInfo (AcsSumInfo *, Hdr *);
 static int PutSumHdrInfo (SingleGroup *, double, double, int, int);

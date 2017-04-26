@@ -1,6 +1,6 @@
 
-# include <string.h>
-# include "acs.h"
+#include <string.h>
+#include "acs.h"
 
 /* This function parses the CCDAMP string from the image header and
     returns a new string which only specifies those amps used by

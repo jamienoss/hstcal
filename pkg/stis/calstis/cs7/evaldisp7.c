@@ -1,7 +1,7 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "stis.h"
-# include "calstis7.h"
+#include "stis.h"
+#include "calstis7.h"
 
 # define PIXEL_TOLERANCE  (0.01)	/* for solving disp rel for prism */
 

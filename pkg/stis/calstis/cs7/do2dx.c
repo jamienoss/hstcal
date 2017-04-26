@@ -8,20 +8,20 @@
 	FreeThroughput
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <math.h>		/* fabs */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>		/* fabs */
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
-# include "stispht.h"
-# include "stistds.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
+#include "stispht.h"
+#include "stistds.h"
 
 static int MOCAdjustDisp (StisInfo7 *, DispRelation *);
 static void AddOffsets (StisInfo7 *, ApInfo *);

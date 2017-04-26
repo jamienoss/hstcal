@@ -1,15 +1,15 @@
-# include <stdio.h>
-# include <stdlib.h>	/* malloc, abs */
-# include <string.h>	/* strcpy */
+#include <stdio.h>
+#include <stdlib.h>	/* malloc, abs */
+#include <string.h>	/* strcpy */
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "calstis6.h"
-# include "stispht.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "calstis6.h"
+#include "stispht.h"
+#include "hstcalerr.h"
 
 typedef struct {
 	IRAFPointer tp;			/* pointer to table descriptor */

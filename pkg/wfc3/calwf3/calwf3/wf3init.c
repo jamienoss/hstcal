@@ -1,9 +1,9 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "wf3.h"
-# include "calwf3.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"
+#include "wf3.h"
+#include "calwf3.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"
 
 /* Initialize the CCD_Switch structure.  This includes information about the
    input and output images, calibration files, and flags to specify which

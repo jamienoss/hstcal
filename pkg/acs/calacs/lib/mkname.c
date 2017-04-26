@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "hstcalerr.h"
-# include "acs.h"	/* for message output */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "hstcalerr.h"
+#include "acs.h"	/* for message output */
 
 int MkName (char *input, char *isuffix, char *osuffix, char *outextn,
 		char *output, int maxch) {

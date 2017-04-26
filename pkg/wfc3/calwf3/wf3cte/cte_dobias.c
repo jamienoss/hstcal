@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "cte.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "cte.h"
 
 
 /* This routine subtracts the special BIACFILE image from x (in-place).

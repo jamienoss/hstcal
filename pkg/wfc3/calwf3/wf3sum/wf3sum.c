@@ -12,16 +12,16 @@
 	RptSumLine
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3sum.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3sum.h"
+#include "hstcalerr.h"
 
 static void InitSumTrl (char *input, char *output);
 static int  GetSumKeyInfo (Wf3SumInfo *, Hdr *);

@@ -1,16 +1,16 @@
-# include <stdio.h>
-# include <string.h>
-# include <math.h>
-# include <float.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "xtables.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
-# include "stistemperature.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "xtables.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
+#include "stistemperature.h"
 
 # define UNDEFINED_TDC_FORMAT   0
 # define POST_SM4_TDC_FORMAT    1

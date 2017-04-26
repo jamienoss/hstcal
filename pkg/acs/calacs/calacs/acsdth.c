@@ -1,21 +1,21 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>
 
 /* This section for EmptyGroup functions */
 # if defined(VMS)
-# include <stat.h>
+#include <stat.h>
 # else
-# include <sys/types.h>
-# include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 # endif
 
-# include "hstio.h"
-# include "xtables.h"
+#include "hstio.h"
+#include "xtables.h"
 
-# include "acs.h"
-# include "calacs.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "calacs.h"
+#include "hstcalerr.h"
 
 /* Custom HSTIO-based routines for creating a SingleGroup without arrays
    (not used) */

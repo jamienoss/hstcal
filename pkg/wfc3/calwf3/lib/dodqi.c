@@ -7,15 +7,15 @@
 	FirstLast
 */
 
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "wf3dq.h"
+#include "xtables.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "wf3dq.h"
 
 # define MIN(a,b) (a < b ? a : b)
 

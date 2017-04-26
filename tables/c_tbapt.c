@@ -1,6 +1,6 @@
-# include <stdlib.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <stdlib.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbaptb (IRAFPointer tp, IRAFPointer cp, int row, Bool *buffer,
                 int first, int nelem) {

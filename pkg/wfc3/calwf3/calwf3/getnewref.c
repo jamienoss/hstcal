@@ -1,9 +1,9 @@
-# include <stdlib.h>
+#include <stdlib.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /* This routine gets the value of a reference file keyword from the
    primary header and appends it to the list of reference file info.

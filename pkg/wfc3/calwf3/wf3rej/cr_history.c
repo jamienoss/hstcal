@@ -1,7 +1,7 @@
-# include   <stdio.h>
-# include "hstio.h"
-# include   "wf3.h"
-# include   "wf3rej.h"
+#include   <stdio.h>
+#include "hstio.h"
+#include   "wf3.h"
+#include   "wf3rej.h"
 
 /*  cr_history -- write the history of crrej to the output file
 

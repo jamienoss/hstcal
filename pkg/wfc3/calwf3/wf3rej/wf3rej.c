@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
 
 
-# include "wf3.h"
-# include "wf3rej.h"
-# include "hstcalerr.h"
-# include "rej.h"
-# include "wf3info.h"
+#include "wf3.h"
+#include "wf3rej.h"
+#include "hstcalerr.h"
+#include "rej.h"
+#include "wf3info.h"
 
 int InitRejTrl (char *, char *); 
 int MkOutName (char *, char **, char **, int, char *,int);

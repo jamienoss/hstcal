@@ -1,5 +1,5 @@
-# include "hstio.h"
-# include "acs.h"
+#include "hstio.h"
+#include "acs.h"
 
 /* The science data and the error array values are multiplied by k;
    the data quality array is not modified.

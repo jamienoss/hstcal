@@ -1,6 +1,6 @@
-# include <stdio.h>
-# include <math.h>		/* for fabs */
-# include "hstio.h"		/* for Hdr */
+#include <stdio.h>
+#include <math.h>		/* for fabs */
+#include "hstio.h"		/* for Hdr */
 
 /* This routine gets from the extension header the keywords
    LTV1, LTV2, LTM1_1, and LTM2_2.  These are converted to

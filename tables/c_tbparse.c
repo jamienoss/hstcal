@@ -1,8 +1,8 @@
-# include <ctype.h>
-# include <stdlib.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 int c_tbparse (char *tablename, char *fname, char *extname, int maxch,
                 int *hdu) {

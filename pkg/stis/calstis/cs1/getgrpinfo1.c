@@ -3,18 +3,18 @@
 	UpdateCCDTemperature
 */
 
-# include <stdio.h>
-# include <string.h>
-# include <math.h>	/* sqrt */
+#include <stdio.h>
+#include <string.h>
+#include <math.h>	/* sqrt */
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stistemperature.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stistemperature.h"
+#include "stisdef.h"
 
 static int UpdateCCDTemperature(StisInfo1 *, Hdr *);
 

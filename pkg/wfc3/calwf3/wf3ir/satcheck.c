@@ -1,6 +1,6 @@
-# include "hstio.h"     /* defines HST I/O functions */
-# include "wf3.h"
-# include "wf3dq.h"
+#include "hstio.h"     /* defines HST I/O functions */
+#include "wf3.h"
+#include "wf3dq.h"
 
 /* SATCHECK: Flag pixels as saturated in a MultiAccum group if they're
 ** flagged as such in the preceding group.

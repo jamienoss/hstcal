@@ -1,15 +1,15 @@
-# include <math.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "hstio.h"    /* defines HST I/O functions */
-# include "wf3.h"
-# include "wf3info.h"
-# include "wf3dq.h"
-# include "trl.h"
-# include "wf3rej.h"
-# include "rej.h"
+#include "hstio.h"    /* defines HST I/O functions */
+#include "wf3.h"
+#include "wf3info.h"
+#include "wf3dq.h"
+#include "trl.h"
+#include "wf3rej.h"
+#include "rej.h"
 
 # define max_CRs         4
 # define equal_weight    0

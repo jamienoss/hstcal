@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "trl.h"		/* for trlwarn */
-# include "hstcalerr.h"		/* for REF_TOO_SMALL */
+#include <stdio.h>
+#include "hstio.h"
+#include "trl.h"		/* for trlwarn */
+#include "hstcalerr.h"		/* for REF_TOO_SMALL */
 
-# include <string.h>
-# include "wf3.h"
+#include <string.h>
+#include "wf3.h"
 
 /* This routine finds the bin factors and corner location to use
    when calling bin2d to extract and bin the appropriate subset of

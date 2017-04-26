@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "hstio.h"
-# include <time.h>
-# include "acs.h"
-# include "acscorr.h"
-# include "calacs.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "hstio.h"
+#include <time.h>
+#include "acs.h"
+#include "acscorr.h"
+#include "calacs.h"
+#include "hstcalerr.h"
 
 /* This routine gets info from the primary header of the science file,
    and it calls routines to get calibration switches and reference file

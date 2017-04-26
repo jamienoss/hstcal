@@ -1,8 +1,8 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "stis.h"
-# include "calstis4.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis4.h"
 
 static void RestoreDispCoeff (DispRelation *);
 static int A4corrAdjustDisp (StisInfo4 *, SpTrace *, DispRelation *, double);

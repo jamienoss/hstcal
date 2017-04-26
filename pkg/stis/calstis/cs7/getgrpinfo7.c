@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>		/* strstr */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>		/* strstr */
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /* This routine gets keyword values from an extension header.
 

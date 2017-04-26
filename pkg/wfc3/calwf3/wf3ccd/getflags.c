@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include <string.h>		/* for strncmp, strcmp */
+#include <stdio.h>
+#include <string.h>		/* for strncmp, strcmp */
 
-# include "hstio.h"
-# include "wf3.h"
-# include "msg.h"
-# include "wf3info.h"
-# include "hstcalerr.h"		/* defines error codes */
+#include "hstio.h"
+#include "wf3.h"
+#include "msg.h"
+#include "wf3info.h"
+#include "hstcalerr.h"		/* defines error codes */
 
 static int checkAtoD (Hdr *, WF3Info *, int *, int *);
 static int checkBias (Hdr *, WF3Info *, int *, int *);

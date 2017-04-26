@@ -3,17 +3,17 @@
 	FreeLampSpec
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
-# include "stisdef.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
+#include "stisdef.h"
 
 static void ScaleTrim (StisInfo4 *);
 static void ScaleOne (int, double, int, int []);

@@ -11,13 +11,13 @@
 	  DriftSet	set coefficients of fit to a given value
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
-# include "acsdq.h"		/* for GOODPIXEL */
+#include <stdio.h>
+#include <stdlib.h>
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
+#include "acsdq.h"		/* for GOODPIXEL */
 
 # define NELEM_SUMS  5		/* size of sums array */
 

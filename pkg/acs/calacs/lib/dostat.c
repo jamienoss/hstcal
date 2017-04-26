@@ -1,9 +1,9 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "hstcalerr.h"
-# include "acsdq.h"
-# include "acs.h"	/* for message output */
+#include "hstio.h"
+#include "hstcalerr.h"
+#include "acsdq.h"
+#include "acs.h"	/* for message output */
 
 /* This routine computes the minimum, mean, and maximum of the science
    data values that are flagged as good in the data quality array.  These

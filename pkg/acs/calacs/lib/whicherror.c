@@ -1,9 +1,9 @@
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
-# include <c_iraf.h>
-# include "hstcalerr.h"
-# include "acs.h"	/* for message output */
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
+#include <c_iraf.h>
+#include "hstcalerr.h"
+#include "acs.h"	/* for message output */
 
 /* This routine prints the status value and message for HSTIO errors,
    IRAF error, or it prints a generic message depending on the value of

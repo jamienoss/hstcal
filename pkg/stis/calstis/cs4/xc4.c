@@ -5,11 +5,11 @@ internal:
 	FindOffset
 */
 
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "stis.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "stis.h"
+#include "hstcalerr.h"
 
 static void FindOffset (CmplxArray *, int, int, double *, double *);
 

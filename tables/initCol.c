@@ -1,7 +1,7 @@
-# include <stdlib.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <stdlib.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void initCol (IRAFPointer tp, IRAFPointer *cp,
         char *colname, char *colunits, char *colfmt, int datatype, int nelem) {

@@ -1,21 +1,21 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>
 
 /* This section for EmptyGroup functions */
 # if defined(VMS)
-# include <stat.h>
+#include <stat.h>
 # else
-# include <sys/types.h>
-# include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 # endif
 
-# include "hstio.h"
-# include "ximio.h"
+#include "hstio.h"
+#include "ximio.h"
 
-# include "wf3.h"
-# include "calwf3.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "calwf3.h"
+#include "hstcalerr.h"
 
 /* wf3dth -- produce DTH product (empty)
 

@@ -1,6 +1,6 @@
 /* NOTE:  this file (ctables.h) depends on fitsio.h */
 
-# include "xtables.h"
+#include "xtables.h"
 
 # define SZ_FNAME    1024
 # define SZ_ERRMESS  1024

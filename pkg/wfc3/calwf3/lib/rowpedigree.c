@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <string.h>
-# include "xtables.h"
-# include "wf3.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <string.h>
+#include "xtables.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /* This routine gets pedigree and descrip from the current table row.
 

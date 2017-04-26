@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include <hstio.h>
-# include <string.h>
+#include <stdio.h>
+#include <hstio.h>
+#include <string.h>
 
-# include "acs.h"
-# include "acsrej.h"
-# include "hstcalerr.h"
-# include "rej.h"
+#include "acs.h"
+#include "acsrej.h"
+#include "hstcalerr.h"
+#include "rej.h"
 
 static void InitRejTrl (char *, char *); 
 

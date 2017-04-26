@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3corr.h"
-# include "calwf3.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3corr.h"
+#include "calwf3.h"
 
 static void CCDSanity (int, char *);
 static void IRSanity  (int, char *);

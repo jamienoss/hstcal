@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 
 /* These routines check whether pedigree indicates that the calibration

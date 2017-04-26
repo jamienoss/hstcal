@@ -1,6 +1,6 @@
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void addCol (IRAFPointer tp, IRAFPointer cp, char *colname, char *colunits) {
 

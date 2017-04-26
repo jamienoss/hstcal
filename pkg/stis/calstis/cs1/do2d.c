@@ -92,16 +92,16 @@
 	Delete function dummyKw, since it should no longer be necessary.
 */
 
-# include <math.h>	/* for fabs and sqrt */
-# include <string.h>
-# include <stdio.h>
+#include <math.h>	/* for fabs and sqrt */
+#include <string.h>
+#include <stdio.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 static void getMinMax (SingleGroup *, float *, float *);
 static void AtoDMsg (StisInfo1 *, int);

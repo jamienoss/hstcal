@@ -1,9 +1,9 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <ctype.h>
-# include "wf3.h"	/* for trlerror & NOT_APPLICABLE */
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "wf3.h"	/* for trlerror & NOT_APPLICABLE */
+#include "hstcalerr.h"
 
 int GotFileName (char *filename) {
 

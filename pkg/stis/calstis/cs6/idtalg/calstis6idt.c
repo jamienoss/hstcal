@@ -1,17 +1,17 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
-# include "xtables.h"
-# include "ximio.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "ximio.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "hstcalerr.h"
-# include "calstis6.h"
-# include "idtalg.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "hstcalerr.h"
+#include "calstis6.h"
+#include "idtalg.h"
 
 static int AddGhost (Hdr *, float **, int, int);
 static void BuildTempNames (char *, char *, char *, char *);

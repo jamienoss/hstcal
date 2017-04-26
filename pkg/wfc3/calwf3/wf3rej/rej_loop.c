@@ -1,15 +1,15 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   <stdlib.h>
-# include   <math.h>
+#include   <stdio.h>
+#include   <string.h>
+#include   <stdlib.h>
+#include   <math.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include   "wf3.h"
-# include   "wf3rej.h"
-# include   "rej.h"
-# include   "hstcalerr.h"
-# include   "wf3info.h"
+#include   "wf3.h"
+#include   "wf3rej.h"
+#include   "rej.h"
+#include   "hstcalerr.h"
+#include   "wf3info.h"
 
 /* local mask values */
 # define    OK          (short)0

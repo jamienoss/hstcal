@@ -101,15 +101,15 @@
 ** Section 6.
 **      Functions to manipulate the header array.
 */
-# include "hstio.h"
-# include <fitsio.h>
-# include <ctype.h>
-# include <stdio.h>
-# include <string.h>
-# include <sys/types.h>
-# include <sys/stat.h>
-# include <time.h>
-# include <unistd.h>
+#include "hstio.h"
+#include <fitsio.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 /*
 ** String defined to allow determination of the HSTIO library version
@@ -863,7 +863,7 @@ int getNaxis1(IODescPtr p) { return ((IODesc *)p)->dims[0]; }
 int getNaxis2(IODescPtr p) { return ((IODesc *)p)->dims[1]; }
 int getType(IODescPtr p) { return ((IODesc *)p)->type; }
 
-# include "c_iraf.h"
+#include "c_iraf.h"
 
 /*
 ** Section 5.

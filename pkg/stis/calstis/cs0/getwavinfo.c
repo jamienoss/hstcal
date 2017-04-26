@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "c_iraf.h"
-# include "hstio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis0.h"
-# include "hstcalerr.h"
-# include "stisshutter.h"	/* for EXT_SHUTTER_CLOSED */
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis0.h"
+#include "hstcalerr.h"
+#include "stisshutter.h"	/* for EXT_SHUTTER_CLOSED */
+#include "stisdef.h"
 
 /* This routine gets switches and reference file names from the primary
    header of the wavecal file.

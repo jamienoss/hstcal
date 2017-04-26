@@ -1,5 +1,5 @@
-# include <string.h>
-# include	"acs.h"
+#include <string.h>
+#include	"acs.h"
 
 /* Initialize multiamp structure to ZERO */
 void initmulti (multiamp *amp) {

@@ -95,13 +95,13 @@
     Revised:          4 May 2015, PLL (replaced tmpnam with mkstemp)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "ximio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "ximio.h"
 
-# include "acs.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "hstcalerr.h"
 
 # define INIT_LEN	2
 

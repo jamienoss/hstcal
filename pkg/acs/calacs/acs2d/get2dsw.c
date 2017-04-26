@@ -1,9 +1,9 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
-# include "acscorr.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
+#include "acscorr.h"
 
 
 static int GetSw (Hdr *, char *, int *);

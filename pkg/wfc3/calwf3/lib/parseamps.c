@@ -1,5 +1,5 @@
-# include <string.h>
-# include "wf3.h"
+#include <string.h>
+#include "wf3.h"
 
 /* This function parses the CCDAMP string from the image header and
     returns a new string which only specifies those amps used by

@@ -57,13 +57,13 @@
 
  */
 
-# include <string.h>
-# include <stdio.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "doccd.h"
+#include <string.h>
+#include <stdio.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "doccd.h"
 
 int PutKeyDbl(Hdr *, char *, double , char *);
 int PutKeyStr(Hdr *, char *, char *, char *);

@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /* This routine determines the chip associated with the
 	EXTVER.

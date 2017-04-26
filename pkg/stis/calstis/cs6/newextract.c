@@ -25,14 +25,14 @@ internal:
 */
 
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "xtables.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 
 static void CopyXtract (XtractInfo *, XtractInfo *);

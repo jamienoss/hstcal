@@ -1,12 +1,12 @@
-# include <ctype.h>
-# include <stdio.h>
-# include <string.h>
-# include "xtables.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include "xtables.h"
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "acs.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "hstcalerr.h"
 
 /* mkNewSpt -- Create a new SPT file for the output file.
 

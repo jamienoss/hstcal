@@ -6,15 +6,15 @@
 	InitRefImage
 */
 
-# include <stdio.h>
-# include <time.h>
-# include <string.h>
+#include <stdio.h>
+#include <time.h>
+#include <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
 
 static void StisInit1 (StisInfo1 *);
 static void InitRefImage (RefImage *);

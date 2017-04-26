@@ -1,6 +1,6 @@
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 int c_tbpsta (IRAFPointer tp, int param) {
 

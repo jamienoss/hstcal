@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <string.h>
-# include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 
 /*

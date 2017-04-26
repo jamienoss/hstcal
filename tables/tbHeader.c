@@ -1,6 +1,6 @@
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 static void extractKeyword (char *card, char *keyword);
 static int keywordExists (fitsfile *fptr, char *keyword, int *status);

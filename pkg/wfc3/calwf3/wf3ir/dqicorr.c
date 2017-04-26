@@ -1,10 +1,10 @@
-# include <xtables.h>
-# include "hstio.h"	/* defines HST I/O functions */
+#include <xtables.h>
+#include "hstio.h"	/* defines HST I/O functions */
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "wf3dq.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "wf3dq.h"
 
 typedef struct {
         IRAFPointer tp;                 /* pointer to table descriptor */

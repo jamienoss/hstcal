@@ -11,14 +11,14 @@
 	  DriftSet	set coefficients of fit to a given value
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <math.h>
-# include "hstio.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "hstio.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
 
 # define NELEM_SUMS  5		/* size of sums array */
 

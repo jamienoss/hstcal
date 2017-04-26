@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stddef.h>
-# include <string.h>
-# include <ctype.h>		/* islower, toupper */
+#include <stdio.h>
+#include <stddef.h>
+#include <string.h>
+#include <ctype.h>		/* islower, toupper */
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 /* This routine gets keyword values from the primary header.
  

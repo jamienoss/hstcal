@@ -6,15 +6,15 @@
  DQINormal
  */
 
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
-# include "acsdq.h"
+#include "xtables.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
+#include "acsdq.h"
 
 typedef struct {
 	IRAFPointer tp;			/* pointer to table descriptor */

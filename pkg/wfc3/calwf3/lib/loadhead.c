@@ -1,8 +1,8 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "wf3.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /*  Load primary header from input image
 

@@ -1,7 +1,7 @@
-# include <stdlib.h>		/* calloc */
-# include "hstio.h"
-# include "hstcalerr.h"
-# include "acs.h"
+#include <stdlib.h>		/* calloc */
+#include "hstio.h"
+#include "hstcalerr.h"
+#include "acs.h"
 
 /* This routine gets the value of a header keyword, expected to be the
    name of a reference image or table.

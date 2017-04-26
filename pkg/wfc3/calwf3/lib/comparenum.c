@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <string.h>
-# include "msg.h"
-# include "wf3.h"
+#include <stdio.h>
+#include <string.h>
+#include "msg.h"
+#include "wf3.h"
 
 
 /* This function checks that the number of input and output files are

@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "hstio.h"
-# include "xtables.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "xtables.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 # define NUMCOLS 26			/* Defined locally to be specific to CCDTAB */
 

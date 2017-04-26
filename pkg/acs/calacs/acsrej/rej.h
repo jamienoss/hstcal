@@ -1,5 +1,5 @@
-# include <c_iraf.h>
-# include <ximio.h>
+#include <c_iraf.h>
+#include <ximio.h>
 
 # define    MAX_ITER    20
 # define    MAX_FILES   120

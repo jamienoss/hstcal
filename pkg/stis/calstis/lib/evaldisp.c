@@ -1,5 +1,5 @@
-# include <stdio.h>
-# include <math.h>
+#include <stdio.h>
+#include <math.h>
 
 # define MAX_COEFF 9		/* maximum number of coefficients */
 

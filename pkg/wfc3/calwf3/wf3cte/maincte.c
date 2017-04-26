@@ -9,20 +9,20 @@ MLS 2015
 
 */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <time.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <time.h>
+#include <string.h>
 
 
-# include <c_iraf.h>		/* for c_irafinit */
-# include "ximio.h"
-# include "hstio.h"
+#include <c_iraf.h>		/* for c_irafinit */
+#include "ximio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"		/* calibration switch names for WFC3ccd */
-# include "wf3version.h"
+#include "wf3.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"		/* calibration switch names for WFC3ccd */
+#include "wf3version.h"
 
 # ifdef _OPENMP
 #  include <omp.h>

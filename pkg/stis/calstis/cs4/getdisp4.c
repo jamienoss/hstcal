@@ -1,15 +1,15 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <math.h>		/* for fabs */
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>		/* for fabs */
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "xtables.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 # define MIDDLE_LINE (512.)	/* middle line of detector, in Y direction */
 

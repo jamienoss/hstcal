@@ -1,6 +1,6 @@
-# include <math.h>
-# include "hstio.h"
-# include "hstcalerr.h"	/* SIZE_MISMATCH */
+#include <math.h>
+#include "hstio.h"
+#include "hstcalerr.h"	/* SIZE_MISMATCH */
 
 /* Subtract the second SingleGroupLine from the first, leaving the
    result in the first.

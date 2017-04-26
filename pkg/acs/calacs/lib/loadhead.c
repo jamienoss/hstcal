@@ -1,9 +1,9 @@
 
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "acs.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "acs.h"
+#include "hstcalerr.h"
 
 /*  Load primary header from input image
 

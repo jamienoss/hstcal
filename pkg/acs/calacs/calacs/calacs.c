@@ -1,17 +1,17 @@
-# include <stdio.h>
-# include <stdlib.h>    /* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>    /* calloc */
+#include <string.h>
 
-# include "xtables.h"   /* for IRAFPointer definition */
-# include "hstio.h"
+#include "xtables.h"   /* for IRAFPointer definition */
+#include "hstio.h"
 
-# include "acs.h"
-# include "calacs.h"
-# include "hstcalerr.h"
-# include "acscorr.h"
-# include "acsasn.h"    /* Contains association table structures */
+#include "acs.h"
+#include "calacs.h"
+#include "hstcalerr.h"
+#include "acscorr.h"
+#include "acsasn.h"    /* Contains association table structures */
 
-# include "acsrej.h"    /* For ACSRej_0 */
+#include "acsrej.h"    /* For ACSRej_0 */
 
 # define NOPOSID 0
 # define FITS_BUFSIZE  2880    /* size of a FITS block; for CopyFFile */

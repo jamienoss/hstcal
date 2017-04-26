@@ -1,7 +1,7 @@
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
+#include "wf3.h"
+#include "wf3info.h"
 
 /* This routine resets switches that are inappropriate for the current
    detector.

@@ -1,14 +1,14 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   <stdlib.h>
-# include   <limits.h>
-# include   <math.h>
+#include   <stdio.h>
+#include   <string.h>
+#include   <stdlib.h>
+#include   <limits.h>
+#include   <math.h>
 
-# include "hstio.h"
-# include   "wf3.h"    /* for message output */
-# include   "hstcalerr.h"
-# include   "wf3info.h"
-# include   "rej.h"
+#include "hstio.h"
+#include   "wf3.h"    /* for message output */
+#include   "hstcalerr.h"
+#include   "wf3info.h"
+#include   "rej.h"
 
 # define    MINVAL      -15000
 # define    BIN_WIDTH   1

@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "acs.h"
-# include "hstcalerr.h"
-# include "acsversion.h"
+#include "acs.h"
+#include "hstcalerr.h"
+#include "acsversion.h"
 
 /* CALACS driver: retrieves input table name and calls pipeline
 */

@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /* Check calibration switch, and set flag to PERFORM, COMPLETE or
    OMIT.  The other options (SKIPPED, DUMMY) are not set here.

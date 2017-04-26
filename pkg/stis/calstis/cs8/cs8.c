@@ -1,14 +1,14 @@
 /* calstis8 -- Sum repeatobs data */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <string.h>
 
-# include "c_iraf.h"		/* for c_irafinit */
+#include "c_iraf.h"		/* for c_irafinit */
 
-# include "../stis.h"
-# include "calstis8.h"
-# include "hstcalerr.h"
+#include "../stis.h"
+#include "calstis8.h"
+#include "hstcalerr.h"
 
 /* This is the main module for calstis8.  It gets the input and output
    file names, calibration switches, and flags, and then calls CalStis8.

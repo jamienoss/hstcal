@@ -5,14 +5,14 @@
  12-Aug-2012 PLL: Separated PCTECORR from ACSCCD.
 
 */
-# include <string.h>
-# include <stdio.h>
+#include <string.h>
+#include <stdio.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 
 static void PCTEMsg (ACSInfo *, int);

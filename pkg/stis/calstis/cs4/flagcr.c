@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>	/* malloc */
-# include <string.h>
-# include <math.h>	/* fabs, qsort */
+#include <stdio.h>
+#include <stdlib.h>	/* malloc */
+#include <string.h>
+#include <math.h>	/* fabs, qsort */
 
-# include "hstio.h"
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
-# include "stisdq.h"	/* for DATAMASKED and DATAREJECT */
+#include "hstio.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
+#include "stisdq.h"	/* for DATAMASKED and DATAREJECT */
 
 static int FlagLine (StisInfo4 *,
 	float *, short *, int, float *, float *, float *);

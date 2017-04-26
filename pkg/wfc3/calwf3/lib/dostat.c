@@ -1,9 +1,9 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
-# include "trl.h"		/* For trlwarn */
-# include "hstcalerr.h"
-# include "wf3dq.h"
+#include "hstio.h"
+#include "trl.h"		/* For trlwarn */
+#include "hstcalerr.h"
+#include "wf3dq.h"
 
 /* This routine computes the minimum, mean, and maximum of the science
    data values that are flagged as good in the data quality array.  These

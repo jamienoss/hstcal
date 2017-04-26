@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stissizes.h"	/* detector sizes, overscan sizes */
+#include <stdio.h>
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stissizes.h"	/* detector sizes, overscan sizes */
 
 # define FULL_FRAME_READOUT  1
 # define SUBARRAY_READOUT    2

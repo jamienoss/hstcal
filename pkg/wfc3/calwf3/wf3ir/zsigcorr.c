@@ -1,11 +1,11 @@
-# include <math.h>
-# include <stdio.h>
+#include <math.h>
+#include <stdio.h>
 
-# include "hstio.h"    /* defines HST I/O functions */
-# include "wf3.h"
-# include "wf3info.h"
-# include "wf3dq.h"
-# include "trl.h"
+#include "hstio.h"    /* defines HST I/O functions */
+#include "wf3.h"
+#include "wf3info.h"
+#include "wf3dq.h"
+#include "trl.h"
 
 extern int status;
 

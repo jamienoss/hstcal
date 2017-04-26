@@ -3,11 +3,11 @@
 
 */
 
-# include <stdio.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 int GetSw (Hdr *, char *, int *);
 

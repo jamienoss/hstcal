@@ -1,6 +1,6 @@
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
 
 /* This routine resets switches that are inappropriate for the current
    detector.

@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 /* Image file name template descriptor.
    NOTE:  This version handles only explicit file names, no wildcards.

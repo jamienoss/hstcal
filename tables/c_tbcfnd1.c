@@ -1,8 +1,8 @@
-# include <ctype.h>
-# include <stdlib.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbcfnd1 (IRAFPointer tp, const char *colname, IRAFPointer *cp) {
 

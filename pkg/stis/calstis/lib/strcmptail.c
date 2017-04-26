@@ -1,4 +1,4 @@
-# include <string.h>
+#include <string.h>
 
 /* This function checks whether string s1 ends with the string s2.
    If it does, the function value will be zero.  strcmp is used to

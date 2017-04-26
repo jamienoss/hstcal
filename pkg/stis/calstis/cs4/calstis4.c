@@ -6,14 +6,14 @@
 	StisInit4
 */
 
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
 
 static void StisInit4 (StisInfo4 *);
 

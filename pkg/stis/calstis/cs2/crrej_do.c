@@ -1,13 +1,13 @@
-# include 	<stdio.h>
-# include 	<stdlib.h>
-# include 	<string.h>
-# include 	"c_iraf.h"
-# include 	"hstio.h"
+#include 	<stdio.h>
+#include 	<stdlib.h>
+#include 	<string.h>
+#include 	"c_iraf.h"
+#include 	"hstio.h"
 
-# include	"stis.h"
-# include	"cs2.h"
-# include	"calstis2.h"
-# include	"stisdef.h"
+#include	"stis.h"
+#include	"cs2.h"
+#include	"calstis2.h"
+#include	"stisdef.h"
 
 static int countImsets (IRAFPointer);
 

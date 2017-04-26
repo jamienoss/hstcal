@@ -7,11 +7,11 @@
     Valgrind says there's a memory leak in NewRefFile
 */
 
-# include <stdlib.h>
-# include <string.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "wf3.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 /* These routines are for managing a list of keyword & value pairs
    for reference file names.

@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <stdlib.h>		/* malloc */
-# include <string.h>
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>		/* malloc */
+#include <string.h>
+#include "hstcalerr.h"
 
 # define MAX_NAMES_INCR   20
 

@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <string.h>		/* for strncmp, strcmp */
+#include <stdio.h>
+#include <string.h>		/* for strncmp, strcmp */
 
-# include "hstio.h"
-# include "wf3.h"
-# include "msg.h"
-# include "wf3info.h"
-# include "hstcalerr.h"		/* defines error codes */
-# include "cte.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "msg.h"
+#include "wf3info.h"
+#include "hstcalerr.h"		/* defines error codes */
+#include "cte.h"
 
 static int checkCCD (Hdr *, WF3Info *, int *, int *);
 static int checkBiac (Hdr *, WF3Info *, int *);

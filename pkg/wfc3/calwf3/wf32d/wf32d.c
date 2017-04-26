@@ -4,16 +4,16 @@
 	WF32d
 */
 
-# include <stdio.h>
-# include <time.h>
-# include <string.h>
+#include <stdio.h>
+#include <time.h>
+#include <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"		/* calibration switch names for calwf3 */
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"		/* calibration switch names for calwf3 */
 
 
 /* Do basic 2-D calibration.

@@ -1,5 +1,5 @@
-# include "stis.h"
-# include "calstis7.h"
+#include "stis.h"
+#include "calstis7.h"
 
 # define SPEED_OF_LIGHT 299792.458		/* c in km/sec */
 

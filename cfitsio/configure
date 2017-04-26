@@ -560,14 +560,14 @@ ac_default_prefix=`pwd`
 ac_includes_default="\
 #include <stdio.h>
 #ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
+#include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
+#include <sys/stat.h>
 #endif
 #ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <stddef.h>
+#include <stdlib.h>
+#include <stddef.h>
 #else
 # ifdef HAVE_STDLIB_H
 #  include <stdlib.h>
@@ -577,19 +577,19 @@ ac_includes_default="\
 # if !defined STDC_HEADERS && defined HAVE_MEMORY_H
 #  include <memory.h>
 # endif
-# include <string.h>
+#include <string.h>
 #endif
 #ifdef HAVE_STRINGS_H
-# include <strings.h>
+#include <strings.h>
 #endif
 #ifdef HAVE_INTTYPES_H
-# include <inttypes.h>
+#include <inttypes.h>
 #endif
 #ifdef HAVE_STDINT_H
-# include <stdint.h>
+#include <stdint.h>
 #endif
 #ifdef HAVE_UNISTD_H
-# include <unistd.h>
+#include <unistd.h>
 #endif"
 
 ac_subst_vars='LTLIBOBJS
@@ -1585,7 +1585,7 @@ fi
 # ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
 # -------------------------------------------------------
 # Tests whether HEADER exists and can be compiled using the include files in
-# INCLUDES, setting the cache variable VAR accordingly.
+#includeS, setting the cache variable VAR accordingly.
 ac_fn_c_check_header_compile ()
 {
   as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
@@ -3176,9 +3176,9 @@ do
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #ifdef __STDC__
-# include <limits.h>
+#include <limits.h>
 #else
-# include <assert.h>
+#include <assert.h>
 #endif
 		     Syntax error
 _ACEOF
@@ -3235,9 +3235,9 @@ do
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #ifdef __STDC__
-# include <limits.h>
+#include <limits.h>
 #else
-# include <assert.h>
+#include <assert.h>
 #endif
 		     Syntax error
 _ACEOF

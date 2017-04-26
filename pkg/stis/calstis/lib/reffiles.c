@@ -5,11 +5,11 @@
 	FreeRefFile
 */
 
-# include <stdlib.h>
-# include <string.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "stis.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "hstcalerr.h"
 
 /* These routines are for managing a list of keyword & value pairs
    for reference file names.

@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
-# include "hstio.h"	/* this is only used for writing debug image */
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
+#include "hstio.h"	/* this is only used for writing debug image */
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
 
 # define TOLERANCE (1.e-6)      /* for inverting the dispersion relation */
 

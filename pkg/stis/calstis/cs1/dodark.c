@@ -3,17 +3,17 @@
 	MedSciVal
 */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <math.h>		/* fabs */
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <math.h>		/* fabs */
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stistemperature.h"	/* defines DARKRATE */
-# include "stisdef.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stistemperature.h"	/* defines DARKRATE */
+#include "stisdef.h"
 
 static int getDarkParam (Hdr *, double *, double *);
 static double CCDFactor (double, double, double);

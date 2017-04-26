@@ -1,5 +1,5 @@
-# include <fitsio.h>
-# include "ctables.h"
+#include <fitsio.h>
+#include "ctables.h"
 
 # define MAXDIM 7
 

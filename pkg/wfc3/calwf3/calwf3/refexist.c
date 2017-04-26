@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-# include "hstio.h"
-# include "xtables.h"
-# include "c_iraf.h"	/* clear_cvoserr */
+#include "hstio.h"
+#include "xtables.h"
+#include "c_iraf.h"	/* clear_cvoserr */
 
-# include "wf3.h"
-# include "calwf3.h"
+#include "wf3.h"
+#include "calwf3.h"
 
 static int SpecialCheck (char *, char *, int, int *, int *);
 static void MissingFile (char *, char *, int *);

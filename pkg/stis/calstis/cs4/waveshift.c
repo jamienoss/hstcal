@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
 
-# include "hstio.h"
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
 
 # define ARCSEC_PER_DEGREE  3600.
 

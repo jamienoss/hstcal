@@ -1,12 +1,12 @@
-# include "hstio.h"
-# include "numeric.h"
-# include <stdio.h>
-# include <string.h>
-# include <math.h>
-# include <ctype.h>
+#include "hstio.h"
+#include "numeric.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <ctype.h>
 
-# include <float.h>
-# include <limits.h>
+#include <float.h>
+#include <limits.h>
 
 /*
  * M.D. De La Pena 28 January 1998 - Addressed problems with improperly

@@ -1,5 +1,5 @@
-# include <fitsio.h>
-# include "ctables.h"
+#include <fitsio.h>
+#include "ctables.h"
 
 IRAFPointer c_tbcnum (IRAFPointer tp, int colnum) {
 

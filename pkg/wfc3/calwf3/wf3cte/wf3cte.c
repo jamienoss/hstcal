@@ -9,23 +9,23 @@
    which can span quads.
 */
 
-# include <time.h>
-# include <string.h>
-# include <math.h>
-# include <stdlib.h>
-# include <stdio.h>
-# include <float.h>
+#include <time.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <float.h>
 
 # ifdef _OPENMP
 #  include <omp.h>
 # endif
 
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"
-# include "cte.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"
+#include "cte.h"
 
 
 int WF3cte (char *input, char *output, CCD_Switch *cte_sw,

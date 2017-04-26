@@ -1,8 +1,8 @@
-# include <math.h>
+#include <math.h>
 
-# include "hstio.h"	/* Defines HST I/O functions */
-# include "wf3.h"
-# include "wf3info.h"
+#include "hstio.h"	/* Defines HST I/O functions */
+#include "wf3.h"
+#include "wf3info.h"
 
 /* MATH: Contains general utilities for performing arithmetic
 ** on "NicmosGroup" two-dimensional data groups. Errors and DQ are

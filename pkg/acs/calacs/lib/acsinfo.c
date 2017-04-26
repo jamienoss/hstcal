@@ -12,10 +12,10 @@
    12-Dec-2012 PLL - added CTE corrected flash reference file.
    12-Aug-2013 PLL - Tidied up code layout.
 */
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "acscorr.h"  /* calibration switch names */
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "acscorr.h"  /* calibration switch names */
 
 
 void ACSInit (ACSInfo *acs) {

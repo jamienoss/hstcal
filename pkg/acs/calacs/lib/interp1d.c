@@ -1,4 +1,4 @@
-# include <stdio.h>
+#include <stdio.h>
 
 /* DET2x2 is the determinant of a 2 x 2 matrix:
 	| a  b |

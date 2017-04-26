@@ -7,13 +7,13 @@ internal:
 	CopyDisp	copy out one DispRelation
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
 
 # define MAX(x,y)  ((x) >= (y) ? (x) : (y))
 

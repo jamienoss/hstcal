@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
 
 /* This routine finds an edge (expected to be fairly sharp) in 1-D data.
 

@@ -1,7 +1,7 @@
-# include <stdlib.h>
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <stdlib.h>
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 int c_tbagtb (IRAFPointer tp, IRAFPointer cp, int row, Bool *buffer,
                 int first, int nelem) {

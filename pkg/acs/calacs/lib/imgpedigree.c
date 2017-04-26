@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
-# include "acs.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
+#include "acs.h"
+#include "hstcalerr.h"
 
 /* This routine opens the reference image header and get pedigree and
    descrip.  If the input name is null (or the first character is a blank),

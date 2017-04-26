@@ -98,13 +98,13 @@
 				       trl file before trying to close the file. (PR 66366)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "ximio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "ximio.h"
 
-# include "wf3.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "hstcalerr.h"
 
 # define INIT_LEN	2
 

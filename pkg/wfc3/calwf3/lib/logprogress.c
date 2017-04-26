@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <time.h>
-# include "msg.h"	/* for message output */
-# include "trl.h"
+#include <stdio.h>
+#include <time.h>
+#include "msg.h"	/* for message output */
+#include "trl.h"
 
 void LogProgress (char *mess, int n) {
 

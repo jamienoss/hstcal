@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdq.h"
+#include "stis.h"
+#include "stisdq.h"
 
 /* This routine interpolates in a 2-D array to determine the value at one
    pixel.  The values for science data, error and data quality flags are

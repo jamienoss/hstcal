@@ -1,11 +1,11 @@
 /* ERR: Contains various error handling routines */
 
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "hstio.h"	/* defines HST I/O functions */
-# include "msg.h"	/* for MsgText and asnerror */
-# include "trl.h"	/* for trlerror */
+#include "hstio.h"	/* defines HST I/O functions */
+#include "msg.h"	/* for MsgText and asnerror */
+#include "trl.h"	/* for trlerror */
 
 void errchk() {
 		

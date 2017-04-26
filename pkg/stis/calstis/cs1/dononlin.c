@@ -5,16 +5,16 @@
 	ExpandDQ
 */
 
-# include <stdio.h>
-# include <math.h>		/* for sqrt and exp, in FindRate */
+#include <stdio.h>
+#include <math.h>		/* for sqrt and exp, in FindRate */
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdq.h"		/* for SATPIXEL */
-# include "stisdef.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdq.h"		/* for SATPIXEL */
+#include "stisdef.h"
 
 static double FindGlobRate (SingleGroup *, double);
 static double FindRate (double, double);

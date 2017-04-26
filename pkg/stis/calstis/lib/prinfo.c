@@ -26,15 +26,15 @@ char *descrip2    value of DESCRIP read from table row
 int   n           imset or spectral order number (ignored if <= 0)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <ctype.h>
-# include <string.h>
-# include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "stisversion.h"		/* STIS_CAL_VER */
+#include "stis.h"
+#include "hstcalerr.h"
+#include "stisversion.h"		/* STIS_CAL_VER */
 
 /* The beginning string will be padded to this many characters, plus one
    to ensure that there's at least one separator.

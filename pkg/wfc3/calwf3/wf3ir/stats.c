@@ -1,10 +1,10 @@
-# include <math.h>
-# include <float.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "trl.h"
+#include <math.h>
+#include <float.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "trl.h"
 
 /* STATS: Compute mean, median, mode, stdv, min, max of unflagged pixels
 ** in a SCI image. */

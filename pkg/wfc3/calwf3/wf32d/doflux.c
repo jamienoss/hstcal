@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 /* This routine scales CHIP2 in the UVIS data so that the flux correction over both chips
    is uniform. It uses the ratio of PHTFLAM2 / PHTFLAM1 and saves that value for reference

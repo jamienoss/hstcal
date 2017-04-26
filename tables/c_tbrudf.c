@@ -1,5 +1,5 @@
-# include <fitsio.h>
-# include "ctables.h"
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbrudf (IRAFPointer tp, IRAFPointer *cp, int numcols, int row) {
 

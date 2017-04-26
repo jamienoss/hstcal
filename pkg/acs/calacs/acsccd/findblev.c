@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <stdlib.h>		/* for calloc and qsort */
+#include <stdio.h>
+#include <stdlib.h>		/* for calloc and qsort */
 
-# include "hstio.h"
-# include "hstcalerr.h"	/* for NO_GOOD_DATA */
-# include "acsdq.h"		/* for GOODPIXEL */
-# include "acs.h"        /* for MsgText */
+#include "hstio.h"
+#include "hstcalerr.h"	/* for NO_GOOD_DATA */
+#include "acsdq.h"		/* for GOODPIXEL */
+#include "acs.h"        /* for MsgText */
 
 /* This routine determines the bias level for one line of an image
  by taking the median of the values in the overscan region.

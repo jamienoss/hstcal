@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stddef.h>
-# include <string.h>
-# include <ctype.h>		/* islower, toupper */
+#include <stdio.h>
+#include <stddef.h>
+#include <string.h>
+#include <ctype.h>		/* islower, toupper */
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 /* This routine gets keyword values from the primary header.
 

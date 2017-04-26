@@ -1,4 +1,4 @@
-# include <ctype.h>
+#include <ctype.h>
 
 /* This function compares two strings without regard to case, returning
    one if the strings are equal.

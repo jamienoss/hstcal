@@ -1,6 +1,6 @@
-# include <stdio.h>
-# include "stis.h"
-# include "calstis4.h"
+#include <stdio.h>
+#include "stis.h"
+#include "calstis4.h"
 
 /* This routine multiplies the shift for each axis by the scale factor
    to convert the shift from image pixels to reference pixels.

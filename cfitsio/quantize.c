@@ -3,11 +3,11 @@
   available for use in CFITSIO in July 1999 and updated in January 2008. 
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <math.h>
-# include <limits.h>
-# include <float.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <limits.h>
+#include <float.h>
 
 #include "fitsio2.h"
 

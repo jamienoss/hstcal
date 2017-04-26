@@ -4,14 +4,14 @@
 	ExpandDQ
 */
 
-# include <stdio.h>
-# include <math.h>		/* for sqrt and exp, in FindRate */
+#include <stdio.h>
+#include <math.h>		/* for sqrt and exp, in FindRate */
 
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
-# include "acsdq.h"		/* for SATPIXEL */
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
+#include "acsdq.h"		/* for SATPIXEL */
 
 static double FindRate (double, double);
 static void ExpandDQ (SingleGroup *, float, int, int);

@@ -1,5 +1,5 @@
-# include "hstio.h"
-# include "wf3version.h"	/* defines WF3_CAL_VER */
+#include "hstio.h"
+#include "wf3version.h"	/* defines WF3_CAL_VER */
 
 /* This routine updates the CAL_VER primary header keyword, or adds it
    to the header if it's not already present.  This keyword gives the

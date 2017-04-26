@@ -1,6 +1,6 @@
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbcdef1 (IRAFPointer tp, IRAFPointer *cp,
         char *colname, char *colunits, char *colfmt, int datatype, int nelem) {

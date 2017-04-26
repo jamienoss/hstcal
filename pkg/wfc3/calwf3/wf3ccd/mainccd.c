@@ -1,21 +1,21 @@
 /* WF3CCD -- basic CCD image reduction */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <time.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <time.h>
+#include <string.h>
 
 int status = 0;			/* zero is OK */
 
-# include "c_iraf.h"		/* for c_irafinit */
-# include "ximio.h"
-# include "hstio.h"
+#include "c_iraf.h"		/* for c_irafinit */
+#include "ximio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"		/* calibration switch names for wf3ccd */
-# include "wf3version.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"		/* calibration switch names for wf3ccd */
+#include "wf3version.h"
 
 static void FreeNames (char *, char *, char *, char *);
 int MkOutName (char *, char **, char **, int, char *, int);

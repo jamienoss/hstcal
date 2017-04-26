@@ -1,6 +1,6 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 /*  strtor -- convert a string of real numbers into a real array 
 

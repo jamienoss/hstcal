@@ -1,12 +1,12 @@
-# include   <stdio.h>
-# include   <string.h>
-# include "hstio.h"
+#include   <stdio.h>
+#include   <string.h>
+#include "hstio.h"
 
-# include   "wf3.h"
-# include   "wf3rej.h"
-# include   "rej.h"
-# include   "hstcalerr.h"
-# include   "wf3info.h"
+#include   "wf3.h"
+#include   "wf3rej.h"
+#include   "rej.h"
+#include   "hstcalerr.h"
+#include   "wf3info.h"
 
 
 static int getnsegn (Hdr *, char *, multiamp *, multiamp *);

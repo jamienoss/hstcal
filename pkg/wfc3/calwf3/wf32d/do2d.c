@@ -45,14 +45,14 @@
 */
 
 
-# include <string.h>
-# include <stdio.h>
+#include <string.h>
+#include <stdio.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 static void DarkMsg (WF3Info *, int);
 static void dqiMsg (WF3Info *, int);

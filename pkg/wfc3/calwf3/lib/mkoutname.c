@@ -8,11 +8,11 @@
    when RPTCORR is off and a new spt is being constructed (#967)       
    */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "wf3.h"	/* for message output */
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "wf3.h"	/* for message output */
+#include "hstcalerr.h"
 
 static int FindExtn ( char *);
 static int strcatN (char *, char *, int);

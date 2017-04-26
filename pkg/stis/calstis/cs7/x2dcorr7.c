@@ -7,18 +7,18 @@
 	FreeInang
 */
 
-# include <math.h>
-# include <stdio.h>
-# include <string.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
 
-# include <c_iraf.h>
-# include <hstio.h>
+#include <c_iraf.h>
+#include <hstio.h>
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
+#include "stisdef.h"
 
 /* Don't interpolate if the sum of weights is smaller than this value. */
 # define TINY_WEIGHT  (0.1)

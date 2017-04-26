@@ -1,4 +1,4 @@
-# include "hstio.h"
+#include "hstio.h"
 
 /* The constant k is added to the science data;
    the error and data quality arrays are not modified.

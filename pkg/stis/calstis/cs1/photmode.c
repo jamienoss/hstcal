@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /*
    Phil Hodge, 2000 Nov 1:

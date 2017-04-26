@@ -1,8 +1,8 @@
-# include <math.h>
-# include <stdio.h>
-# include "hstio.h"
-# include "hstcalerr.h"	/* SIZE_MISMATCH */
-# include "wf3.h"
+#include <math.h>
+#include <stdio.h>
+#include "hstio.h"
+#include "hstcalerr.h"	/* SIZE_MISMATCH */
+#include "wf3.h"
 
 
 /* Subtract the second SingleGroupLine from the first, leaving the

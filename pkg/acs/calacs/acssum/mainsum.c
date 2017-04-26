@@ -1,16 +1,16 @@
 /* AcsSum -- Sum repeatobs data */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <string.h>
 
 int status = 0;			/* zero is OK */
 
-# include <c_iraf.h>		/* for c_irafinit */
+#include <c_iraf.h>		/* for c_irafinit */
 
-# include "acs.h"
-# include "acssum.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acssum.h"
+#include "hstcalerr.h"
 
 /* 
     This function will only return either 0 (ACS_OK) if everything

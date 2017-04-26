@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
-# include "acs.h"
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
+#include "acs.h"
+#include "hstcalerr.h"
 
 /* This routine writes history records for a reference image, including
    the name of the file and the pedigree and descrip values.

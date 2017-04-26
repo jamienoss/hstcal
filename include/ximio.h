@@ -1,4 +1,4 @@
-# include <c_iraf.h>
+#include <c_iraf.h>
 
 IRAFPointer c_imtopen(char *pattern);
 

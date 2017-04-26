@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "stis.h"
-# include "calstis0.h"
+#include <stdio.h>
+#include "hstio.h"
+#include "stis.h"
+#include "calstis0.h"
 
 static void CCDSanity (int, char *);
 static void MAMASanity (int, char *);

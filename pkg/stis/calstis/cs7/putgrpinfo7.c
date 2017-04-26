@@ -1,12 +1,12 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis7.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis7.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 # define ARCSEC_TO_DEGREES    (1./3600.)
 

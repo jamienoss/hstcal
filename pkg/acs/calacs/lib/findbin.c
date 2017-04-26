@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"		/* for REF_TOO_SMALL */
+#include <stdio.h>
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"		/* for REF_TOO_SMALL */
 
 /* This routine finds the bin factors and corner location to use
    when calling bin2d to extract and bin the appropriate subset of

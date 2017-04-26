@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "msg.h"
+#include "msg.h"
 
 # define NSUF	16
 

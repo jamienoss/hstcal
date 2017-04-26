@@ -2,14 +2,14 @@
  doFlash
  */
 
-# include <stdio.h>
-# include <stdlib.h>  /* calloc */
-# include <math.h>    /* fabs */
+#include <stdio.h>
+#include <stdlib.h>  /* calloc */
+#include <math.h>    /* fabs */
 
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 /* This routine subtracts the post-flash image from x (in-place).
  For CCD data, the post-flash image is multiplied by flash time

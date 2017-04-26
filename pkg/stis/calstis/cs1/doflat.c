@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>		/* for calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* for calloc */
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /* This routine divides x in-place by the flat fields.
    There are up to three flat fields.  They are read into SingleGroups,

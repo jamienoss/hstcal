@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <ctype.h>
-# include <string.h>
-# include "hstio.h"
-# include <time.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include "hstio.h"
+#include <time.h>
 
-# include "acs.h"
+#include "acs.h"
 
 int parseObsDate (Hdr *phdr, time_t *date) {
     /* This function reads in the DATE-OBS keyword from the header

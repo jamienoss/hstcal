@@ -82,7 +82,7 @@
  
 */
 
-# include "msg.h"
+#include "msg.h"
 
 # define NAMPS  4    /* Maximum number of amps for a single readout */
 # define MAX_MAREADS	26	/* Max number of MultiAccum reads */

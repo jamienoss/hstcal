@@ -1,15 +1,15 @@
-# include <ctype.h>
-# include <stdio.h>
-# include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "imphttab.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
-# include "stistds.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "imphttab.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
+#include "stistds.h"
 
 static void Phot2Obs (char *, char *);
 static int removeA2D (char *, char *);

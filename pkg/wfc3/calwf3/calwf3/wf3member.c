@@ -1,14 +1,14 @@
-# include <ctype.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "hstio.h"	/* defines HST I/O functions */
+#include "hstio.h"	/* defines HST I/O functions */
 
-# include "wf3.h"	/* defines WF3 data structures */
-# include "wf3asn.h"	/* defines WF3 Association data structures */
-# include "hstcalerr.h"
-# include "calwf3.h"	/* defines WF3 observation data structures */
+#include "wf3.h"	/* defines WF3 data structures */
+#include "wf3asn.h"	/* defines WF3 Association data structures */
+#include "hstcalerr.h"
+#include "calwf3.h"	/* defines WF3 observation data structures */
 
 /* GETASNMEMBER: Copy information from association table structure
 **	to a single image structure for use by the remainder of the 

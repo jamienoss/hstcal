@@ -11,10 +11,10 @@
    wildcard.
 */
 
-# include <string.h>
+#include <string.h>
 
-# include "stis.h"
-# include "stiswild.h"	/* defines wildcard values */
+#include "stis.h"
+#include "stiswild.h"	/* defines wildcard values */
 
 int SameInt (int rowvalue, int value) {
 

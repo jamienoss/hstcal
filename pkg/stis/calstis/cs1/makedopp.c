@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include <stdlib.h>		/* for calloc */
-# include <math.h>		/* for sin */
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>		/* for calloc */
+#include <math.h>		/* for sin */
+#include "hstcalerr.h"
 
 # define PI    3.1415926535897932384626433
 # define DT     (1./86400.)	/* time step (one second) in days */

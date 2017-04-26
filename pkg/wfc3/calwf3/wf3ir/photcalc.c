@@ -1,11 +1,11 @@
-# include <stdlib.h>
-# include <string.h>
-# include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
-# include "hstio.h"	/* defines HST I/O functions */
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "hstio.h"	/* defines HST I/O functions */
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 
 /* PHOTCALC: Store the photometry parameter values in the global header

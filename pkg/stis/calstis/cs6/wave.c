@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <string.h>
-# include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "stisdq.h"
-# include "calstis6.h"
-# include "stissizes.h"
+#include "stis.h"
+#include "stisdq.h"
+#include "calstis6.h"
+#include "stissizes.h"
 
 # define GRATING_DISP  1
 # define PRISM_DISP    2

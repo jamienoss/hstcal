@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>	/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>	/* calloc */
+#include <string.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "calwf3.h"
-# include "hstcalerr.h"
-# include "wf3corr.h"
-# include "wf3asn.h"	/* Contains association table structures */
+#include "wf3.h"
+#include "calwf3.h"
+#include "hstcalerr.h"
+#include "wf3corr.h"
+#include "wf3asn.h"	/* Contains association table structures */
 
 # define NOPOSID 0
 
@@ -663,7 +663,7 @@ int CopyFFile (char *infile, char *outfile) {
    and the CTE routine will call it with 0.
  */
 
-# include "wf3rej.h"
+#include "wf3rej.h"
 
 int WF3Rej_0 (char *input, char *output, char *mtype, int printtime,
 		int verbose, int makespt) {

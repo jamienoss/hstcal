@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "stis.h"
-# include "calstis4.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "stis.h"
+#include "calstis4.h"
 
 /* These two bracket 6, which is the length of the medium echelle slit. */
 # define MEDIUM_SHORT  5.	/* boundary between short and medium */

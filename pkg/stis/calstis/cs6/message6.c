@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "calstis6.h"
 
 /* 
    Print message at the beginning of processing with names of reference 

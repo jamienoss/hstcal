@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <math.h>	/* fabs */
+#include <stdio.h>
+#include <math.h>	/* fabs */
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis12.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis12.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 static int UpdateShift (Hdr *, double, double);
 

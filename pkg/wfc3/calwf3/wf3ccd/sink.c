@@ -44,13 +44,13 @@
 
 */
 
-# include <time.h>
-# include <string.h>
-# include "wf3dq.h"
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "wf3corr.h"		/* calibration switch names */
+#include <time.h>
+#include <string.h>
+#include "wf3dq.h"
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "wf3corr.h"		/* calibration switch names */
 
 int makedqRAZ(SingleGroup *, SingleGroup *);
 int makeSciSingleRAZ(SingleGroup *, SingleGroup *);

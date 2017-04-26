@@ -1,15 +1,15 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   <stdlib.h>
-# include   <ctype.h>
-# include   "hstio.h"
-# include   "xtables.h"
+#include   <stdio.h>
+#include   <string.h>
+#include   <stdlib.h>
+#include   <ctype.h>
+#include   "hstio.h"
+#include   "xtables.h"
 
-# include   "wf3.h"
-# include   "wf3rej.h"
-# include   "hstcalerr.h"
-# include   "wf3dq.h"
-# include   "rej.h"
+#include   "wf3.h"
+#include   "wf3rej.h"
+#include   "hstcalerr.h"
+#include   "wf3dq.h"
+#include   "rej.h"
 
 static int strtor (char *, float []);
 

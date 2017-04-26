@@ -1,7 +1,7 @@
-# include <string.h>
-# include <ctype.h>
-# include "acs.h"		/* for PERFORM and OMIT */
-# include "acsomit.h"	/* a list of switches that should be OMIT */
+#include <string.h>
+#include <ctype.h>
+#include "acs.h"		/* for PERFORM and OMIT */
+#include "acsomit.h"	/* a list of switches that should be OMIT */
 # define SIZE_KEYWORD  9
 
 /* This routine assigns the default value for a calibration switch,

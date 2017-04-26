@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <string.h>
-# include "xtables.h"
+#include <stdio.h>
+#include <string.h>
+#include "xtables.h"
 
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 /* 
    This routine checks for the existence of both reference files 

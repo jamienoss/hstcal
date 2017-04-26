@@ -1,8 +1,8 @@
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include <string.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include <string.h>
 
 /* The science data and the error array values are multiplied by k;
    the data quality array is not modified.

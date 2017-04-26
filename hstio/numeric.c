@@ -22,7 +22,7 @@
  * 19 August 1999: M.D. De La Pena - Added void to functions which have no
  * parameters.
  *
- * 25 April 2002: P.E. Hodge - Removed '# include <values.h>'.
+ * 25 April 2002: P.E. Hodge - Removed '#include <values.h>'.
  *
  */
 
@@ -41,9 +41,9 @@ typedef struct {
     	const char *errmsg; /* error message, if any */
 } NumericResult;
 
-# include <ctype.h>
-# include <limits.h>
-# include <float.h>
+#include <ctype.h>
+#include <limits.h>
+#include <float.h>
 
 /* Initialize the static data */
 static double tenpower[309] = { 1.0,

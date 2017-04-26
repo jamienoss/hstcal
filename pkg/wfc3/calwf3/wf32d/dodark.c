@@ -2,15 +2,15 @@
 	doDark
 */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <math.h>		/* fabs */
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <math.h>		/* fabs */
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 /* This routine subtracts the dark image from x (in-place).
    For CCD data, the dark image is multiplied by the exposure time and

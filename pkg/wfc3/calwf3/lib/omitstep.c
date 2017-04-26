@@ -1,4 +1,4 @@
-# include "wf3.h"
+#include "wf3.h"
 
 /* This routine returns one if the flag is OMIT or COMPLETE.  This means
    that the calibration step was not even attempted.

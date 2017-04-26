@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "c_iraf.h"
-# include "hstio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis0.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis0.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 static int goodImage (SingleGroup *);
 

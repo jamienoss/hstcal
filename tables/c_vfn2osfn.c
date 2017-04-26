@@ -3,9 +3,9 @@
    (Extracted from irafinit.c.)
 */
 
-# include <stdlib.h>
-# include <string.h>
-# include "c_iraf.h"
+#include <stdlib.h>
+#include <string.h>
+#include "c_iraf.h"
 
 /* Convert a virtual filename (path) to an OS-specific filename
 

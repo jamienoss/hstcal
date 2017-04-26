@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-# include "xtables.h"
+#include "xtables.h"
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "calstis6.h"
-# include "idtalg.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "calstis6.h"
+#include "idtalg.h"
 
 static int FindIndex (double *, int, double);
 

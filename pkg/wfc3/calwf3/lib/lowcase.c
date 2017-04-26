@@ -1,8 +1,8 @@
 /* LOWCASE: Contains routines for converting the case of strings */
 
-# include <stdio.h>
-# include <string.h>
-# include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 
 /* Convert s2 into lower case and copy out to s1.

@@ -1,9 +1,9 @@
-# include <stdio.h>
-# include "xtables.h"
+#include <stdio.h>
+#include "xtables.h"
 
 
-# include "stis.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "calstis6.h"
 
 
 /* 

@@ -7,14 +7,14 @@
 */
 
 /*
-# include <xclio.h>
+#include <xclio.h>
 */
 
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
 
 
 void initWF3sect (WF3sect *x) {

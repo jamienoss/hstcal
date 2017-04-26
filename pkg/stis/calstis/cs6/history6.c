@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 static int outHistory (int, char *, Hdr *);
 

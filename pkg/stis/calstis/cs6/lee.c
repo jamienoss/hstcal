@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <math.h>
+#include <stdio.h>
+#include <math.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
+#include "calstis6.h"
 
 static void AddPixel (int, RowContents *, short, double *, double *, int *);
 static void RemovePixel (int, RowContents *, short, double *, double *, int *);

@@ -1,5 +1,5 @@
-# include "hstio.h"	/* defines HST I/O functions */
-# include "wf3.h"
+#include "hstio.h"	/* defines HST I/O functions */
+#include "wf3.h"
 
 /* PIXOK: Function to check whether or not an image pixel is OK, based
 ** on its DQ flag settings. Returns boolean False if pixel is bad; True

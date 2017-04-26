@@ -7,14 +7,14 @@
 */
 
 /*
-# include <xclio.h>
+#include <xclio.h>
 */
 
-# include <stdio.h>
-# include <string.h>
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
+#include <stdio.h>
+#include <string.h>
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
 
 
 void initACSsect (ACSsect *x) {

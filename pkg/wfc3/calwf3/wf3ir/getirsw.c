@@ -1,7 +1,7 @@
-# include <stdio.h>
-# include  "hstio.h"
-# include "wf3.h"
-# include "wf3info.h"
+#include <stdio.h>
+#include  "hstio.h"
+#include "wf3.h"
+#include "wf3info.h"
 
 static int GetSw (Hdr *, char *, int *);
 

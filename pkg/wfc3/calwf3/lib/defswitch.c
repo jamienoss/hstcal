@@ -1,7 +1,7 @@
-# include <string.h>
-# include <ctype.h>
-# include "wf3.h"		/* for PERFORM and OMIT */
-# include "wf3omit.h"	/* a list of switches that should be OMIT */
+#include <string.h>
+#include <ctype.h>
+#include "wf3.h"		/* for PERFORM and OMIT */
+#include "wf3omit.h"	/* a list of switches that should be OMIT */
 
 /* This routine assigns the default value for a calibration switch,
    for the case that no switch was specified on the command line.

@@ -31,18 +31,18 @@
    28 Aug 13  -  Use integer loop index and limits in X1DBack (PEH)
 */
 
-# include <stdio.h>
-# include <math.h>
-# include <float.h>
+#include <stdio.h>
+#include <math.h>
+#include <float.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
+#include "calstis6.h"
 
 # define MAX_CLIP	5	/* max. number of sigma-clip iterations */
 

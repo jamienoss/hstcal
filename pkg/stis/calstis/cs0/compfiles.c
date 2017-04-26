@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "stis.h"
-# include "calstis0.h"
+#include "stis.h"
+#include "calstis0.h"
 
 static int SpecialKey (char *);
 static void SpecialComp (RefFileInfo *, RefFileInfo *, int);

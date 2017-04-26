@@ -1,17 +1,17 @@
-# include <stdio.h>
-# include <string.h>
-# include <math.h>
-# include <float.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
 
-# include "xtables.h"
-# include "ximio.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "ximio.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
-# include "calstis6.h"
-# include "idtalg.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
+#include "calstis6.h"
+#include "idtalg.h"
 
 static int GetScatter (char *, ScatterFunctions *);
 static int GetRefWave (Hdr *, char *, ScatterFunctions *);

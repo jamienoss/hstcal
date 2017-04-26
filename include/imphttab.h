@@ -1,9 +1,9 @@
 #ifndef IMPHTTAB_INCL
 #define IMPHTTAB_INCL
 
-# include "c_iraf.h"  /* For Bool type */
-# include "xtables.h" /* for SZ_COLNAME*/
-# include "hstcalerr.h"
+#include "c_iraf.h"  /* For Bool type */
+#include "xtables.h" /* for SZ_COLNAME*/
+#include "hstcalerr.h"
 
 /* Constants and Definitions for use with IMPHTTAB library */
 /* Definitions based on those defined in acs.h */

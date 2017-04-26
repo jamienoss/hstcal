@@ -1,6 +1,6 @@
-# include <string.h>
-# include <fitsio.h>
-# include "ctables.h"
+#include <string.h>
+#include <fitsio.h>
+#include "ctables.h"
 
 void c_tbhgcm (IRAFPointer tp, char *keyword, char *comment, int maxch) {
 

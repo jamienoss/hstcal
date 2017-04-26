@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <string.h>
-# include <math.h>		/* for sqrt */
-# include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>		/* for sqrt */
+#include <time.h>
 
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 /* This routine checks whether the error array is all zero, and if so,
  a simple noise model is evaluated and assigned to the error array.

@@ -1,8 +1,8 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include "stis.h"
-# include "hstcalerr.h"
-# include "idtalg.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "stis.h"
+#include "hstcalerr.h"
+#include "idtalg.h"
 
 
 /*

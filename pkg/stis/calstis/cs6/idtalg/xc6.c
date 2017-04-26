@@ -18,13 +18,13 @@
    25 Jul 00  -  Remove functions that were moved to the calstis library (IB)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include "hstio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "hstio.h"
 
-# include "stis.h"
-# include "hstcalerr.h"
-# include "idtalg.h"
+#include "stis.h"
+#include "hstcalerr.h"
+#include "idtalg.h"
 
 /*static int CDebug (char *, CmplxArray *);*/ /* Not used */
 

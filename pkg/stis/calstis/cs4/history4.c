@@ -1,11 +1,11 @@
-# include <stdio.h>
-# include "c_iraf.h"
-# include "hstio.h"
+#include <stdio.h>
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /* This routine updates the WAVECORR switch to COMPLETE (or SKIPPED,
    if there was a dummy reference table) and appends history records

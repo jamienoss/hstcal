@@ -1,5 +1,5 @@
-# include <string.h>
-# include "wf3.h"
+#include <string.h>
+#include "wf3.h"
 
 /* Initialize multiamp structure to ZERO */
 void initmulti (multiamp *amp) {

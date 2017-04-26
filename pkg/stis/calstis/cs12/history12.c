@@ -1,14 +1,14 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis12.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis12.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /* This routine updates the WAVECORR switch to COMPLETE and appends a
    history record to the header.

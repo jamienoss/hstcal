@@ -1,9 +1,9 @@
-# include   <stdio.h>
-# include   "hstio.h"
+#include   <stdio.h>
+#include   "hstio.h"
 
-# include   "acs.h"
-# include   "hstcalerr.h"
-# include   "rej.h"
+#include   "acs.h"
+#include   "hstcalerr.h"
+#include   "rej.h"
 
 /*  cr_scaling -- Determine the scaling factors according to exposure times or
         other user specified scheme. */

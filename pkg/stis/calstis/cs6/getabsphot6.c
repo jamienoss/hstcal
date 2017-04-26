@@ -1,15 +1,15 @@
-# include <stdio.h>
-# include <stdlib.h>	/* malloc */
-# include <string.h>	/* strcpy */
+#include <stdio.h>
+#include <stdlib.h>	/* malloc */
+#include <string.h>	/* strcpy */
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
-# include "stispht.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
+#include "stispht.h"
 
 
 typedef struct {

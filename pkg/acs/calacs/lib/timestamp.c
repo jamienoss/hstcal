@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <time.h>
-# include <string.h>
-# include <ctype.h>
-# include "acs.h"	/* for message output */
-# include "hstcalerr.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <ctype.h>
+#include "acs.h"	/* for message output */
+#include "hstcalerr.h"
 
 # define SZ_TIMESTRING  100 /* Make sure this is less that ACS_LINE */
 # define SZ_EIGHTY       80

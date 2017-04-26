@@ -1,16 +1,16 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <time.h>
-# include <math.h>		/* fabs */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>		/* fabs */
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
-# include "stisdq.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
+#include "stisdq.h"
 
 static double average (double *, int *, int, double, double *);
 static int OpenSGeo1 (char *, FloatHdrData *, FloatHdrData *);

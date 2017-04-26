@@ -16,16 +16,16 @@ MLS: 07/2015 Cleand up for unused variables and warning
 MLS: 08/2015 Added some initializations the clang complained about
 
 */
-# include <stdio.h>
-# include <string.h>
-# include <stdlib.h>    /* for strtol function */
-# include <ctype.h>
-# include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>    /* for strtol function */
+#include <ctype.h>
+#include <math.h>
 
-# include "hstio.h"
-# include "xtables.h"
-# include "imphttab.h"
-# include "c_iraf.h"  /* For Bool type */
+#include "hstio.h"
+#include "xtables.h"
+#include "imphttab.h"
+#include "c_iraf.h"  /* For Bool type */
 
 /* Internal functions to be used to interpret IMPHTTAB ref tables */
 static int OpenPhotTab (char *, char *, PhtCols *);

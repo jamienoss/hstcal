@@ -2,14 +2,14 @@
 	unbinsect
 */
 
-# include <stdlib.h>		/* calloc */
-# include <string.h>		/* strncmp */
-# include <math.h>		/* sqrt */
-# include "hstio.h"  /* for SingleGroupLine definitions */
+#include <stdlib.h>		/* calloc */
+#include <string.h>		/* strncmp */
+#include <math.h>		/* sqrt */
+#include "hstio.h"  /* for SingleGroupLine definitions */
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 /* This routine takes an input data array and expands it by linear
    interpolation, writing to the output array.  The calling routine

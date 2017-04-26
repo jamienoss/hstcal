@@ -1,10 +1,10 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 /* This routine applies the shutter shading correction:
 

@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <string.h>
+#include <stdio.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdef.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "stisdef.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 /* 
    calstis6 -- This is the entry point for both pipeline and standalone 

@@ -22,17 +22,17 @@
 ** H.Bushouse	25-Feb-2009	Added crrpar_in to read parameters for CRCORR.
 */
 
-# include <math.h>
-# include <ctype.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <math.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "hstio.h"	/* defines HST I/O functions */
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
-# include "trl.h"
+#include "hstio.h"	/* defines HST I/O functions */
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
+#include "trl.h"
 
 # define  FATAL   1
 # define  WARNING 2
@@ -701,11 +701,11 @@ int RebinRef (SingleNicmosGroup *in, SingleNicmosGroup *ref, int avg) {
 	return (status = 0);
 }
 
-# include   "xtables.h"
+#include   "xtables.h"
 
-# include   "wf3rej.h"
-# include   "wf3dq.h"
-# include   "rej.h"
+#include   "wf3rej.h"
+#include   "wf3dq.h"
+#include   "rej.h"
 
 static int strtor (char *, float []);
 

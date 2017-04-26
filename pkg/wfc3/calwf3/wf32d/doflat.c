@@ -1,12 +1,12 @@
-# include <stdio.h>
-# include <stdlib.h>		/* for calloc */
-# include <string.h>		/* for strncmp */
+#include <stdio.h>
+#include <stdlib.h>		/* for calloc */
+#include <string.h>		/* for strncmp */
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"
 
 static int divFlat (SingleGroup *, char *, WF3Info *, int);
 

@@ -1,6 +1,6 @@
-# include <stdio.h>
-# include "hstio.h"	/* for ckNewFile */
-# include "wf3.h"	/* for message output */
+#include <stdio.h>
+#include "hstio.h"	/* for ckNewFile */
+#include "wf3.h"	/* for message output */
 
 /* This routine takes action if the output file already exists.  If not,
    zero is returned.  If it does, the environment variable imclobber is

@@ -1,10 +1,10 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <time.h>
-# include <string.h>
-# include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <ctype.h>
 
-# include "stis.h"
+#include "stis.h"
 
 # define SZ_TIMESTRING  100
 # define SZ_EIGHTY       80

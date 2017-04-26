@@ -2,12 +2,12 @@
  get_nsegn
  */
 
-# include   <stdio.h>
-# include   <string.h>
+#include   <stdio.h>
+#include   <string.h>
 
-# include   "hstio.h"
-# include   "acs.h"
-# include   "acsinfo.h"
+#include   "hstio.h"
+#include   "acs.h"
+#include   "acsinfo.h"
 
 /*  This contains the function used to determine the NOISE and GAIN value
  for a given pixel position given a CCDAMP and CHIP configuration.

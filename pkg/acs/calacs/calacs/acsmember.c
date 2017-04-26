@@ -1,13 +1,13 @@
-# include <ctype.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "hstio.h"	/* defines HST I/O functions */
-# include "acs.h"	/* defines ACS data structures */
-# include "acsasn.h"	/* defines ACS Association data structures */
-# include "hstcalerr.h"
-# include "calacs.h"	/* defines ACS observation data structures */
+#include "hstio.h"	/* defines HST I/O functions */
+#include "acs.h"	/* defines ACS data structures */
+#include "acsasn.h"	/* defines ACS Association data structures */
+#include "hstcalerr.h"
+#include "calacs.h"	/* defines ACS observation data structures */
 
 /* GETASNMEMBER: Copy information from association table structure
 **	to a single image structure for use by the remainder of the 

@@ -4,14 +4,14 @@
 	InterpDQInfo
 */
 
-# include <stdlib.h>		/* calloc */
-# include <string.h>		/* strncmp */
-# include <math.h>		/* sqrt */
-# include "hstio.h"  /* for SingleGroupLine definitions */
+#include <stdlib.h>		/* calloc */
+#include <string.h>		/* strncmp */
+#include <math.h>		/* sqrt */
+#include "hstio.h"  /* for SingleGroupLine definitions */
 
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 /* This routine takes an input data array and expands it by linear
    interpolation, writing to the output array.  The calling routine

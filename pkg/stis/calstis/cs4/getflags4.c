@@ -5,15 +5,15 @@
 	GetCheckRef4
 */
 
-# include <stdio.h>
+#include <stdio.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
+#include "c_iraf.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis4.h"
-# include "hstcalerr.h"		/* defines error codes */
-# include "stisdef.h"
+#include "stis.h"
+#include "calstis4.h"
+#include "hstcalerr.h"		/* defines error codes */
+#include "stisdef.h"
 
 static int CheckWave (Hdr *, StisInfo4 *, int *, int *);
 static int CheckX2D (Hdr *, StisInfo4 *);

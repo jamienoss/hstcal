@@ -1,14 +1,14 @@
-# include   <stdio.h>
-# include   <string.h>
-# include   <stdlib.h>
-# include   <math.h>
+#include   <stdio.h>
+#include   <string.h>
+#include   <stdlib.h>
+#include   <math.h>
 
-# include   "hstio.h"
+#include   "hstio.h"
 
-# include   "acs.h"
-# include   "acsrej.h"
-# include   "rej.h"
-# include   "hstcalerr.h"
+#include   "acs.h"
+#include   "acsrej.h"
+#include   "rej.h"
+#include   "hstcalerr.h"
 
 /* local mask values */
 # define    OK          (short)0

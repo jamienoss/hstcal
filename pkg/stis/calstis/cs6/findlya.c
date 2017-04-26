@@ -1,15 +1,15 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <math.h>
-# include <float.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
 
-# include "xtables.h"
-# include "hstio.h"
+#include "xtables.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "stisdq.h"
-# include "calstis6.h"
+#include "stis.h"
+#include "stisdq.h"
+#include "calstis6.h"
 
 # define    SAFETY_MARGIN 15  /* safety around the slit projected image */
 

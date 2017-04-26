@@ -6,14 +6,14 @@
 	WavOption
 */
 
-# include <stdio.h>
-# include <string.h>	/* strcpy, strcmp */
+#include <stdio.h>
+#include <string.h>	/* strcpy, strcmp */
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "stis.h"
-# include "calstis12.h"
-# include "hstcalerr.h"
+#include "stis.h"
+#include "calstis12.h"
+#include "hstcalerr.h"
 
 static void StisInit12 (StisInfo12 *, StisInfo12 *);
 

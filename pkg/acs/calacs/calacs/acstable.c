@@ -19,17 +19,17 @@
 **
 */
 
-# include <ctype.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include "xtables.h"    /* defines TABLE I/O functions */
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "xtables.h"    /* defines TABLE I/O functions */
 
-# include "hstio.h"    /* defines HST I/O functions */
-# include "acs.h"    /* defines ACS data structures */
-# include "acsasn.h"    /* defines ACS Association data structures */
-# include "hstcalerr.h"
-# include "calacs.h"
+#include "hstio.h"    /* defines HST I/O functions */
+#include "acs.h"    /* defines ACS data structures */
+#include "acsasn.h"    /* defines ACS Association data structures */
+#include "hstcalerr.h"
+#include "calacs.h"
 
 # define CRLEN    2
 # define RPTLEN 2

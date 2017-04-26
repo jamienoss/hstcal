@@ -1,8 +1,8 @@
 /* wf3sum.h Sum Repeatobs data */
 
 /* include "../wf3.h" */
-# include "c_iraf.h" 	/* Needed for definition of IRAFPointer */
-# include "ximio.h"	/* Needed for c_imt* functions */
+#include "c_iraf.h" 	/* Needed for definition of IRAFPointer */
+#include "ximio.h"	/* Needed for c_imt* functions */
 
 /* Image description for wf3sum.  */
 

@@ -1,17 +1,17 @@
 /* Wf3Sum -- Sum repeatobs data */
 
-# include <stdio.h>
-# include <stdlib.h>		/* calloc */
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>		/* calloc */
+#include <string.h>
 
 int status = 0;			/* zero is OK */
 
-# include "c_iraf.h"		/* for c_irafinit */
+#include "c_iraf.h"		/* for c_irafinit */
 
-# include "wf3.h"
-# include "wf3sum.h"
-# include "hstcalerr.h"
-# include "wf3version.h"
+#include "wf3.h"
+#include "wf3sum.h"
+#include "hstcalerr.h"
+#include "wf3version.h"
 
 /* 
     This function will only return either 0 (WF3_OK) if everything

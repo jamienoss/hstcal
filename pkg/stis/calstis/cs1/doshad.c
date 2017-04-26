@@ -1,11 +1,11 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "c_iraf.h"
-# include "hstio.h"
-# include "stis.h"
-# include "calstis1.h"
-# include "hstcalerr.h"
-# include "stisdef.h"
+#include "c_iraf.h"
+#include "hstio.h"
+#include "stis.h"
+#include "calstis1.h"
+#include "hstcalerr.h"
+#include "stisdef.h"
 
 /* This routine applies the shutter shading correction:
 

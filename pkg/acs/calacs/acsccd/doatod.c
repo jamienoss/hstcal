@@ -1,13 +1,13 @@
-# include <stdio.h>
-# include <stdlib.h>		/* for malloc */
-# include <math.h>		/* for fabs */
+#include <stdio.h>
+#include <stdlib.h>		/* for malloc */
+#include <math.h>		/* for fabs */
 
-# include "xtables.h"
-# include "hstio.h"
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
-# include "acsdq.h"		/* for SATPIXEL */
+#include "xtables.h"
+#include "hstio.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
+#include "acsdq.h"		/* for SATPIXEL */
 
 typedef struct {
 	IRAFPointer tp;			/* pointer to table descriptor */

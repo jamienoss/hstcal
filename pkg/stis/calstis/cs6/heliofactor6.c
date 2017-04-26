@@ -1,6 +1,6 @@
-# include "xtables.h"
-# include "stis.h"
-# include "calstis6.h"
+#include "xtables.h"
+#include "stis.h"
+#include "calstis6.h"
 
 /* This routine computes the heliocentric correction factor.  An
    observed wavelength should be multiplied by this factor to correct

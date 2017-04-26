@@ -17,14 +17,14 @@ internal:
    07 Jan 00  -  Add npix handling (IB)
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "xtables.h"
-# include "stis.h"
-# include "calstis6.h"
-# include "hstcalerr.h"
+#include "xtables.h"
+#include "stis.h"
+#include "calstis6.h"
+#include "hstcalerr.h"
 
 static void CopyCoord (CoordInfo *, CoordInfo *);
 

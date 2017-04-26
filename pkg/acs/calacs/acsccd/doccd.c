@@ -16,14 +16,14 @@
 
 ** This code is a trimmed down version of CALSTIS1 do2d.c.
 */
-# include <string.h>
-# include <stdio.h>
+#include <string.h>
+#include <stdio.h>
 
-# include "hstio.h"
+#include "hstio.h"
 
-# include "acs.h"
-# include "acsinfo.h"
-# include "hstcalerr.h"
+#include "acs.h"
+#include "acsinfo.h"
+#include "hstcalerr.h"
 
 
 static void dqiMsg (ACSInfo *, int);

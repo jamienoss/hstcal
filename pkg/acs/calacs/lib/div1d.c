@@ -1,8 +1,8 @@
-# include <math.h>
-# include "hstio.h"
+#include <math.h>
+#include "hstio.h"
 
-# include "acsdq.h"	/* CALIBDEFECT = bad pixel value for divide by zero */
-# include "hstcalerr.h"	/* SIZE_MISMATCH */
+#include "acsdq.h"	/* CALIBDEFECT = bad pixel value for divide by zero */
+#include "hstcalerr.h"	/* SIZE_MISMATCH */
 
 /* Divide the first SingleGroup triplet by the second, leaving the result
    in the first.

@@ -4,17 +4,17 @@
 	WF3ir
 */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "hstio.h"	/* defines HST I/O functions */
+#include "hstio.h"	/* defines HST I/O functions */
 
-# include "wf3.h"
-# include "wf3info.h"
-# include "hstcalerr.h"     /* error values */
-# include "wf3corr.h"    /* calibration switch names */
-# include "trl.h"        /* trailer functions */
+#include "wf3.h"
+#include "wf3info.h"
+#include "hstcalerr.h"     /* error values */
+#include "wf3corr.h"    /* calibration switch names */
+#include "trl.h"        /* trailer functions */
 
 extern int status;
 

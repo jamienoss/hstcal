@@ -28,18 +28,18 @@
  **      Updates for CTE calibration code, see #1193 
  */
 
-# include <ctype.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-# include "xtables.h"	/* defines TABLE I/O functions */
-# include "hstio.h"	/* defines HST I/O functions */
+#include "xtables.h"	/* defines TABLE I/O functions */
+#include "hstio.h"	/* defines HST I/O functions */
 
-# include "wf3.h"	/* defines WF3 data structures */
-# include "wf3asn.h"	/* defines WF3 Association data structures */
-# include "hstcalerr.h"
-# include "calwf3.h"
+#include "wf3.h"	/* defines WF3 data structures */
+#include "wf3asn.h"	/* defines WF3 Association data structures */
+#include "hstcalerr.h"
+#include "calwf3.h"
 
 # define CRLEN	2
 # define RPTLEN 2

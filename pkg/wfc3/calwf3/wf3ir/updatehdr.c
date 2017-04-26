@@ -1,7 +1,7 @@
-# include <stdio.h>
+#include <stdio.h>
 
-# include "hstio.h"     /* defines HST I/O functions */
-# include "wf3.h"
+#include "hstio.h"     /* defines HST I/O functions */
+#include "wf3.h"
 
 extern int status;
 
