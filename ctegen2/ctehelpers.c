@@ -350,10 +350,9 @@ No.    Name         Type      Cards   Dimensions   Format
         return status;
     }
 
-    /*
     sprintf(MsgText,"FIXROCR: %d",pars->fix_rocr);
     trlmessage(MsgText);
-    */
+
 
 
     /* DONE READING STUFF FROM THE PRIMARY HEADER */

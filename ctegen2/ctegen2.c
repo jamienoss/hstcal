@@ -343,16 +343,16 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
         for (i = 0; i < nRows; ++i)
         {
             pixel = pixelColumn[i];
-            Bool isInsideTrailLength = nTransfersFromTrap < ctePars->cte_len;
-            //Bool isAboveChargeThreshold = pixel >= ctePars->qlevq_data[w] - 1.;
+            Bool isInsideTrailLength = nTransfersFromTrap <= ctePars->cte_len;//<= or <?
+            Bool isAboveChargeThreshold = pixel >= ctePars->qlevq_data[w] - 1.;
 
             //check if this are needed
             chargeToAdd = 0;
             extraChargeToAdd = 0;
             chargeToRemove = 0;
 
-            //if (!isInsideTrailLength && !isAboveChargeThreshold)
-              //  continue;
+            if (!isInsideTrailLength && !isAboveChargeThreshold)
+                continue;
 
             /*HAPPENS AFTER FIRST PASS*/
             /*SHUFFLE CHARGE IN*/
@@ -368,8 +368,8 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
                 if (isInsideTrailLength)
                 {
                     ++nTransfersFromTrap;
-                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
-                    extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux;
+                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap/*-1*/] * trappedFlux;
+                    extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap/*-1*/] * trappedFlux;
                 }
                 chargeToRemove = ctePars->dpdew_data[w] / ctePars->n_par * (double)traps[i];
                 trappedFlux = 0;
@@ -379,7 +379,7 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
                 if (isInsideTrailLength)
                 {
                     ++nTransfersFromTrap;
-                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
+                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap/*-1*/] * trappedFlux;
                 }
             }
 
@@ -399,7 +399,7 @@ int simulateColumnReadout(double * const pixelColumn, const float * const traps,
     {unsigned shift;
     for (shift = 1; shift <= nPixelShifts; ++shift)
     {
-        if ((localStatus = simulatePixelReadout(pixelColumn, traps, cte, rprof, cprof, nRows)))
+        if ((localStatus = simulatePixelReadout_2(pixelColumn, traps, cte, rprof, cprof, nRows)))
             return localStatus;
     }}
 

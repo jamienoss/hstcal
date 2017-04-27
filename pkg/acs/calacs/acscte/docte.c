@@ -190,7 +190,7 @@ int DoCTE (ACSInfo *acs_info) {
          *#                                                 #
          *###################################################
          */
-        acs_info->cteAlgorithmGen = 1;
+        //acs_info->cteAlgorithmGen = 1;
         //###################################################
 
         if (acs_info->cteAlgorithmGen && (acs_info->cteAlgorithmGen != cteAlgorithmGen))
