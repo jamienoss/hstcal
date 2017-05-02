@@ -326,6 +326,8 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
         if (ctePars->qlevq_data[w] <= maxPixel)//is any of this even needed or can we just directly map?
         {
             maxChargeTrapIndex = w;
+            if (ctePars->qlevq_data[w] == maxPixel)
+                ++w;// jay goes up, and >=
             break;
         }
     }}
