@@ -351,8 +351,8 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
             extraChargeToAdd = 0;
             chargeToRemove = 0;
 
-            if (!isInsideTrailLength && !isAboveChargeThreshold)
-                continue;
+            // (!isInsideTrailLength && !isAboveChargeThreshold)
+            //    continue;
 
             /*HAPPENS AFTER FIRST PASS*/
             /*SHUFFLE CHARGE IN*/
@@ -368,8 +368,8 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
                 if (isInsideTrailLength)
                 {
                     ++nTransfersFromTrap;
-                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap/*-1*/] * trappedFlux;
-                    extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap/*-1*/] * trappedFlux;
+                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
+                    extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux;
                 }
                 chargeToRemove = ctePars->dpdew_data[w] / ctePars->n_par * (double)traps[i];
                 trappedFlux = 0;
@@ -379,7 +379,7 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
                 if (isInsideTrailLength)
                 {
                     ++nTransfersFromTrap;
-                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap/*-1*/] * trappedFlux;
+                    chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
                 }
             }
 
