@@ -319,7 +319,7 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
     }
 
     //Find highest charge trap to not exceed i.e. map pmax to an index
-    unsigned maxChargeTrapIndex = ctePars->cte_traps-1;
+   /* unsigned maxChargeTrapIndex = ctePars->cte_traps-1;
     {int w;
     for (w = maxChargeTrapIndex; w >= 0; --w)//go up or down? (if swap, change below condition)
     {
@@ -327,10 +327,25 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
         {
             maxChargeTrapIndex = w;
             if (ctePars->qlevq_data[w] == maxPixel)
-                ++w;// jay goes up, and >=
+                ++maxChargeTrapIndex;// jay goes up, and >=
             break;
         }
-    }}
+    }}*/
+
+    unsigned maxChargeTrapIndex = 0;//ctePars->cte_traps-1;
+        {int w;
+        for (w = 0; w < ctePars->nTraps; ++w)//go up or down? (if swap, change below condition)
+        {
+           // printf("%d, %f\n", w, ctePars->qlevq_data[w]);
+            if (maxPixel >= ctePars->qlevq_data[w])//is any of this even needed or can we just directly map?
+            {
+                maxChargeTrapIndex = w;
+               // break;
+            }
+        }}
+
+        //printf("%d/%d : %f\n", maxChargeTrapIndex, ctePars->cte_traps-1, maxPixel);
+
 
     /*GO THROUGH THE TRAPS ONE AT A TIME, FROM HIGHEST TO LOWEST Q,
       AND SEE WHEN THEY GET FILLED AND EMPTIED, ADJUST THE PIXELS ACCORDINGLY*/
@@ -373,8 +388,9 @@ int simulatePixelReadout_2(double * const pixelColumn, const float * const traps
                     chargeToAdd = rprof->data[w*rprof->ny + nTransfersFromTrap-1] * trappedFlux;
                     extraChargeToAdd = cprof->data[w*cprof->ny + nTransfersFromTrap-1] * trappedFlux;
                 }
-                chargeToRemove = ctePars->dpdew_data[w] / ctePars->n_par * (double)traps[i];
-                trappedFlux = 0;
+                trappedFlux = ctePars->dpdew_data[w] / ctePars->n_par * (double)traps[i];
+                chargeToRemove = trappedFlux;
+                nTransfersFromTrap = 0;
             }
             else
             {

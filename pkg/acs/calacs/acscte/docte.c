@@ -175,7 +175,7 @@ int DoCTE (ACSInfo *acs_info) {
             freeOnExit(&ptrReg);
             return (status = tmpStatus);
         }
-        else if (strcmp(cteName, "pixelCTE 2017") == 0)
+        else if (strcmp(cteName, "PixelCTE 2017") == 0)
             cteAlgorithmGen = 2;
         else
             cteAlgorithmGen = 1;
