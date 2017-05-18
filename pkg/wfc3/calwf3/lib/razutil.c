@@ -38,6 +38,11 @@ int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
                 Pix(raz->sci.data,i+2*subcol,j)=Pix(ab->sci.data,i,RAZ_ROWS-j-1);
                 Pix(raz->sci.data,i+3*subcol,j)=Pix(ab->sci.data,subcol*2-i-1,RAZ_ROWS-j-1);
 
+                Pix(raz->err.data,i,j)=Pix(cd->err.data,i,j);
+                Pix(raz->err.data,i+subcol,j)=Pix(cd->err.data,subcol*2-i-1,j);
+                Pix(raz->err.data,i+2*subcol,j)=Pix(ab->err.data,i,RAZ_ROWS-j-1);
+                Pix(raz->err.data,i+3*subcol,j)=Pix(ab->err.data,subcol*2-i-1,RAZ_ROWS-j-1);
+
                 Pix(raz->dq.data,i,j)=Pix(cd->dq.data,i,j);
                 Pix(raz->dq.data,i+subcol,j)=Pix(cd->dq.data,subcol*2-i-1,j);
                 Pix(raz->dq.data,i+2*subcol,j)=Pix(ab->dq.data,i,RAZ_ROWS-j-1);
@@ -64,6 +69,11 @@ int undoRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
              Pix(cd->sci.data,subcol*2-i-1,j) = Pix(raz->sci.data,i+subcol,j);
              Pix(ab->sci.data,i,RAZ_ROWS-j-1) = Pix(raz->sci.data,i+2*subcol,j);
              Pix(ab->sci.data,subcol*2-i-1,RAZ_ROWS-j-1) = Pix(raz->sci.data,i+3*subcol,j);
+
+             Pix(cd->err.data,i,j) = Pix(raz->err.data,i,j);
+             Pix(cd->err.data,subcol*2-i-1,j) = Pix(raz->err.data,i+subcol,j);
+             Pix(ab->err.data,i,RAZ_ROWS-j-1) = Pix(raz->err.data,i+2*subcol,j);
+             Pix(ab->err.data,subcol*2-i-1,RAZ_ROWS-j-1) = Pix(raz->err.data,i+3*subcol,j);
 
              Pix(cd->dq.data,i,j) = Pix(raz->dq.data,i,j);
              Pix(cd->dq.data,subcol*2-i-1,j) = Pix(raz->dq.data,i+subcol,j);

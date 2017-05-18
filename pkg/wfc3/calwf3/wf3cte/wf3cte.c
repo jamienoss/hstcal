@@ -87,7 +87,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     SingleGroup rsz; /* LARGE FORMAT READNOISE CORRECTED IMAGE */
     SingleGroup rsc; /* CTE CORRECTED*/
     SingleGroup rzc; /* FINAL CTE CORRECTED IMAGE */
-    SingleGroup chg; /* THE CHANGE DUE TO CTE  */
     SingleGroup raw; /* THE RAW IMAGE IN RAZ FORMAT */
 
     int i,j; /*loop vars*/
@@ -231,9 +230,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     initSingleGroup(&raw);
     allocSingleGroup(&raw, RAZ_COLS, RAZ_ROWS, True);
 
-    initSingleGroup(&chg);
-    allocSingleGroup(&chg, RAZ_COLS, RAZ_ROWS, True);
-
     /*hardset the science arrays*/
     for (i=0;i<RAZ_COLS;i++){
         for(j=0;j<RAZ_ROWS;j++){
@@ -242,7 +238,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
             Pix(rsz.sci.data,i,j)=hardset;
             Pix(rsc.sci.data,i,j)=hardset;
             Pix(rzc.sci.data,i,j)=hardset;
-            Pix(chg.sci.data,i,j)=hardset;
         }
     }
 
@@ -478,8 +473,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /*** CREATE THE FINAL CTE CORRECTED IMAGE, PUT IT BACK INTO ORIGNAL RAW FORMAT***/
     for (i=0;i<RAZ_COLS;i++){
         for(j=0; j<RAZ_ROWS; j++){
-           Pix(chg.sci.data,i,j) = (Pix(rsc.sci.data,i,j) - Pix(rsz.sci.data,i,j))/wf3.ccdgain;
-           Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + Pix(chg.sci.data,i,j);
+            float correction = Pix(rsc.sci.data,i,j) - Pix(rsz.sci.data,i,j);
+            Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + correction/wf3.ccdgain;
+            // Add CTE error contribution as 10% of the correction in quadrature
+            Pix(rzc.err.data,i,j) = sqrt(correction*correction + Pix(rzc.err.data,i,j)*Pix(rzc.err.data,i,j));
         }
     }
 
@@ -535,7 +532,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     /** CLEAN UP ON AISLE 3 **/
     freeSingleGroup(&rzc);
     freeSingleGroup(&rsc);
-    freeSingleGroup(&chg);
     freeSingleGroup(&raz);
     freeSingleGroup(&rsz);
     freeSingleGroup(&raw);
