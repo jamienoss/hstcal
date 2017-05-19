@@ -151,12 +151,14 @@ typedef struct {
     void ** ptrs;
     FreeFunction * freeFunctions;
 } PtrRegister;
-void initPtrRegister(PtrRegister * reg);
-void addPtr(PtrRegister * reg, void * ptr, void * freeFunc); // ptr list is self expanding
-void freePtr(PtrRegister * reg, void * ptr);
-void freeOnExit(PtrRegister * reg); //only calls freeAll() followed by freeReg()
-void freeAll(PtrRegister * reg); // frees all ptrs registered (excluding itself)
+void * newPtrRegister(); //Allocates a PtrRegister, calls initPtrRegister, registers allocated pointer then returns it
+void initPtrRegister(PtrRegister * reg); // initializes members, inc. alloc of registers
+void addPtr(PtrRegister * reg, void * ptr, void * freeFunc); // self expanding
+void freePtr(PtrRegister * reg, void * ptr); // non contracting
+void freeOnExit(PtrRegister * reg); //only calls freeAll() followed by freeOnlyReg()
+void freeAll(PtrRegister * reg); //frees all ptrs registered (excluding itself)
 void freeReg(PtrRegister * reg); //frees ONLY the registers themselves and NOT the pointers in PtrRegister::ptrs
+void deleteOnExit(PtrRegister ** reg); //calls freeOnExit and sets *reg = NULL
 
 # define SZ_PATHNAME 511
 
