@@ -474,8 +474,10 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     for (i=0;i<RAZ_COLS;i++){
         for(j=0; j<RAZ_ROWS; j++){
             float correction = Pix(rsc.sci.data,i,j) - Pix(rsz.sci.data,i,j);
-            Pix(rzc.sci.data,i,j) =  Pix(raw.sci.data,i,j) + correction/wf3.ccdgain;
+            correction = correction/wf3.ccdgain;
+            Pix(rzc.sci.data,i,j) = Pix(raw.sci.data,i,j) + correction;
             // Add CTE error contribution as 10% of the correction in quadrature
+            correction = 0.1*correction;
             Pix(rzc.err.data,i,j) = sqrt(correction*correction + Pix(rzc.err.data,i,j)*Pix(rzc.err.data,i,j));
         }
     }
