@@ -7,51 +7,118 @@
 # include "wf3info.h"
 # include "hstcalerr.h"
 
-/* This routine checks whether the error array is all zero, and if so,
-   a simple noise model is evaluated and assigned to the error array.
-   The noise model is:
+void TimeStamp (char *, const char *);
+int doNoise (const WF3Info *, SingleGroup *, int * done);
+int noiseHistory (Hdr *);
 
-	sigma = sqrt ((I - bias) * gain + readnoise^2)  electrons
+int addNoise (const WF3Info *wf3, SingleGroup *x, int updateNoiseHistory)
+{
+    if (status != HSTCAL_OK)
+        return status;
 
-	      = sqrt ((I - bias) / gain + (readnoise / gain)^2)  dn,
+    if (wf3->noiscorr != PERFORM)
+        return status;
 
-   where I is the science data value in dn, bias is in dn, readnoise is
-   the readout noise in electrons, gain is the CCD gain in electrons per dn.
-   The value of sigma in dn is what is assigned to the error array.
-   
-    This has been modified to account for 1/2/4 AMP readout of a CCD
-    where each AMP creates regions of the chip with different
-    readnoise and gain values.  
-    The regions are specified in the CCDTAB table,
-    when the READNSE[1-4] values are determined.
-    
-    For each AMP used, a gain and readnoise value will be non-zero, with
-    the AMPX and AMPY parameters specifying the first column affected by
-    the second AMP in that dimension.
-    
-    The boundary for each AMP is modified by the trim values as 
-       read in from the LTV1,2 keywords in the header.
-       
-    For ACS MAMA data, a separate loop initializes the ERR array with a
-        value of SQRT(SCI data) or 1, whichever is greater.
-        WJH 27 July 1999
+    int done = 0;
+    if ((status = doNoise (wf3, x, &done)))
+        return status;
 
-    H.Bushouse, 2001 May 8:
-	Revisions to keep in sync with calacs: multi-amp bug fixes.
+    if (!done)
+        return status;
 
-    H.Bushouse, 2001 Nov 16:
-	Revisions to keep in sync with calacs: modified to use individual
-	bias values for each amp.
+    if (updateNoiseHistory) {
+        if ((status = noiseHistory (x->globalhdr)))
+            return (status);
+    }
+    trlmessage ("         Uncertainty array initialized,");
+    char buff[SZ_FITS_REC+1];
+    buff[0] = '\0';
 
-    H.Bushouse, 2003 Oct 27:
-	Modified to use correct default bias values for CCD chips
-	(following CALACS changes).
-    H.Bushouse, 2003 Nov 11:
-	Modified use of ampx to take into account presence of WFC3
-	serial virtual overscan columns.
-*/
+    //dev note (remove before merge) - the below conditional did not exits for instance in doccd.c, though the code within did.
+    //it just wasn't wrapped in the the IF
+    if (wf3->detector != IR_DETECTOR) {
+        sprintf (MsgText, "    readnoise =");
+        {unsigned i;
+        for (i=0; i < NAMPS-1; ++i) {
+            if (wf3->readnoise[i] > 0) {
+                sprintf (buff, "%.5g,",wf3->readnoise[i]);
+                strcat (MsgText, buff);
+            }
+        }}
+        if (wf3->readnoise[NAMPS-1] > 0) {
+            sprintf (buff, "%.5g",wf3->readnoise[NAMPS-1]);
+            strcat (MsgText, buff);
+        }
+        trlmessage (MsgText);
 
-int doNoise (WF3Info *wf3, SingleGroup *x, int *done) {
+        sprintf(MsgText, "    gain =");
+        {unsigned i;
+        for (i=0; i < NAMPS-1; ++i) {
+            if (wf3->atodgain[i] > 0) {
+                sprintf (buff, "%.5g,",wf3->atodgain[i]);
+                strcat (MsgText, buff);
+            }
+        }}
+        if (wf3->atodgain[NAMPS-1] > 0) {
+            sprintf(buff, "%.5g",wf3->atodgain[NAMPS-1]);
+            strcat (MsgText, buff);
+        }
+        trlmessage (MsgText);
+    }
+    if (wf3->printtime)
+        TimeStamp ("Uncertainty array initialized", wf3->rootname);
+
+    return status;
+}
+
+
+
+int doNoise (const WF3Info *wf3, SingleGroup *x, int *done) {
+
+    /* This routine checks whether the error array is all zero, and if so,
+       a simple noise model is evaluated and assigned to the error array.
+       The noise model is:
+
+        sigma = sqrt ((I - bias) * gain + readnoise^2)  electrons
+
+              = sqrt ((I - bias) / gain + (readnoise / gain)^2)  dn,
+
+       where I is the science data value in dn, bias is in dn, readnoise is
+       the readout noise in electrons, gain is the CCD gain in electrons per dn.
+       The value of sigma in dn is what is assigned to the error array.
+
+        This has been modified to account for 1/2/4 AMP readout of a CCD
+        where each AMP creates regions of the chip with different
+        readnoise and gain values.
+        The regions are specified in the CCDTAB table,
+        when the READNSE[1-4] values are determined.
+
+        For each AMP used, a gain and readnoise value will be non-zero, with
+        the AMPX and AMPY parameters specifying the first column affected by
+        the second AMP in that dimension.
+
+        The boundary for each AMP is modified by the trim values as
+           read in from the LTV1,2 keywords in the header.
+
+        For ACS MAMA data, a separate loop initializes the ERR array with a
+            value of SQRT(SCI data) or 1, whichever is greater.
+            WJH 27 July 1999
+
+        H.Bushouse, 2001 May 8:
+        Revisions to keep in sync with calacs: multi-amp bug fixes.
+
+        H.Bushouse, 2001 Nov 16:
+        Revisions to keep in sync with calacs: modified to use individual
+        bias values for each amp.
+
+        H.Bushouse, 2003 Oct 27:
+        Modified to use correct default bias values for CCD chips
+        (following CALACS changes).
+        H.Bushouse, 2003 Nov 11:
+        Modified use of ampx to take into account presence of WFC3
+        serial virtual overscan columns.
+    */
+
 
 /* arguments:
 WF3Info *wf3	 i: calibration switches and info

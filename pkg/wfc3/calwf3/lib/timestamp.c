@@ -23,7 +23,7 @@
 			temporary local string...
 */
 
-void TimeStamp (char *message, char *rootname) {
+void TimeStamp (char *message, const char *rootname) {
 
 /* arguments:
 char *message   i: string to append to date & time info

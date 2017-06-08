@@ -27,6 +27,7 @@
 # include "wf3corr.h"
 # include "cte.h"
 
+int addNoise (const WF3Info *wf3, SingleGroup *x, int updateNoiseHistory);
 
 int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         RefFileInfo *refnames, int printtime, int verbose, int onecpu) {
@@ -169,6 +170,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     wf3.darkcorr = cte_sw->darkcorr;
     wf3.biascorr = cte_sw->biascorr;
     wf3.blevcorr = cte_sw->blevcorr;
+    wf3.noiscorr = PERFORM;
     wf3.printtime = printtime;
     wf3.verbose = verbose;
     wf3.refnames = refnames;
@@ -424,6 +426,12 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 PPix(&cd.dq.data, i, j) = 1;
             }
         }
+
+        //Initialize error array
+        if ((status = addNoise(&wf3, &ab, 1)))
+            return status;
+        if ((status = addNoise(&wf3, &cd, 0)))
+            return status;
 
         /* SAVE A COPY OF THE RAW IMAGE FOR LATER */
         makeRAZ(&cd,&ab,&raw);

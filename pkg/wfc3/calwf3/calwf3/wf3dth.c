@@ -75,7 +75,7 @@ int Wf3Dth ( char *in_list, char *output, int dthcorr, int printtime,
 
 	void PrBegin (char *);
 	void PrEnd (char *);
-	void TimeStamp (char *, char *);	
+	void TimeStamp (char *, const char *);
 
 	int  mkNewSpt (char *, char *, char *);
 	

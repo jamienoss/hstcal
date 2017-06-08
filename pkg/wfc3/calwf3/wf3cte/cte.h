@@ -49,7 +49,7 @@ int MkName (char *, char *, char *, char *, char *, int);
 int GetKeys (WF3Info *, Hdr *);
 int GetSwitch (Hdr *, char *, int *);
 int resistmean(float *, int, float, float *,float *,float *,float *);
-void TimeStamp (char *, char *);
+void TimeStamp (char *, const char *);
 int  FileExists (char *);
 void PrRefInfo (char *, char *,char *, char *, char *);
 void PrSwitch (char *, int );

@@ -77,11 +77,8 @@ int extver       i: "imset" number, the current set of extensions
 	SingleGroup x;	/* used for both input and output */
 	int option = 0;
 	float meandark;		/* mean value of dark (for history) */
-	int done;	/* true means error array was initialized in donoise */
-	int i;
 
 	int logit;
-	char buff[SZ_FITS_REC+1];
 	Bool subarray;
 
 	int CCDHistory (WF3Info *, Hdr *);
@@ -91,8 +88,7 @@ int extver       i: "imset" number, the current set of extensions
 	int dqiHistory (WF3Info *, Hdr *);
 	int doFlat (WF3Info *, int, SingleGroup *);
 	int flatHistory (WF3Info *, Hdr *);
-	int doNoise (WF3Info *, SingleGroup *, int *);
-	int noiseHistory (Hdr *);
+	int addNoise (WF3Info *, SingleGroup *, int extver);
 	int doPhot (WF3Info *, SingleGroup *);
 	int PhotMode (WF3Info *, Hdr *);
 	int photHistory (WF3Info *, Hdr *);
@@ -106,7 +102,7 @@ int extver       i: "imset" number, the current set of extensions
 	int PutKeyStr (Hdr *, char *, char *, char *);
 	void PrSwitch (char *, int);
 	void PrRefInfo (char *, char *, char *, char *, char *);
-	void TimeStamp (char *, char *);
+	void TimeStamp (char *, const char *);
 	void UCalVer (Hdr *);
 	void UFilename (char *, Hdr *);
 	int UpdateSwitch (char *, int, Hdr *, int *);
@@ -182,48 +178,9 @@ int extver       i: "imset" number, the current set of extensions
 	}
 
 	/* Fill in the error array, if it initially contains all zeros. */
-	if (wf32d->noiscorr == PERFORM) {
-	    if (doNoise (wf32d, &x, &done))
-		return (status);
-	    if (done) {
-		if (extver == 1) {
-		    if (noiseHistory (x.globalhdr))
-			return (status);
-		}
-		trlmessage ("         Uncertainty array initialized,");
-		buff[0] = '\0';
-
-		if (wf32d->detector != IR_DETECTOR) {
-		    sprintf (MsgText, "    readnoise =");
-		    for (i=0; i < NAMPS-1; i++) {
-			 if (wf32d->readnoise[i] > 0) {
-			     sprintf (buff, "%.5g,",wf32d->readnoise[i]);
-			     strcat (MsgText, buff);
-			 }
-		    }
-		    if (wf32d->readnoise[NAMPS-1] > 0) {
-			sprintf (buff, "%.5g",wf32d->readnoise[NAMPS-1]);
-			strcat (MsgText, buff);
-		    }
-		    trlmessage (MsgText);
-
-		    sprintf(MsgText, "    gain =");
-		    for (i=0; i < NAMPS-1; i++) {
-			 if (wf32d->atodgain[i] > 0) {
-			     sprintf (buff, "%.5g,",wf32d->atodgain[i]);
-			     strcat (MsgText, buff);
-			 }
-		    }
-		    if (wf32d->atodgain[NAMPS-1] > 0) {
-			sprintf(buff, "%.5g",wf32d->atodgain[NAMPS-1]);
-			strcat (MsgText, buff);
-		    }
-		    trlmessage (MsgText);
-		}
-		if (wf32d->printtime)
-		TimeStamp ("Uncertainty array initialized", wf32d->rootname);
-	    }
-	}
+    int updateNoiseHistory = extver == 1 ? 1 : 0;
+    if ((status = addNoise(wf32d, &x, &updateNoiseHistory)))
+        return status;
 
 	/* Data quality initialization and (for the CCD) check saturation. */
 	dqiMsg (wf32d, extver);

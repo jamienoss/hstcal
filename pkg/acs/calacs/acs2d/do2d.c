@@ -76,7 +76,7 @@ int Do2D (ACSInfo *acs2d, int extver) {
 	int flatHistory (ACSInfo *, Hdr *);
 	int doNonLin (ACSInfo *, SingleGroup *, int *, int *);
 	int nonlinHistory (ACSInfo *, Hdr *);
-	int doNoise (ACSInfo *, SingleGroup *, int *);
+	int addNoise (ACSInfo *, SingleGroup *);
 	int noiseHistory (Hdr *);
 	int doPhot (ACSInfo *, SingleGroup *);
 	int PhotMode (ACSInfo *, SingleGroup *);

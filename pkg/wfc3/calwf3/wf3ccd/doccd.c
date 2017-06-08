@@ -89,7 +89,6 @@ int DoCCD (WF3Info *wf3, int extver) {
     int i, j, x1, dx;		/* loop index */
     int overscan;
     int blevcorr;
-    char buff[SZ_FITS_REC+1];
     Bool subarray;
 
 
@@ -166,60 +165,9 @@ int DoCCD (WF3Info *wf3, int extver) {
         return (status);
 
     /* FILL IN THE ERROR ARRAY, IF IT INITIALLY CONTAINS ALL ZEROS. */
-    if (wf3->noiscorr == PERFORM) {
-        if (doNoise (wf3, &x, &done))
-            return (status);
-        if (done) {
-            if (extver == 1) {
-                if (noiseHistory (x.globalhdr))
-                    return (status);
-            }
-            trlmessage ("    Uncertainty array initialized,");
-            buff[0] = '\0';
-
-            sprintf(MsgText, "    readnoise =");
-            for (i=0; i < NAMPS-1; i++) {
-                if (wf3->readnoise[i] > 0) {
-                    sprintf (buff, "%.5g,",wf3->readnoise[i]);
-                    strcat (MsgText, buff);
-                }
-            }
-            if (wf3->readnoise[NAMPS-1] > 0) {
-                sprintf(buff, "%.5g",wf3->readnoise[NAMPS-1]);
-                strcat (MsgText, buff);
-            }
-            trlmessage (MsgText);
-
-            sprintf(MsgText, "    gain =");
-            for (i=0; i < NAMPS-1; i++) {
-                if (wf3->atodgain[i] > 0) {
-                    sprintf(buff, "%.5g,",wf3->atodgain[i]);
-                    strcat (MsgText, buff);
-                }
-            }
-            if (wf3->atodgain[NAMPS-1] > 0) {
-                sprintf(buff, "%.5g",wf3->atodgain[NAMPS-1]);
-                strcat (MsgText, buff);
-            }
-            trlmessage (MsgText);
-
-            sprintf (MsgText, "    default bias levels = ");
-            for (i=0; i < NAMPS-1; i++) {
-                if (wf3->ccdbias[i] > 0) {
-                    sprintf (buff, "%.5g,", wf3->ccdbias[i]);
-                    strcat (MsgText, buff);
-                }
-            }
-            if (wf3->ccdbias[NAMPS-1] > 0) {
-                sprintf (buff, "%.5g", wf3->ccdbias[NAMPS-1]);
-                strcat (MsgText, buff);
-            }
-            trlmessage (MsgText);
-
-            if (wf3->printtime)
-                TimeStamp ("Uncertainty array initialized", wf3->rootname);
-        }
-    }
+    int updateNoiseHistory = extver == 1 ? 1 : 0;
+    if ((status = addNoise(wf3, &x, updateNoiseHistory)))
+        return status;
 
     /* DATA QUALITY INITIALIZATION AND (FOR THE CCDS) CHECK SATURATION. */
     dqiMsg (wf3, extver);

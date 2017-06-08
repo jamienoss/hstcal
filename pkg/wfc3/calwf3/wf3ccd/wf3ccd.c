@@ -48,7 +48,7 @@ int WF3ccd (char *input, char *output, CCD_Switch *ccd_sw,
     int FileExists (char *);
     int GetFlags (WF3Info *, Hdr *);
     int GetKeys (WF3Info *, Hdr *);
-    void TimeStamp (char *, char *);
+    void TimeStamp (char *, const char *);
     void PrBegin (char *);
     void PrEnd (char *);
     void PrFileName (char *, char *);

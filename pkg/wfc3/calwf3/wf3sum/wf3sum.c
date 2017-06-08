@@ -79,7 +79,7 @@ int Wf3Sum (char *input, char *output, char *mtype, int printtime, int verbose){
 	char wf3_input[SZ_FNAME];
 
 	int  FileExists (char *);
-	void TimeStamp (char *, char *);
+	void TimeStamp (char *, const char *);
 	void PrBegin (char *);
 	void PrEnd (char *);
 	void PrFileName (char *, char *);
@@ -308,7 +308,7 @@ static int SumGrps (Wf3SumInfo *wf3, char *mtype) {
 	char uroot[SZ_FNAME+1];		/* Upper case version of rootname */
     
 	int doStat (SingleGroup *, short);
-	void TimeStamp (char *, char *);
+	void TimeStamp (char *, const char *);
 	void PrGrpBegin (char *, int);
 	void PrGrpEnd (char *, int);
 	void UCalVer (Hdr *);
