@@ -1,6 +1,6 @@
 # define SZ_CBUF           24  /* small buffer for e.g. rootname */
-# define SZ_FNAME          255
-# define SZ_LINE           255
+# define SZ_FNAME          255 // Use of SZ_FNAME & SZ_LINE are interchanged throughout and should therefore be identical.
+# define SZ_LINE           255 // Use of SZ_FNAME & SZ_LINE are interchanged throughout and should therefore be identical.
 # define SZ_FITS_VAL       68
 # define SZ_KEYWORD	    8
 
