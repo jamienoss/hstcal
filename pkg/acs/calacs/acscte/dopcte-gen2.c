@@ -22,8 +22,8 @@ int get_amp_array_size_acs_cte(const ACSInfo *acs, SingleGroup *amp,
                               int *xsize, int *ysize, int *xbeg,
                               int *xend, int *ybeg, int *yend);
 
-static int extractAmp(SingleGroup * amp, const SingleGroup * image, const unsigned ampID);
-static int insertAmp(SingleGroup * amp, const SingleGroup * image, const unsigned ampID);
+static int extractAmp(SingleGroup * amp, const SingleGroup * image, const unsigned ampID, CTEParamsFast * ctePars);
+static int insertAmp(SingleGroup * amp, const SingleGroup * image, const unsigned ampID, CTEParamsFast * ctePars);
 static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID);
 static int alignAmp(SingleGroup * amp, const unsigned ampID);
 
@@ -103,10 +103,12 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
         nColumns = amp_xsize;
         ctePars->nRows = nRows;
         ctePars->nColumns = nColumns;
-        ctePars->columnOffset = 0;//amp_xbeg;//acs->offsetx;
-        ctePars->rowOffset = 0;//amp_ybeg;//acs->offsety;
-        ctePars->razColumnOffset = nthAmp*nColumns;
+        ctePars->columnOffset = amp_xbeg;//acs->offsetx;
+        ctePars->rowOffset = amp_ybeg;//acs->offsety;
+        ctePars->razColumnOffset = nthAmp*nColumns;//needs to be addressed
 
+        printf("xbeg %d\n", amp_xbeg);
+        printf("ybeg %d\n", amp_ybeg);
         //This is used for the final output
         SingleGroup ampImage;
         initSingleGroup(&ampImage);
@@ -119,7 +121,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
 
         // read data from the SingleGroup into an array containing data from
         // just one amp
-        if ((status = extractAmp(&ampImage, chipImage, ampID)))
+        if ((status = extractAmp(&ampImage, chipImage, ampID, ctePars)))
         {
             freeOnExit(&ptrReg);
             return (status);
@@ -251,7 +253,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
             return (status);
         }
 
-        if ((status = insertAmp(chipImage, &ampImage, ampID)))
+        if ((status = insertAmp(chipImage, &ampImage, ampID, ctePars)))
         {
             freeOnExit(&ptrReg);
             return (status);
@@ -269,7 +271,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
     return (status);
 }
 
-static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsigned ampID)
+static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsigned ampID, CTEParamsFast * ctePars)
 {
     extern int status;
 
@@ -285,7 +287,7 @@ static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsig
     unsigned rowSkipLength = image->sci.data.nx;
     unsigned offset = 0;
     if (ampID == AMP_B || ampID == AMP_D)
-        offset = nColumns;
+        offset = ctePars->columnOffset;//prob should be outside of IF
     else if (ampID != AMP_A && ampID != AMP_C)
     {
         trlerror("Amp number not recognized, must be 0-3.");
@@ -296,7 +298,7 @@ static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsig
     return status;
 }
 
-static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigned ampID)
+static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigned ampID, CTEParamsFast * ctePars)
 {
     extern int status;
 
@@ -312,7 +314,7 @@ static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigne
     unsigned rowSkipLength = image->sci.data.nx;
     unsigned offset = 0;
     if (ampID == AMP_B || ampID == AMP_D)
-        offset = nColumns;
+        offset = ctePars->columnOffset;
     else if (ampID != AMP_A && ampID != AMP_C)
     {
         trlerror("Amp number not recognized, must be 0-3.");
