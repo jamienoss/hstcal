@@ -32,6 +32,7 @@ static void FreeNames (char *, char *, char *, char *);
 void FreeRefFile (RefFileInfo *);
 void InitRefFile (RefFileInfo *);
 int WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
+int WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned);
 int MkName (char *, char *, char *, char *, char *, int);
 void WhichError (int);
 int CompareNumbers (int, int, char *);
@@ -55,6 +56,8 @@ int main (int argc, char **argv) {
     int verbose = NO;	/* print additional info? */
     int quiet = NO;	/* print additional info? */
     int onecpu = NO; /* Use OpenMP with onely one thread, if available? */
+    int fastCTE = NO; // Use high performance CTE implementation
+    unsigned nThreads = 0;
     int too_many = 0;	/* too many command-line arguments? */
     int i, j;		/* loop indexes */
     int k;
@@ -105,20 +108,50 @@ int main (int argc, char **argv) {
     for (i = 1;  i < argc;  i++) {
 
         if (argv[i][0] == '-') {
-            for (j = 1;  argv[i][j] != '\0';  j++) {
-                if (argv[i][j] == 't') {
-                    printtime = YES;
-                } else if (argv[i][j] == 'v') {
-                    verbose = YES;
-                } else if (argv[i][j] == '1') {
-                    onecpu = YES;
-				} else if (argv[i][j] == 'r'){
-					printf ("Current version: %s\n", WF3_CAL_VER);
-					exit(0);
-                } else {
-                    printf (MsgText, "Unrecognized option %s\n", argv[i]);
-                    FreeNames (inlist, outlist, input, output);
+            if (strncmp(argv[i], "--fast", 6) == 0)
+            {
+                fastCTE = YES;
+                continue;
+            }
+            else if (strncmp(argv[i], "--nthreads", 10) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - number of threads not specified\n");
+                    exit(1);
+                }
+                ++i;
+                nThreads = (unsigned)atoi(argv[i]);
+                if (nThreads < 1)
+                    nThreads = 1;
+#ifndef _OPENMP
+                printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+                nThreads = 1;
+#endif
+                continue;
+            }
+            else
+            {
+                if (argv[i][1] == '-')
+                {
+                    printf ("Unrecognized option %s\n", argv[i]);
                     exit (ERROR_RETURN);
+                }
+                for (j = 1;  argv[i][j] != '\0';  j++) {
+                    if (argv[i][j] == 't') {
+                        printtime = YES;
+                    } else if (argv[i][j] == 'v') {
+                        verbose = YES;
+                    } else if (argv[i][j] == '1') {
+                        onecpu = YES;
+                    } else if (argv[i][j] == 'r'){
+                        printf ("Current version: %s\n", WF3_CAL_VER);
+                        exit(0);
+                    } else {
+                        printf (MsgText, "Unrecognized option %s\n", argv[i]);
+                        FreeNames (inlist, outlist, input, output);
+                        exit (ERROR_RETURN);
+                    }
                 }
             }
         } else if (inlist[0] == '\0') {
@@ -130,10 +163,11 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  WF3cte [-v] [-1] input output\n");
+        printf ("syntax:  WF3cte [-v] [-1] [--fast [--nthreads <N>]] input output\n");
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
+
     /* INITIALIZE THE STRUCTURE FOR MANAGING TRAILER FILE COMMENTS */
     InitTrlBuf ();
     /* COPY COMMAND-LINE VALUE FOR QUIET TO STRUCTURE */
@@ -144,6 +178,54 @@ int main (int argc, char **argv) {
     o_imt = c_imtopen (outlist);
     n_in = c_imtlen (i_imt);
     n_out = c_imtlen (o_imt);
+
+    if (fastCTE)
+    {
+        sprintf(MsgText, "Using high performance CTE implementation \n"
+                "Best results obtained when built with --O3 configure option");
+        trlwarn(MsgText);
+    }
+    else if (nThreads)
+    {
+        sprintf(MsgText, "cmd options --nthreads requires --fast");
+        trlerror(MsgText);
+        exit(1);
+    }
+
+#ifdef _OPENMP
+    unsigned ompMaxThreads = omp_get_num_procs();
+#endif
+    if (onecpu)
+    {
+        if (nThreads )
+        {
+            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+            trlwarn(MsgText);
+        }
+        nThreads = 1;
+    }
+    else if (!nThreads)//unset
+    {
+#ifdef _OPENMP
+        nThreads = ompMaxThreads;
+#else
+        nThreads = 1;
+#endif
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
 
     /* The number of input and output files must be the same. */
     if (CompareNumbers (n_in, n_out, "output"))
@@ -201,8 +283,13 @@ int main (int argc, char **argv) {
             }
 
             /* CALIBRATE THE CURRENT INPUT FILE. */
-            if (WF3cte (input, output, &cte_sw, &refnames, printtime, verbose,
-                        onecpu)) {
+            int ret = status;
+            if (fastCTE)
+                ret = WF3cteFast(input, output, &cte_sw, &refnames, printtime, verbose, nThreads);
+            else
+                ret = WF3cte(input, output, &cte_sw, &refnames, printtime, verbose, onecpu);
+
+            if (ret) {
                 sprintf (MsgText, "Error processing cte for %s", input);
                 trlerror (MsgText);
                 WhichError (status);

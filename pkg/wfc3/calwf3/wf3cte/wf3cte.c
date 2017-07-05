@@ -105,10 +105,6 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     int start=0;            /*where the subarray starts*/
     int finish=0;           /*where the subarray ends*/
 
-    /* init header vars */
-    initHdr(&phdr);
-    initHdr(&scihdr);
-
     /*check if this is a subarray image.
       This is necessary because the CTE routine will start with the raw images
       from scratch and read them in so that both chips can be used. CTE is
@@ -369,6 +365,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
                 return (status);
 
             start = sci_corner[0] - ref_corner[0];
+            finish = start + subab.sci.data.nx + 2103;
             finish = start + subab.sci.data.nx;
             if ( start >= 25 &&  finish + 60 <= (RAZ_COLS/2) - 25){
                 sprintf(MsgText,"Subarray not taken with physical overscan (%i %i)\nCan't perform CTE correction\n",start,finish);
@@ -630,10 +627,9 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
         for (k=0;k<4;k++){
             for (i=0; i<subcol;i++){
                 for (j=0;j<RAZ_ROWS; j++){
-                    if(Pix(raz->dq.data,i+k*subcol,j)){
+                    if(Pix(raz->dq.data,i+k*subcol,j))
                         Pix(raz->sci.data,i+k*subcol,j) -= bias_pre[k];
                         Pix(raz->sci.data,i+k*subcol,j) *= gain;
-                    }
                 }
             }
         }
@@ -769,7 +765,7 @@ int findPreScanBias(SingleGroup *raz, float *mean, float *sigma){
         if (0 < npix ){
             plistSub = (float *) calloc(npix, sizeof(float));
             if (plistSub == NULL){
-                trlerror("out of memory for resistmean entrance in findPreScanBias.");
+                trlerror("out of memory for resistmean entrance in findPostScanBias.");
                 free(plistSub);
                 return (ERROR_RETURN);
             }
