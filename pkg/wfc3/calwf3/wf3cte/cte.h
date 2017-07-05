@@ -98,4 +98,4 @@ int initCTETrl (char *, char *);
 int makeRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
 int undoRAZ(SingleGroup *, SingleGroup *, SingleGroup *);
 
-#endif
+#endif /* INCL_CTE_H */

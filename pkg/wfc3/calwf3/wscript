@@ -6,6 +6,7 @@ SUBDIRS = [
     'wf3ccd',
     'wf3rej',
     'wf3cte',
+    'wf3cte-fast',
     'wf3ir',
     'wf32d',
     'wf3sum',
