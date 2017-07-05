@@ -4,6 +4,10 @@
 # include "wf3info.h"
 # include "hstcalerr.h"
 
+# ifdef _OPENMP
+#include <omp.h>
+# endif
+
 /* These are subroutines which can be used to go between subarray
    and full-frame chip images
 
@@ -16,45 +20,57 @@ int PutKeyStr(Hdr *, char *, char *, char *);
 int PutKeyBool(Hdr *, char *, int, char *);
 int GetCorner (Hdr *, int, int *, int *);
 
+int initChipMetaData(WF3Info *wf3, Hdr * hdr, int groupNumber)
+{
+    if (groupNumber == 1){
+        if (PutKeyDbl(hdr, "LTV2", 0.0, "offset in X to light start")) {
+            trlmessage("Error putting LTV1 keyword in header");
+            return (status=HEADER_PROBLEM);
+        }
+    } else {
+        if (PutKeyDbl(hdr, "LTV2", 19.0, "offset in X to light start")) {
+            trlmessage("Error putting LTV1 keyword in header");
+            return (status=HEADER_PROBLEM);
+        }
+    }
+
+    if (PutKeyDbl(hdr, "LTV1", 25.0, "offset in X to light start")) {
+        trlmessage("Error putting LTV1 keyword in header");
+        return (status=HEADER_PROBLEM);
+    }
+    if (PutKeyDbl(hdr, "LTM1_1", 1.0, "reciprocal of sampling rate in X")) {
+        trlmessage("Error putting LTV2 keyword in header");
+        return (status=HEADER_PROBLEM);
+    }
+    if (PutKeyDbl(hdr, "LTM2_2", 1.0, "reciprocal of sampling rate in Y")) {
+        trlmessage("Error putting LTV2 keyword in header");
+        return (status=HEADER_PROBLEM);
+    }
+    if (PutKeyStr(hdr, "CCDAMP", wf3->ccdamp, "CCD amplifier")){
+        trlmessage("Error updating CCDAMP keyword in image header");
+        return (status=HEADER_PROBLEM);
+    }
+
+    return status;
+}
 
 int CreateEmptyChip(WF3Info *wf3, SingleGroup *full){
   /* Create a full size, but empty group, which contains necessary meta data
      alloc and init the full data with the group and sizes you want
   */
 
-  int row, col;
-
-  if (full->group_num == 1){
-      if (PutKeyDbl(&full->sci.hdr, "LTV2", 0.0, "offset in X to light start")) {
-        trlmessage("Error putting LTV1 keyword in header");
-        return (status=HEADER_PROBLEM);
-      }
- } else {
-     if (PutKeyDbl(&full->sci.hdr, "LTV2", 19.0, "offset in X to light start")) {
-       trlmessage("Error putting LTV1 keyword in header");
-       return (status=HEADER_PROBLEM);
-     }
- }
-  if (PutKeyDbl(&full->sci.hdr, "LTV1", 25.0, "offset in X to light start")) {
-    trlmessage("Error putting LTV1 keyword in header");
-    return (status=HEADER_PROBLEM);
-  }
-  if (PutKeyDbl(&full->sci.hdr, "LTM1_1", 1.0, "reciprocal of sampling rate in X")) {
-    trlmessage("Error putting LTV2 keyword in header");
-    return (status=HEADER_PROBLEM);
-  }
-  if (PutKeyDbl(&full->sci.hdr, "LTM2_2", 1.0, "reciprocal of sampling rate in Y")) {
-    trlmessage("Error putting LTV2 keyword in header");
-    return (status=HEADER_PROBLEM);
-  }
-  if (PutKeyStr(&full->sci.hdr, "CCDAMP", wf3->ccdamp, "CCD amplifier")){
-    trlmessage("Error updating CCDAMP keyword in image header");
-    return (status=HEADER_PROBLEM);
-  }
+  if (initChipMetaData(wf3, &full->sci.hdr, full->group_num))
+      return status;
 
   /*Zero out the large arrays*/
-  for(row=0; row < full->sci.data.nx; row++){
-    for(col=0; col < full->sci.data.ny; col++){
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+    #pragma omp parallel for num_threads(nThreads) shared(full) schedule(static)
+#endif
+  for (unsigned col = 0; col < full->sci.data.ny; ++col)
+  {
+    for (unsigned row = 0; row < full->sci.data.nx; ++row)
+    {
       PPix(&full->sci.data,row,col) = 0.;
       PPix(&full->dq.data,row,col) = 0;
     }
@@ -75,9 +91,7 @@ int Sub2Full(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int real_dq, int f
   int sci_corner[2];		/* science image corner location */
   int ref_bin[2];			/* bin size of full image */
   int ref_corner[2];		/* full image corner location */
-  int rsize = 1;       /* reference pixel size */
-  int col = 0;
-  int row = 0;
+  const int rsize = 1;       /* reference pixel size */
   int scix, sciy;
 
 
@@ -110,15 +124,19 @@ int Sub2Full(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int real_dq, int f
   trlmessage(MsgText);
 
   /*Zero out the large arrays*/
-  for(row=0; row < full->sci.data.nx; row++){
-    for(col=0; col < full->sci.data.ny; col++){
-      PPix(&full->sci.data,row,col) = 0.;
-      PPix(&full->dq.data,row,col) = 0;
-    }
+  for (unsigned col = 0; col < full->sci.data.ny; ++col)
+  {
+      for (unsigned row = 0; row < full->sci.data.nx; ++row)
+      {
+          PPix(&full->sci.data, row, col) = 0.;
+          PPix(&full->dq.data, row, col) = 0;
+      }
   }
 
-  if(virtual){
-      if (scix >= 2072){ /*image starts in B or D regions and we can just shift the starting pixel*/
+  if (virtual)
+  {
+      if (scix >= 2072)
+      { /*image starts in B or D regions and we can just shift the starting pixel*/
           sprintf(MsgText,"Subarray starts in B or D region, moved from (%d,%d) to ",scix,sciy);
           trlmessage(MsgText);
           scix += 60;
@@ -127,19 +145,45 @@ int Sub2Full(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int real_dq, int f
       }
   }
 
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+    #pragma omp parallel num_threads(nThreads) shared(x, full, scix, sciy)
+#endif
+  {
+  //split out IFs to allow vectorization
   /* Copy the data from the sub-array to the full-array */
-  for(row=0; row < x->sci.data.nx; row++){
-    for(col=0; col < x->sci.data.ny; col++){
-      PPix(&full->sci.data,row+scix,col+sciy) = PPix(&x->sci.data,row,col);
-      if (real_dq){
-        /* if real_dq is true(one), then the actual dq values are used*/
-        PPix(&full->dq.data,row+scix, col+sciy) = PPix(&x->dq.data,row,col);
-      } else {
-        PPix(&full->dq.data,row+scix, col+sciy) = flag;
+#ifdef _OPENMP
+      #pragma omp for schedule(static)
+#endif
+      for (unsigned col = 0; col < x->sci.data.ny; ++col)
+      {
+          for(unsigned row = 0; row < x->sci.data.nx; ++row)
+              PPix(&full->sci.data, row+scix, col+sciy) = PPix(&x->sci.data, row, col);
       }
-    }
-  }
-
+      /* if real_dq is true(one), then the actual dq values are used*/
+      if (real_dq)
+      {
+#ifdef _OPENMP
+          #pragma omp for schedule(static)
+#endif
+          for (unsigned col = 0; col < x->sci.data.ny; ++col)
+          {
+              for (unsigned row = 0; row < x->sci.data.nx; ++row)
+                  PPix(&full->dq.data, row+scix, col+sciy) = PPix(&x->dq.data, row, col);
+          }
+      }
+      else
+      {
+#ifdef _OPENMP
+          #pragma omp for schedule(static)
+#endif
+          for (unsigned col = 0; col < x->sci.data.ny; ++col)
+          {
+              for (unsigned row = 0; row < x->sci.data.nx; ++row)
+                  PPix(&full->dq.data, row+scix, col+sciy) = flag;
+          }
+      }
+  } // close parallel block
   /*Save scix, sciy and the extent into the full frame header?*/
   return (status);
 }
@@ -153,7 +197,6 @@ int Full2Sub(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int dq, int sci, i
   int ref_bin[2];			/* bin size of full image */
   int ref_corner[2];		/* full image corner location */
   int rsize = 1;       /* reference pixel size */
-  int col, row;
   int scix=0;
   int sciy=0;
 
@@ -194,16 +237,36 @@ int Full2Sub(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int dq, int sci, i
           trlmessage(MsgText);
       }
   }
+
+#ifdef _OPENMP
+    const unsigned nThreads = omp_get_num_procs();
+    #pragma omp parallel num_threads(nThreads) shared(x, full, scix, sciy)
+#endif
+  {
   /* Copy the data from the sub-array to the full-array */
-  for(row=0; row< x->sci.data.tot_nx; row++){
-    for(col=0; col< x->sci.data.tot_ny; col++){
-      if (dq) {
-        PPix(&x->dq.data,row,col) = PPix(&full->dq.data,row+scix,col+sciy);
+  if (dq)
+  {
+#ifdef _OPENMP
+     #pragma omp for schedule(static)
+#endif
+      for (unsigned col = 0; col < x->sci.data.tot_ny; ++col)
+      {
+          for (unsigned row = 0; row < x->sci.data.tot_nx; ++row)
+              PPix(&x->dq.data,row,col) = PPix(&full->dq.data,row+scix,col+sciy);
       }
-      if (sci) {
-        PPix(&x->sci.data,row,col) = PPix(&full->sci.data,row+scix,col+sciy);
-      }
-    }
   }
+
+  if (sci)
+  {
+#ifdef _OPENMP
+     #pragma omp for schedule(static)
+#endif
+      for (unsigned col = 0; col < x->sci.data.tot_ny; ++col)
+      {
+        for (unsigned row = 0; row < x->sci.data.tot_nx; ++row)
+            PPix(&x->sci.data,row,col) = PPix(&full->sci.data,row+scix,col+sciy);
+      }
+  }
+  } // close parallel block
   return (status); /*returns the reference, full is deallocated outside of function*/
 }

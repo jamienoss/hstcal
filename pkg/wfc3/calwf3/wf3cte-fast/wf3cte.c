@@ -165,7 +165,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         freeOnExit(&ptrReg);
         return (status);
     }
-    if ((status = getCTEParsFast(wf3.pctetab.name, &ctePars)))
+    if ((status = loadPCTETAB(wf3.pctetab.name, &ctePars)))
     {
         freeOnExit(&ptrReg);
         return (status);
@@ -240,7 +240,7 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
         }
 
         //Look for CTE parameters in the image file and use this instead of those from PCTETAB
-        if ((status = compareCTEParamsFast(&raw, &ctePars)))
+        if ((status = getCTEParsFromImageHeader(&raw, &ctePars)))
         {
             freeOnExit(&ptrReg);
             return (status);
