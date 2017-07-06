@@ -13,6 +13,10 @@
  */
 
 int	status;		/* value of zero indicates OK */
+static void printSyntax()
+{
+    printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1 | --nthreads <N>] [--fast ] input \n");
+}
 
 int main (int argc, char **argv) {
 
@@ -25,11 +29,13 @@ int main (int argc, char **argv) {
 	int quiet = NO;		/* suppress STDOUT messages? */
 	int too_many = NO;	/* too many command-line arguments? */
 	int onecpu = NO;  /* suppress openmp usage by using only 1 thread?*/
+	int fastCTE = NO; // Use high performance CTE implementation
+	unsigned nThreads = 0;
     int i, j;		/* loop indexes */
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int  CalWf3Run  (char *, int, int, int, int, int);
+	int  CalWf3Run  (char *, int, int, int, int, unsigned nThreads);
 	void WhichError (int);
 
 	/* Initialize status to OK and MsgText to null */
@@ -52,28 +58,61 @@ int main (int argc, char **argv) {
 			printf("%s\n",WF3_CAL_VER_NUM);
 			exit(0);
 		}
-		if (argv[i][0] == '-') {
-			for (j = 1;  argv[i][j] != '\0';  j++) {
-				if (argv[i][j] == 't') {
-					printtime = YES;
-				} else if (argv[i][j] == 's') {
-					save_tmp = YES;
-				} else if (argv[i][j] == 'r'){
-					printf ("Current version: %s\n", WF3_CAL_VER);
-					exit(0);
-				} else if (argv[i][j] == 'v') {
-					verbose = YES;
-				} else if (argv[i][j] == 'd') {
-					debug = NO;
-				} else if (argv[i][j] == 'q') {
-					quiet = YES;
-				} else if (argv[i][j] == '1'){
-                    onecpu = YES;
-                } else {
-					printf ("Unrecognized option %s\n", argv[i]);
-					exit (ERROR_RETURN);
-				}
-			}
+		if (argv[i][0] == '-')
+		{
+		    if (strncmp(argv[i], "--fast", 6) == 0)
+            {
+                fastCTE = YES;
+                continue;
+            }
+            else if (strncmp(argv[i], "--nthreads", 10) == 0)
+            {
+                if (i + 1 > argc - 1)
+                {
+                    printf("ERROR - number of threads not specified\n");
+                    exit(1);
+                }
+                ++i;
+                nThreads = (unsigned)atoi(argv[i]);
+                if (nThreads < 1)
+                    nThreads = 1;
+#ifndef _OPENMP
+                printf("WARNING: '--nthreads <N>' used but OPENMP not found!\n");
+                nThreads = 1;
+#endif
+                continue;
+            }
+            else
+            {
+                if (argv[i][1] == '-')
+                {
+                    printf ("Unrecognized option %s\n", argv[i]);
+                    printSyntax();
+                    exit (ERROR_RETURN);
+                }
+                for (j = 1;  argv[i][j] != '\0';  j++) {
+                    if (argv[i][j] == 't') {
+                        printtime = YES;
+                    } else if (argv[i][j] == 's') {
+                        save_tmp = YES;
+                    } else if (argv[i][j] == 'r'){
+                        printf ("Current version: %s\n", WF3_CAL_VER);
+                        exit(0);
+                    } else if (argv[i][j] == 'v') {
+                        verbose = YES;
+                    } else if (argv[i][j] == 'd') {
+                        debug = NO;
+                    } else if (argv[i][j] == 'q') {
+                        quiet = YES;
+                    } else if (argv[i][j] == '1'){
+                        onecpu = YES;
+                    } else {
+                        printf ("Unrecognized option %s\n", argv[i]);
+                        printSyntax();
+                        exit (ERROR_RETURN);
+                    }
+                }
+            }
 		} else if (input[0] == '\0') {
 			strcpy (input, argv[i]);
 		} else {
@@ -82,7 +121,7 @@ int main (int argc, char **argv) {
 	}
 
 	if (input[0] == '\0' || too_many) {
-		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] input \n");
+		printSyntax();
 		exit (ERROR_RETURN);
 	}
 
@@ -92,8 +131,48 @@ int main (int argc, char **argv) {
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode (quiet);
 
+    if (fastCTE)
+    {
+        sprintf(MsgText, "Using high performance CTE implementation \n");
+                //"Best results obtained when built with --O3 configure option");
+        trlwarn(MsgText);
+    }
+
+
+#ifdef _OPENMP
+        unsigned ompMaxThreads = omp_get_num_procs();
+#endif
+    if (onecpu)
+    {
+        if (nThreads )
+            trlwarn("WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
+        nThreads = 1;
+    }
+    else if (!nThreads)//unset
+    {
+#ifdef _OPENMP
+        nThreads = ompMaxThreads;
+#else
+        nThreads = 1;
+#endif
+    }
+
+#ifdef _OPENMP
+    omp_set_dynamic(0);
+    if (nThreads > ompMaxThreads)
+    {
+        sprintf(MsgText, "System env limiting nThreads from %d to %d", nThreads, ompMaxThreads);
+        nThreads = ompMaxThreads;
+    }
+    else
+        sprintf(MsgText,"Setting max threads to %d out of %d available", nThreads, ompMaxThreads);
+
+    omp_set_num_threads(nThreads);
+    trlmessage(MsgText);
+#endif
+
 	/* Call the CALWF3 main program */
-	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, onecpu)) {
+	if (CalWf3Run (input, printtime, save_tmp, verbose, debug, nThreads)) {
 
 		if (status == NOTHING_TO_DO) {
 			/* If there is just nothing to do, 

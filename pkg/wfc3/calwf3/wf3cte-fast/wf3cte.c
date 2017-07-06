@@ -74,6 +74,11 @@ int WF3cteFast (char *input, char *output, CCD_Switch *cte_sw,
 
     extern int status;
 
+#ifdef _OPENMP
+    if (nThreads > 1)
+        trlmessage("(pctecorr) Using parallel processing provided by OpenMP inside CTE routine");
+#endif
+
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
     PtrRegister ptrReg;
     initPtrRegister(&ptrReg);

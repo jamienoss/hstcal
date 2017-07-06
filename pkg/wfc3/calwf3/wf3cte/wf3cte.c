@@ -29,14 +29,14 @@
 
 
 int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
-        RefFileInfo *refnames, int printtime, int verbose, int onecpu) {
+        RefFileInfo *refnames, int printtime, int verbose, unsigned nThreads) {
 
     /*
     input: filename
     output: filename
     cte_sw: the calibration flags
     refnames: the names of the calibration reference files
-    onecpu: use parallel processing?
+    nThreads: use parallel processing?
 
     The following are new primary header keywords which will be added to the data
     so that they can be updated by the code. They are also specified in the PCTETAB
@@ -72,6 +72,11 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
 */
 
     extern int status;
+
+#ifdef _OPENMP
+    if (nThreads > 1)
+        trlmessage("(pctecorr) Using parallel processing provided by OpenMP inside CTE routine");
+#endif
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
     Hdr phdr; /*primary header for input image, all output information saved here*/
@@ -130,7 +135,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
      */
     begin = (double)clock();
 
-    /*CONTAIN PARALLEL PROCESSING TO A SINGLE THREAD AS USER OPTION*/
+/*    //CONTAIN PARALLEL PROCESSING TO A SINGLE THREAD AS USER OPTION
 #   ifdef _OPENMP
     trlmessage("Using parallel processing provided by OpenMP inside CTE routine");
     if (onecpu){
@@ -139,13 +144,13 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
         sprintf(MsgText,"onecpu == TRUE, Using only %i threads/cpu", max_threads);
     } else {
         omp_set_dynamic(0);
-        max_threads = omp_get_num_procs(); /*be nice, use 1 less than avail?*/
+        max_threads = omp_get_num_procs(); //be nice, use 1 less than avail?
         sprintf(MsgText,"Setting max threads to %i of %i cpus",max_threads, omp_get_num_procs());
     }
     omp_set_num_threads(max_threads);
     trlmessage(MsgText);
 #   endif
-
+*/
 
     /* COPY COMMAND-LINE ARGUMENTS INTO WF3. */
     WF3Init (&wf3); /*sets default information*/

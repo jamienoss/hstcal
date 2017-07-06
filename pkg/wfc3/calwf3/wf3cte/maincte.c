@@ -31,8 +31,8 @@ MLS 2015
 static void FreeNames (char *, char *, char *, char *);
 void FreeRefFile (RefFileInfo *);
 void InitRefFile (RefFileInfo *);
-int WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, int);
-int WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned);
+int WF3cte (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned nThreads);
+int WF3cteFast (char *, char *, CCD_Switch *, RefFileInfo *, int, int, unsigned nThreads);
 int MkName (char *, char *, char *, char *, char *, int);
 void WhichError (int);
 int CompareNumbers (int, int, char *);
@@ -47,6 +47,10 @@ file names, calibration switches, and flags, and then calls WFC3cte.
 This is necessary for the task to act standalone.
 
 */
+static void printSyntax()
+{
+    printf ("syntax:  WF3cte [-v] [-1 | --nthreads <N>] [--fast ] input [output]\n");
+}
 
 int main (int argc, char **argv) {
 
@@ -135,6 +139,7 @@ int main (int argc, char **argv) {
                 if (argv[i][1] == '-')
                 {
                     printf ("Unrecognized option %s\n", argv[i]);
+                    printSyntax();
                     exit (ERROR_RETURN);
                 }
                 for (j = 1;  argv[i][j] != '\0';  j++) {
@@ -149,6 +154,7 @@ int main (int argc, char **argv) {
                         exit(0);
                     } else {
                         printf (MsgText, "Unrecognized option %s\n", argv[i]);
+                        printSyntax();
                         FreeNames (inlist, outlist, input, output);
                         exit (ERROR_RETURN);
                     }
@@ -163,7 +169,7 @@ int main (int argc, char **argv) {
         }
     }
     if (inlist[0] == '\0' || too_many) {
-        printf ("syntax:  WF3cte [-v] [-1] [--fast [--nthreads <N>]] input output\n");
+        printSyntax();
         FreeNames (inlist, outlist, input, output);
         exit (ERROR_RETURN);
     }
@@ -181,16 +187,11 @@ int main (int argc, char **argv) {
 
     if (fastCTE)
     {
-        sprintf(MsgText, "Using high performance CTE implementation \n"
-                "Best results obtained when built with --O3 configure option");
+        sprintf(MsgText, "Using high performance CTE implementation \n");
+                //"Best results obtained when built with --O3 configure option");
         trlwarn(MsgText);
     }
-    else if (nThreads)
-    {
-        sprintf(MsgText, "cmd options --nthreads requires --fast");
-        trlerror(MsgText);
-        exit(1);
-    }
+
 
 #ifdef _OPENMP
     unsigned ompMaxThreads = omp_get_num_procs();
@@ -198,10 +199,7 @@ int main (int argc, char **argv) {
     if (onecpu)
     {
         if (nThreads )
-        {
-            sprintf(MsgText, "WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
-            trlwarn(MsgText);
-        }
+            trlwarn("WARNING: option '-1' takes precedence when used in conjunction with '--nthreads <N>'");
         nThreads = 1;
     }
     else if (!nThreads)//unset
@@ -287,7 +285,7 @@ int main (int argc, char **argv) {
             if (fastCTE)
                 ret = WF3cteFast(input, output, &cte_sw, &refnames, printtime, verbose, nThreads);
             else
-                ret = WF3cte(input, output, &cte_sw, &refnames, printtime, verbose, onecpu);
+                ret = WF3cte(input, output, &cte_sw, &refnames, printtime, verbose, nThreads);
 
             if (ret) {
                 sprintf (MsgText, "Error processing cte for %s", input);
