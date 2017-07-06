@@ -60,10 +60,12 @@ def build(bld):
             ../wf3cte/wf3cte.c ../wf3cte/getctepars.c ../wf3cte/cte_dobias.c
             ../wf3cte/getcteflags.c  ../wf3cte/getctesw.c 
             
+            ../wf3cte-fast/wf3cte.c ../wf3cte-fast/cte_dobias.c
+            
             """,
         target = 'calwf3',
         install_path = bld.env.INSTALL_LIB and '${PREFIX}/lib',
-        use = ['CFITSIO','OPENMP'],
+        use = ['CFITSIO','OPENMP', 'ctegen2'],
         includes = ['../include'],
         export_includes = ['../include']
         )
