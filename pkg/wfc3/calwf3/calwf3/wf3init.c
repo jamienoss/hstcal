@@ -29,7 +29,7 @@ CCD_Switch *sci_sw  o: all calibration switches (0 or 1) for science file
 RefFileInfo *sciref o: reference file name and info
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int missing;		/* number of missing reference files */
 
@@ -67,7 +67,7 @@ IR_Switch *sci_sw   o: all calibration switches (0 or 1) for science file
 RefFileInfo *sciref o: reference file name and info
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int missing;		/* number of missing reference files */
 
@@ -140,7 +140,7 @@ void WF3Defaults (WF3Info *wf3) {
 
 int InsertWF3Suffix (WF3Info *wf3) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int MkName (char *, char *, char *, char *, char *, int);
 

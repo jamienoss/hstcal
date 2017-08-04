@@ -32,7 +32,7 @@ int DoCTE (ACSInfo *acs_info) {
        acs   i: calibration switches and info
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     SingleGroup * x;    /* used for both input and output */
     ACSInfo * acs;    /* hold a copy of the acs_info struct for each extension */
@@ -367,7 +367,7 @@ static void PCTEMsg (ACSInfo *acs, int extver) {
    *****************
 */
 static int OscnTrimmed (Hdr *phdr, Hdr *hdr) {
-    extern int status;
+    int status = HSTCAL_OK;
 
     double ltv1, ltv2;
     int blevcorr;

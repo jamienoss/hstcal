@@ -221,7 +221,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
      */
 
-    extern int status; /* variable for return status */
+    int status = HSTCAL_OK; /* variable for return status */
 
     /* VARIABLE FOR FILENAME + EXTENSION NUMBER. */
     char filename_wext[strlen(filename) + 4];
@@ -621,7 +621,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
 int populateHeaderWithCTEKeywordValues(SingleGroup *group, CTEParamsFast *pars)
 {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if ((status = PutKeyStr(group->globalhdr,"CTE_NAME", pars->cte_name, "CTE algorithm name")))
     {
@@ -695,7 +695,7 @@ int populateHeaderWithCTEKeywordValues(SingleGroup *group, CTEParamsFast *pars)
 
 int getCTEParsFromImageHeader(SingleGroup *group, CTEParamsFast *pars) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     double rn_amp = 0;
     int cte_len = 0;

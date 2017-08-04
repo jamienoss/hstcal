@@ -4,6 +4,7 @@
 
    ltm[0] and ltm[1] are assumed to be greater than zero.
 */
+#include "hstcalerr.h"
 
 # define NINT(x)  ((x >= 0.) ? (int) (x + 0.5) : (int) (x - 0.5))
 
@@ -17,7 +18,7 @@ int bin[2]       o: pixel size in X and Y
 int corner[2]    o: corner of subarray in X and Y
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	double dbinx, dbiny, dxcorner, dycorner;
 
 	dbinx = (double)rsize / ltm[0];

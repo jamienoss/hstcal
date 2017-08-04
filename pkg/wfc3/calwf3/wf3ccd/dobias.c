@@ -46,7 +46,7 @@ int doBias (WF3Info *wf3, SingleGroup *x) {
        SingleGroup *x	io: image to be calibrated; written to in-place
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     SingleGroupLine y, z;	/* y and z are scratch space */
     int extver = 1;		/* get this imset from bias image */

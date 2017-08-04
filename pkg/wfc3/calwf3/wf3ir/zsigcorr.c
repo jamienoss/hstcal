@@ -7,7 +7,7 @@
 # include "wf3dq.h"
 # include "trl.h"
 
-extern int status;
+int status = HSTCAL_OK;
 
 static int zsigcorr (WF3Info *, MultiNicmosGroup *, NlinData *, 
 		     SingleNicmosGroup *);

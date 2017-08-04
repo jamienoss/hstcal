@@ -36,7 +36,7 @@ clpar *par;         o: user specified parameters
 int newpar[];       o: array of parameters set by the user
 */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int ctoken;     /* current command-line token being processed */
 
@@ -168,7 +168,7 @@ int newpar[];       o: array of parameters set by the user
 /*  Get a short parameter from the argv array. */
 
 static int getArgS (char **argv, int argc, int *ctoken, short *value) {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (*ctoken <= (argc-2)) {
         *value = (short) strtol(argv[++(*ctoken)], (char **)NULL, 10);
@@ -186,7 +186,7 @@ static int getArgS (char **argv, int argc, int *ctoken, short *value) {
 /*  Get a string parameter from the argv array. */
 
 static int getArgT (char **argv, int argc, int *ctoken, char *value) {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (*ctoken <= (argc-2)) {
         strcpy (value, argv[++(*ctoken)]);
@@ -204,7 +204,7 @@ static int getArgT (char **argv, int argc, int *ctoken, char *value) {
 /*  Get a float parameter from the argv array. */
 
 static int getArgR (char **argv, int argc, int *ctoken, float *value) {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (*ctoken <= (argc-2)) {
         *value = strtod (argv[++(*ctoken)], (char **)NULL);
@@ -220,7 +220,7 @@ static int getArgR (char **argv, int argc, int *ctoken, float *value) {
 
 
 static int syntax_error (char *msg) {
-    extern int status;
+    int status = HSTCAL_OK;
 
     printf ("Syntax error: %s\n", msg);
     return (status = ERROR_RETURN);

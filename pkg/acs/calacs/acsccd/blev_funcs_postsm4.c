@@ -40,7 +40,7 @@ static int unmake_amp_array(const int arr_rows, const int arr_cols, SingleGroup 
  * based on ISR http://www.stsci.edu/hst/acs/documents/isrs/isr1202.pdf
  * chip2 is amps C & D, chip1 is amps A & B. */
 int bias_shift_corr(ACSInfo *acs, SingleGroup *chip2, SingleGroup *chip1) {
-  extern int status;
+  int status = HSTCAL_OK;
   
   int i, j, k;     /* iteration variables */
   
@@ -212,7 +212,7 @@ void cross_talk_corr(ACSInfo *acs, SingleGroup *im) {
 /* remove stripes from post-SM4 full frame WFC data using information in
  * the prescan regions. chip2 is amps C & D, chip1 is amps A & B. */
 int doDestripe(ACSInfo *acs, SingleGroup *chip2, SingleGroup *chip1) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i, j, k;
@@ -365,7 +365,7 @@ int doDestripe(ACSInfo *acs, SingleGroup *chip2, SingleGroup *chip1) {
 static int remove_stripes(const int arr_rows, const int arr_cols,
                           char * good_rows[NAMPS], double * ampdata[NAMPS],
                           int * num_fixed, int * num_skipped) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j,k;
@@ -479,7 +479,7 @@ static int remove_stripes(const int arr_rows, const int arr_cols,
 static int calc_bias_mean_std(const int arr_rows, const int arr_cols,
                               const double * array, const char * good_rows,
                               double * mean, double * std, int * pix_used) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j;
@@ -611,7 +611,7 @@ static int calc_bias_mean_std(const int arr_rows, const int arr_cols,
  */
 static int find_good_rows(const int arr_rows, const int arr_cols, const double * array,
                           char * good_rows, int * num_good_rows) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j;
@@ -715,7 +715,7 @@ static int find_good_rows(const int arr_rows, const int arr_cols, const double *
  */
 static int bias_col_mean_std(const int arr_rows, const int arr_cols, const double array[],
                              double col_means[], double col_stds[]) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j;
@@ -785,7 +785,7 @@ static int bias_col_mean_std(const int arr_rows, const int arr_cols, const doubl
  */
 static int calc_mean_std(const int len, const double array[], const double sig,
                          double *mean, double *std) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j;
@@ -840,7 +840,7 @@ static int calc_mean_std(const int len, const double array[], const double sig,
 /* subtract the reference column means from the reference columns */
 static int sub_bias_col_means(const int arr_rows, const int arr_cols, const int bias_cols,
                               const double bias_means[], double array[]) {
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j;
@@ -862,7 +862,7 @@ static int sub_bias_col_means(const int arr_rows, const int arr_cols, const int 
 static int make_amp_array(const int arr_rows, const int arr_cols, SingleGroup *im,
                           int amp, double * array) {
 
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i, j;
@@ -904,7 +904,7 @@ static int make_amp_array(const int arr_rows, const int arr_cols, SingleGroup *i
 static int unmake_amp_array(const int arr_rows, const int arr_cols, SingleGroup *im,
                             int amp, double * array) {
 
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i, j;

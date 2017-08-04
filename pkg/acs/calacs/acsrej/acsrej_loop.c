@@ -128,7 +128,7 @@ int acsrej_loop (IODescPtr ipsci[], IODescPtr ipdq[],
             FloatTwoDArray *avevar, float *efacsum,
             ShortTwoDArray *dq, int *nrej, char *shadfile)
 {
-    extern int status;
+    int status = HSTCAL_OK;
 
     Hdr     dqhdr;              /* data quality header structure */
     int     width;
@@ -1179,7 +1179,7 @@ static void scrollShortBuff (short *ssect, int line, int nlines, int bufflines,
 static int initShad (Hdr *scihdr, int dimx, char *shadname, int chipext,
                      int *refx, int *rx, int *ry, int *x0, int *y0) {
     SingleGroupLine y;
-    extern int status;
+    int status = HSTCAL_OK;
     int same_size = 0;
 
     int FindLineHdr (Hdr *, Hdr *, int, int, int *, int *, int *, int *, int *);

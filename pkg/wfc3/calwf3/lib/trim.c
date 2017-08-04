@@ -36,7 +36,7 @@ int updated	      i: == 1 means have already updated the header info
 SingleGroupLine *b    o: output data
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double block[2];	/* number of input pixels for one output */
 	double offset[2];	/* offset of binned image */

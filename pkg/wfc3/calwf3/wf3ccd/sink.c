@@ -60,7 +60,7 @@ int getFloatHD(char *, char *, int , FloatHdrData *);
 
 int SinkDetect(WF3Info *wf3, SingleGroup *x){
 
-    extern int status;
+    int status = HSTCAL_OK;
     int i,j, jj;
     short dqval=0;
     float scipix; /*to save the value of the science pixel*/

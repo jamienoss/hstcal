@@ -39,7 +39,7 @@
 
 int atodHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -63,7 +63,7 @@ int atodHistory (WF3Info *wf3, Hdr *phdr) {
 
 int biasHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -87,7 +87,7 @@ int biasHistory (WF3Info *wf3, Hdr *phdr) {
 
 int flashHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -111,7 +111,7 @@ int flashHistory (WF3Info *wf3, Hdr *phdr) {
 
 int blevHistory (WF3Info *wf3, Hdr *phdr, int done, int driftcorr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 	int TabHistory (RefTab *, Hdr *);
@@ -153,7 +153,7 @@ int blevHistory (WF3Info *wf3, Hdr *phdr, int done, int driftcorr) {
 
 int CCDHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int TabHistory (RefTab *, Hdr *);
 
 	addHistoryKw (phdr, "CCD parameters table: ");
@@ -166,7 +166,7 @@ int CCDHistory (WF3Info *wf3, Hdr *phdr) {
 
 int dqiHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int flag;
 	int OmitStep (int);
@@ -209,7 +209,7 @@ int dqiHistory (WF3Info *wf3, Hdr *phdr) {
 
 int noiseHistory (Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	addHistoryKw (phdr, "Uncertainty array initialized.");
 	if (hstio_err())
@@ -220,7 +220,7 @@ int noiseHistory (Hdr *phdr) {
 
 int darkHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int ImgHistory (RefImage *, Hdr *);
@@ -242,7 +242,7 @@ int darkHistory (WF3Info *wf3, Hdr *phdr) {
 
 int flatHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -279,7 +279,7 @@ int flatHistory (WF3Info *wf3, Hdr *phdr) {
 
 int shadHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int ImgHistory (RefImage *, Hdr *);
@@ -303,7 +303,7 @@ int shadHistory (WF3Info *wf3, Hdr *phdr) {
 
 int photHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int TabHistory (RefTab *, Hdr *);
@@ -325,7 +325,7 @@ int photHistory (WF3Info *wf3, Hdr *phdr) {
 
 int fluxHistory (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int TabHistory (RefTab *, Hdr *);
@@ -341,7 +341,7 @@ int fluxHistory (WF3Info *wf3, Hdr *phdr) {
 }
 
 int cteHistory (WF3Info *wf3, Hdr *phdr) {
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int TabHistory (RefTab *, Hdr *);
@@ -374,7 +374,7 @@ Hdr *phdr         o: primary header
 int *logit        o: true if we should log reference file names
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	char *history;
 	int PutKeyStr (Hdr *, char *, char *, char *);

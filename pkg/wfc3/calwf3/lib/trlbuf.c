@@ -140,7 +140,7 @@ int InitTrlFile (char *inlist, char *output) {
 char *inlist        i: list of input trailer filenames
 char *output        i: full filename of output (final) trailer file
 */
-    extern int status;
+    int status = HSTCAL_OK;
 
     IRAFPointer tpin;
     FILE *ip;
@@ -268,7 +268,7 @@ static void CatTrlFile(FILE *ip, FILE *op) {
 */ 
 static int AppendTrlFile() {
 	
-    extern int status;
+    int status = HSTCAL_OK;
     char buf[SZ_LINE+1];
     
     char *oprefix;
@@ -342,7 +342,7 @@ static int AppendTrlFile() {
 */
 int WriteTrlFile (void) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* Now that we have copied the information to the final
         trailer file, we can close it and the temp file...
@@ -366,7 +366,7 @@ int WriteTrlFile (void) {
 
 int InitTrlBuf (void) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     trlbuf.trlfile[0] = '\0';
     trlbuf.fp = NULL;
@@ -454,7 +454,7 @@ char *message     	  i: new trailer file line to add to buffer
 */
     void asnmessage (char *);
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     if ( ! trlbuf.init ) {
 	printf("TRLBUF NOT INIT, YOU MAY HAVE PROBLEMS\n");
@@ -488,7 +488,7 @@ char *message     	  i: new trailer file line to add to buffer
 void InitTrlPreface (void) {
 
     void asnmessage (char *);
-    extern int status;
+    int status = HSTCAL_OK;
 
     trlbuf.preface = realloc (trlbuf.preface, (strlen(trlbuf.buffer) +2));
     if (trlbuf.preface == NULL) {
@@ -535,7 +535,7 @@ void ResetTrlPreface (void) {
 */
 static void ResetTrlBuf (void) {
 
-    extern int status;
+    int status = HSTCAL_OK;
     void asnmessage (char *);
 
     free(trlbuf.buffer);
@@ -603,7 +603,7 @@ static void WriteTrlBuf (char *message) {
 */
 void CloseTrlBuf (void) {
 
-    extern int status;
+    int status = HSTCAL_OK;
     FILE *ofp;
 
     /* Do we have any messages which need to be written out? */

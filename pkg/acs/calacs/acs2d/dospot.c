@@ -7,7 +7,7 @@
 
 int readSpotImage(char *spotname, SingleGroup *inspot, SingleGroupLine *spotline) {
     
-    extern int status;
+    int status = HSTCAL_OK;
     int dimx;
 	
     initSingleGroup (inspot);
@@ -51,7 +51,7 @@ float dx,dy             i: shift in x,y
 int nx,ny               i: size of output shifted spot flat
 float **outspot          o: output product
 */
-    extern int status;
+    int status = HSTCAL_OK;
 
 	int i, j;
     int dimx, dimy;

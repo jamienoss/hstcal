@@ -41,7 +41,7 @@
 
 int ProcessIR (AsnInfo *asn, WF3Info *wf3hdr, int printtime) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     RefFileInfo sciref;		/* ref file keywords and names */
     IR_Switch sci_sw;		/* all cal switches for science file */

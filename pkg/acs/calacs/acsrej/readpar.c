@@ -41,7 +41,7 @@ static int strtor (char *, float []);
 */
 int rejpar_in (clpar *par, int newpar[], int nimgs, float exptot, int *niter, float sigma[])
 {
-    extern int status;
+    int status = HSTCAL_OK;
 
     IRAFPointer     tp;
     IRAFPointer     colptr, colptr1;

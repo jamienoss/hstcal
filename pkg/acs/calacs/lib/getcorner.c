@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <math.h>		/* for fabs */
 # include "hstio.h"		/* for Hdr */
+#include "hstcalerr.h"
 
 /* This routine gets from the extension header the keywords
    LTV1, LTV2, LTM1_1, and LTM2_2.  These are converted to
@@ -23,7 +24,7 @@ int bin[2]       o: pixel size in X and Y
 int corner[2]    o: corner of subarray in X and Y
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double ltm[2];		/* diagonal elements of MWCS matrix */
 	double ltv[2];		/* MWCS linear transformation vector */

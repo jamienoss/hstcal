@@ -72,7 +72,7 @@ int CalAcsRun (char *input, int printtime, int save_tmp, int verbose, int debug,
        int onecpu      i: true --> turn off use of OpenMP during processing
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     ACSInfo acshdr;        /* calibration switches, etc */
     AsnInfo    asn;        /* association table data    */
@@ -343,7 +343,7 @@ char *BuildDthInput (AsnInfo *asn, int prod) {
 
 int ProcessACSCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, const unsigned nThreads, const unsigned cteAlgorithmGen, const char * pcteTabNameFromCmd) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     RefFileInfo sciref;       /* ref file keywords and names */
     CalSwitch sci_sw;         /* all cal switches for science file */
@@ -846,7 +846,7 @@ int ProcessACSCCD (AsnInfo *asn, ACSInfo *acshdr, int *save_tmp, int printtime, 
 
 int ProcessMAMA (AsnInfo *asn, ACSInfo *acshdr, int printtime) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     RefFileInfo sciref;       /* ref file keywords and names */
     CalSwitch sci_sw;         /* all cal switches for science file */
@@ -1145,7 +1145,7 @@ static int CopyFFile (char *infile, char *outfile) {
        outfile   i: name of output file
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     FILE *ifp, *ofp;  /* for input and output files */
     void *buf;        /* buffer for copying blocks */
@@ -1225,7 +1225,7 @@ static int CopyFFile (char *infile, char *outfile) {
 */
 static int ACSRej_0 (char *input, char *output, char *mtype, int newbias, int printtime, int verbose) {
 
-    extern int status;
+    int status = HSTCAL_OK;
     clpar par;              /* parameters used */
     int newpar[MAX_PAR+1];  /* user specifiable parameters */
 
@@ -1247,7 +1247,7 @@ static int ACSRej_0 (char *input, char *output, char *mtype, int newbias, int pr
    the image header with those deduced from the ASN table. */
 int CheckCorr (AsnInfo *asn, ACSInfo *acshdr) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     if ( (asn->crcorr != acshdr->sci_crcorr) || (asn->rptcorr != acshdr->sci_rptcorr)) {
         trlerror ("CRCORR and/or RPTCORR values not consistent with ASN table!");

@@ -25,7 +25,7 @@
 int RowPedigree (RefTab *ref, int row, IRAFPointer tp, IRAFPointer cp_pedigree,
 		 IRAFPointer cp_descrip) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	/* Get pedigree and descrip.  If either or both are missing,
 	   that's not an error in this case.

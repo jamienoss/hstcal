@@ -24,7 +24,7 @@ CalSwitch *sci_sw     o: all calibration switches (0 or 1) for science file
 RefFileInfo *sciref  io: list of keyword,filename pairs for science file
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	IODescPtr im;		/* descriptor for an image */
 	Hdr phdr;		/* primary header */

@@ -9,7 +9,7 @@
 
 void errchk() {
 		
-	extern int status;
+	int status = HSTCAL_OK;
 	
 	if (hstio_err()) {
 	    status = 1;

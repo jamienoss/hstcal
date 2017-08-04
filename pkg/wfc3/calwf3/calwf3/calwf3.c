@@ -115,7 +115,7 @@ int CalWf3Run (char *input, int printtime, int save_tmp, int verbose, int debug,
        int onecpu   i: true --> turn off use of OpenMP during processing
 	 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	WF3Info wf3hdr;		 /* calibration switches, etc */
 	AsnInfo	asn;		 /* association table data    */
@@ -360,7 +360,7 @@ char* BuildDthInput (AsnInfo *asn, int prod, char *suffix_name) {
 
 	int i, j;
 	int MkName (char *, char *, char *, char *, char *, int);
-    extern int status;
+    int status = HSTCAL_OK;
 
 	/*
 	 * allocate 1 byte - we will realloc every time we append
@@ -583,7 +583,7 @@ int CopyFFile (char *infile, char *outfile) {
 	   char *outfile   i: name of output file
 	 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	FILE *ifp, *ofp;	/* for input and output files */
 	void *buf;		/* buffer for copying blocks */
@@ -668,7 +668,7 @@ int CopyFFile (char *infile, char *outfile) {
 int WF3Rej_0 (char *input, char *output, char *mtype, int printtime,
 		int verbose, int makespt) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	clpar 	par;			/* parameters used */
 	int 	newpar[MAX_PAR+1];	/* user specifiable parameters */
 
@@ -689,7 +689,7 @@ int WF3Rej_0 (char *input, char *output, char *mtype, int printtime,
 
 int CheckCorr (AsnInfo *asn, WF3Info *wf3hdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	if ((asn->crcorr  != wf3hdr->sci_crcorr) ||
 			(asn->rptcorr != wf3hdr->sci_rptcorr)) {

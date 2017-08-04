@@ -6,7 +6,7 @@
 # include "wf3info.h"
 # include "trl.h"
 
-extern int status;
+int status = HSTCAL_OK;
 
 static int darkcorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 

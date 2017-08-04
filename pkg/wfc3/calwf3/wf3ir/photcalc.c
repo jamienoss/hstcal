@@ -71,21 +71,21 @@ int photcalc (WF3Info *wf3, MultiNicmosGroup *input) {
 	}
 
 	/* Update the photometry keyword values in the header */
-	if (PutKeyFlt (input->group[0].globalhdr, "PHOTFLAM", obs.photflam, ""))
+	if ((status = PutKeyFlt (input->group[0].globalhdr, "PHOTFLAM", obs.photflam, "")))
 	    return (status);
 
-	if (PutKeyFlt (input->group[0].globalhdr, "PHOTZPT", obs.photzpt, ""))
+	if ((status = PutKeyFlt (input->group[0].globalhdr, "PHOTZPT", obs.photzpt, "")))
 	    return (status);
 
-	if (PutKeyFlt (input->group[0].globalhdr, "PHOTPLAM", obs.photplam, ""))
+	if ((status = PutKeyFlt (input->group[0].globalhdr, "PHOTPLAM", obs.photplam, "")))
 	    return (status);
 
-	if (PutKeyFlt (input->group[0].globalhdr, "PHOTBW", obs.photbw, ""))
+	if ((status = PutKeyFlt (input->group[0].globalhdr, "PHOTBW", obs.photbw, "")))
 	    return (status);
 
 	photfnu = 3.33564e+4 * obs.photflam * obs.photplam*obs.photplam;
 
-	if (PutKeyFlt (input->group[0].globalhdr, "PHOTFNU", photfnu, ""))
+	if ((status = PutKeyFlt (input->group[0].globalhdr, "PHOTFNU", photfnu, "")))
 	    return (status);
 
 	FreePhotPar (&obs);
@@ -94,7 +94,7 @@ int photcalc (WF3Info *wf3, MultiNicmosGroup *input) {
 	}
 
 	/* Successful return */
-	return (status = 0);
+	return (status = HSTCAL_OK);
 }
 
 /* This function converts the PHOTMODE string into an OBSMODE string

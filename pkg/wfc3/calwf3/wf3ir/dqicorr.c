@@ -31,7 +31,7 @@ typedef struct {
 	int ccdchip;
 } TblRow;
 
-extern int status;
+int status = HSTCAL_OK;
 
 static int dqicorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 

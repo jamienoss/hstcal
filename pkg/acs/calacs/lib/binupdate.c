@@ -16,6 +16,7 @@
    The CD matrix is mapped to the 1-D array cd in the following order:
 	CD1_1, CD1_2, CD2_1, CD2_2
 */
+#include "hstcalerr.h"
 
 int BinUpdate (double *block, double *offset,
 	double *ltm, double *ltv, double *cd, double *crpix) {
@@ -28,7 +29,7 @@ double cd[4]            io: CD matrix
 double crpix[2]         io: reference pixel
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	/* If we're actually unbinning (blkrep rather than blkavg), then
 	   the offset that we use to compute the new parameters needs

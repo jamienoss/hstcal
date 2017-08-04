@@ -37,7 +37,7 @@ static int BiasKeywords (WF3Info *);
 int WF3ccd (char *input, char *output, CCD_Switch *ccd_sw,
         RefFileInfo *refnames, int printtime, int verbose) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     WF3Info wf3;	/* calibration switches, reference files, etc */
     int extver;
@@ -202,7 +202,7 @@ int WF3ccd (char *input, char *output, CCD_Switch *ccd_sw,
 
 void InitCCDTrl (char *input, char *output) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int exist;
 
 	char trl_in[SZ_LINE+1]; 	/* trailer filename for input */
@@ -276,7 +276,7 @@ void InitCCDTrl (char *input, char *output) {
 
 static int BiasKeywords (WF3Info *wf3) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     IODescPtr im;	/* descriptor for output image */
     Hdr phdr;	/* primary header for input image */

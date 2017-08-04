@@ -52,7 +52,7 @@ SingleGroup *x    io: image to be calibrated; written to in-place
 float *meandark	   o: mean of dark image values subtracted
 */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     SingleGroupLine y, z;	/* y and z are scratch space */
     int extver = 1;		/* get this imset from dark image */

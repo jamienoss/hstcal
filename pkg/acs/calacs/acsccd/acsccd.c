@@ -36,7 +36,7 @@ void InitCCDTrl (char *, char *);
 int ACSccd (char *input, char *output, CalSwitch *ccd_sw,
             RefFileInfo *refnames, int printtime, int verbose) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     ACSInfo acs;	/* calibration switches, reference files, etc */
 
@@ -187,7 +187,7 @@ int ACSccd (char *input, char *output, CalSwitch *ccd_sw,
 
 void InitCCDTrl (char *input, char *output) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     char trl_in[ACS_LINE+1]; 	/* trailer filename for input */
     char trl_out[ACS_LINE+1]; 	/* output trailer filename */
@@ -228,7 +228,7 @@ void InitCCDTrl (char *input, char *output) {
 
 static int BiasKeywords (ACSInfo *acs) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     IODescPtr im;		/* descriptor for output image */
     int PutKeyFlt (Hdr *, char *, float, char *);

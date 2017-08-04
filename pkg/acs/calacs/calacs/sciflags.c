@@ -46,7 +46,7 @@ int SciFlags (ACSInfo *acs, CalSwitch *sci_sw, Hdr *phdr,
        RefFileInfo *sciref  io: list of keyword,filename pairs
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int refimage_used = 0;  /* = 1 if do bias, dark, flat, or shadcorr */
 

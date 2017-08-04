@@ -15,7 +15,7 @@ RefImage *ref     i: info about reference image
 Hdr *phdr         io: header to receive history records
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	char history[ACS_LINE];
 

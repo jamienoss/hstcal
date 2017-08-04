@@ -35,7 +35,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
        x      io: image to be calibrated; written to in-place
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (!acs || !ctePars || !chipImage)
         return (status = ALLOCATION_PROBLEM);
@@ -277,7 +277,7 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
 
 static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsigned ampID, CTEParamsFast * ctePars)
 {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (!amp || !amp->sci.data.data || !image || !image->sci.data.data)
         return (status = ALLOCATION_PROBLEM);
@@ -303,7 +303,7 @@ static int extractAmp(SingleGroup * amp,  const SingleGroup * image, const unsig
 
 static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigned ampID, CTEParamsFast * ctePars)
 {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (!amp || !amp->sci.data.data || !image || !image->sci.data.data)
         return (status = ALLOCATION_PROBLEM);
@@ -329,7 +329,7 @@ static int insertAmp(SingleGroup * image, const SingleGroup * amp, const unsigne
 
 static int alignAmp(SingleGroup * amp, const unsigned ampID)
 {
-    extern int status;
+    int status = HSTCAL_OK;
     if (!amp)
         return (status = ALLOCATION_PROBLEM);
 
@@ -357,7 +357,7 @@ static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID)
     //NOTE: There is a similar version of this in wfc3 - code changes should be reflected in both.
 
     //Align image quadrants such that the amps are at the bottom left, i.e. aligned with amp C.
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (!amp || !amp->data)
         return (status = ALLOCATION_PROBLEM);

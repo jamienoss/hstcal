@@ -76,7 +76,7 @@ float *meanflash    o: mean of post-flash image values subtracted
         which messes up the scaling call to multk1d
 */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     SingleGroupLine y, z;	/* y and z are scratch space */
     int extver = 1;		/* get this imset from post-flash image */

@@ -32,7 +32,7 @@
 
 int atodHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -56,7 +56,7 @@ int atodHistory (ACSInfo *acs, Hdr *phdr) {
 
 int pcteHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -80,7 +80,7 @@ int pcteHistory (ACSInfo *acs, Hdr *phdr) {
 
 int biasHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -104,7 +104,7 @@ int biasHistory (ACSInfo *acs, Hdr *phdr) {
 
 int flashHistory (ACSInfo *acs, Hdr *phdr) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int logit;  /* true if we should log file name */
     int OmitStep (int);
@@ -132,7 +132,7 @@ int flashHistory (ACSInfo *acs, Hdr *phdr) {
 
 int blevHistory (ACSInfo *acs, Hdr *phdr, int done, int driftcorr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 	int TabHistory (RefTab *, Hdr *);
@@ -171,7 +171,7 @@ int blevHistory (ACSInfo *acs, Hdr *phdr, int done, int driftcorr) {
 
 int sinkHistory (const ACSInfo *acs, Hdr *phdr) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int logit; // True if we should log file name
     int OmitStep (int);
@@ -197,7 +197,7 @@ int sinkHistory (const ACSInfo *acs, Hdr *phdr) {
 
 int CCDHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int TabHistory (RefTab *, Hdr *);
 
 	addHistoryKw (phdr, "CCD parameters table: ");
@@ -209,7 +209,7 @@ int CCDHistory (ACSInfo *acs, Hdr *phdr) {
 
 int dqiHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int flag;
 	int OmitStep (int);
@@ -252,7 +252,7 @@ int dqiHistory (ACSInfo *acs, Hdr *phdr) {
 
 int noiseHistory (Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	addHistoryKw (phdr, "Uncertainty array initialized.");
 	if (hstio_err())
@@ -263,7 +263,7 @@ int noiseHistory (Hdr *phdr) {
 
 int darkHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int ImgHistory (const RefImage *, Hdr *);
@@ -288,7 +288,7 @@ int darkHistory (ACSInfo *acs, Hdr *phdr) {
 
 int flatHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -332,7 +332,7 @@ int flatHistory (ACSInfo *acs, Hdr *phdr) {
 
 int nonlinHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logglin, loglfl;			/* true if we should log file name */
 	int OmitStep (int);
 	int TabHistory (RefTab *, Hdr *);
@@ -362,7 +362,7 @@ int nonlinHistory (ACSInfo *acs, Hdr *phdr) {
 
 int shadHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int ImgHistory (const RefImage *, Hdr *);
@@ -386,7 +386,7 @@ int shadHistory (ACSInfo *acs, Hdr *phdr) {
 
 int photHistory (ACSInfo *acs, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int TabHistory (RefTab *, Hdr *);
@@ -419,7 +419,7 @@ int UpdateSwitch (char *calSwitch, int flag, Hdr *phdr, int *logit) {
    int *logit        o: true if we should log reference file names
    */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	char *history;
 	int PutKeyStr (Hdr *, char *, char *, char *);

@@ -28,7 +28,7 @@ int doCteBias (WF3Info *wf3, SingleGroup *x) {
 	   SingleGroup *x	io: image to be calibrated; written to in-place
 	 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	SingleGroupLine y, z;	/* y and z are scratch space */
 	int rx, ry;		/* for binning biac image down to size of x */

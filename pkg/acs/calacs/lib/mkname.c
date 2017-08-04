@@ -16,7 +16,7 @@ char *outextn	   i: extension to append for output, e.g. ".trl" (optional)
 int maxch          i: maximum size of output
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	char fitsext[] = ".fits";	/* default extension */
 	char *extn;		/* extension on input (or default) */

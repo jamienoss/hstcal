@@ -29,7 +29,7 @@ int *extver		o: extension (IMSET) from file corresponding
 	Hdr scihdr, prihdr;
 	IODescPtr ip;
 	
-	extern int status;
+	int status = HSTCAL_OK;
 	int ccdchip;		/* CHIP id from reference header */
 	int n, foundit;
 	int nextend, ngrps;
