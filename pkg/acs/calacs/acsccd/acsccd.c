@@ -13,6 +13,7 @@
 # include "acsinfo.h"
 # include "hstcalerr.h"
 # include "acscorr.h"		/* calibration switch names */
+# include "trlbuf.h"
 
 static int BiasKeywords (ACSInfo *);
 void InitCCDTrl (char *, char *);

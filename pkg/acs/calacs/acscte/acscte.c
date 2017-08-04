@@ -13,7 +13,7 @@
 # include "acsinfo.h"
 # include "hstcalerr.h"
 # include "acscorr.h"		/* calibration switch names */
-
+# include "trlbuf.h"
 
 void InitCTETrl (char *, char *);
 

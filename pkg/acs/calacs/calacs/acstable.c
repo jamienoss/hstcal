@@ -30,6 +30,7 @@
 # include "acsasn.h"    /* defines ACS Association data structures */
 # include "hstcalerr.h"
 # include "calacs.h"
+# include "trlbuf.h"
 
 # define CRLEN    2
 # define RPTLEN 2

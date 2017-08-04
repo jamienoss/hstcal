@@ -14,7 +14,7 @@
 # include "wf3info.h"
 # include "hstcalerr.h"     /* error values */
 # include "wf3corr.h"    /* calibration switch names */
-# include "trl.h"        /* trailer functions */
+# include "trlbuf.h"        /* trailer functions */
 
 extern int status;
 

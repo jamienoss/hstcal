@@ -5,7 +5,7 @@
 
 # include "hstio.h"	/* defines HST I/O functions */
 # include "msg.h"	/* for MsgText and asnerror */
-# include "trl.h"	/* for trlerror */
+# include "trlbuf.h"	/* for trlerror */
 
 void errchk() {
 		

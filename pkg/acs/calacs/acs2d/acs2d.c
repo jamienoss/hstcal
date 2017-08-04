@@ -14,6 +14,7 @@
 # include "acsinfo.h"
 # include "hstcalerr.h"
 # include "acscorr.h"		/* calibration switch names for calacs */
+# include "trlbuf.h"
 
 void Init2DTrl (char *, char *);
 

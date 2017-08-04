@@ -6,16 +6,11 @@
 # include <stdio.h>             /* To insure that FILE is defined for TrlPtr */
 # include "msg.h"
 # include "imphttab.h"
-
-/* Macros for dusing GetKey/PutKey functions.... */
-# define USE_DEFAULT    1       /* Use default if keyword is missing */
-# define NO_DEFAULT     0       /* missing keyword is fatal error */
+# include "hstcal.h" // NOTE: This shouldn't be here
 
 typedef unsigned char Byte;
 
 #define SIZE_BYTE   8
-#define YES         1
-#define NO          0
 
 # define MAX_DQ     65535
 
@@ -26,34 +21,6 @@ typedef unsigned char Byte;
 
 /* Three extensions per SingleGroup. */
 # define EXT_PER_GROUP 3
-
-/* Integer codes for string-valued header keywords. */
-
-/* Flag values for calibration switches. */
-enum SwitchVals_ {BLANK=(-2), DUMMY, OMIT, PERFORM, COMPLETE, SKIPPED,
-		  IGNORED, SKIP, OMITTED, PERFORMED};
-typedef enum SwitchVals_ SwitchVals;
-
-/* Codes to specify whether a reference file exists or not. */
-# define EXISTS_YES       1
-# define EXISTS_NO        0
-# define EXISTS_UNKNOWN (-1)
-
-/* For a reference file name, this string means that a name was
-   intentionally not given.
-*/
-# define NOT_APPLICABLE   "n/a" /* Upper case in headers, converted to
-                                    lower case by CALWF3 */
-
-/* nearest integer function */
-# define NINT(x)  ((x >= 0.) ? (int) (x + 0.5) : (int) (x - 0.5))
-
-/* Codes for goodPedigree in RefImage and RefTab to specify whether
-   pedigree is good, dummy, or not specified.
-*/
-# define GOOD_PEDIGREE      1
-# define DUMMY_PEDIGREE     0
-# define PEDIGREE_UNKNOWN (-1)
 
 /* Possible values for detector. */
 # define UNKNOWN_DETECTOR   (-1)
@@ -122,12 +89,6 @@ typedef struct {
     int detector;   /* Which detector was used */
 } multiamp;
 
-
-/* This macro defines the string which will be used to distinguish the
-	start of CALWF3 comments in the trailer files...
-*/
-# define TRL_PREFIX     "CALWF3BEG"
-
-# include "trl.h"
+#include "trlbuf.h" // What is this doing all the way down here?!
 
 #endif /* INCL_WF3_H */

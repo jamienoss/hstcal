@@ -12,6 +12,7 @@
 
 # include "hstio.h"
 # include "xtables.h"
+# include "trlbuf.h"
 
 # include "acs.h"
 # include "calacs.h"

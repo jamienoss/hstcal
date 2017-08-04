@@ -3,7 +3,7 @@
 def build(bld):
     t = bld.stlib(
         source = [
-            'dummy.c',
+            'trlbuf.c',
             ],
         target = 'hstcallib',
         includes = ['../include/',
