@@ -12,6 +12,7 @@ int status = 0;			/* zero is OK */
 # include "wf3sum.h"
 # include "hstcalerr.h"
 # include "wf3version.h"
+# include "hstcalversion.h"
 
 /* 
     This function will only return either 0 (WF3_OK) if everything
@@ -90,7 +91,8 @@ int main (int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
-	
+    trlVersion();
+
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);
 

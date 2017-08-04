@@ -5,6 +5,7 @@
 # include "acs.h"
 # include "hstcalerr.h"
 # include "acsversion.h"
+# include "hstcalversion.h"
 
 # ifdef _OPENMP
 #  include <omp.h>
@@ -157,6 +158,7 @@ int main(int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
+    trlVersion();
 
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);

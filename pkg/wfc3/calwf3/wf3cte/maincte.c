@@ -23,6 +23,7 @@ MLS 2015
 # include "hstcalerr.h"
 # include "wf3corr.h"		/* calibration switch names for WFC3ccd */
 # include "wf3version.h"
+# include "hstcalversion.h"
 
 # ifdef _OPENMP
 #  include <omp.h>
@@ -136,6 +137,8 @@ int main (int argc, char **argv) {
     }
     /* INITIALIZE THE STRUCTURE FOR MANAGING TRAILER FILE COMMENTS */
     InitTrlBuf ();
+    trlVersion();
+
     /* COPY COMMAND-LINE VALUE FOR QUIET TO STRUCTURE */
     SetTrlQuietMode(quiet);
            

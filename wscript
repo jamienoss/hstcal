@@ -1,6 +1,6 @@
 # vim: set syntax=python:
 
-import os, platform, shutil, sys
+import os, platform, shutil, sys, subprocess
 
 from waflib import Configure
 from waflib import Errors
@@ -11,8 +11,10 @@ from waflib import Task
 from waflib import Utils
 from waflib import TaskGen
 
-APPNAME = 'hstcal'
-VERSION = '0.1.1'
+APPNAME = "HSTCAL"
+VERSION = "UNKNOWN"
+COMMIT = "UNKNOWN"
+BRANCH = "UNKNOWN"
 
 top = '.'
 out = 'build.' + platform.platform()
@@ -83,6 +85,54 @@ def _setup_openmp(conf):
         conf.end_msg("OpenMP not found.", 'YELLOW')
     else:
         conf.end_msg("OpenMP found.", 'GREEN')
+
+def _ok_color(var, val):
+    if var == val:
+        return "GREEN"
+    else:
+        return "YELLOW"
+
+def _warn_color(var, val):
+    if var == val:
+        return "YELLOW"
+    else:
+        return "GREEN"
+
+def _err_color(var, val):
+    if var == val:
+        return "RED"
+    else:
+        return "GREEN"
+
+def _get_git_details(conf):
+    global APPNAME, VERSION, COMMIT, BRANCH
+
+    results = subprocess.run('git describe --dirty', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if not results.returncode:
+        VERSION = results.stdout.rstrip()
+
+    results = subprocess.run('git rev-parse HEAD', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if not results.returncode:
+        COMMIT = results.stdout.rstrip()
+
+    results = subprocess.run('git rev-parse --abbrev-ref HEAD', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if not results.returncode:
+        BRANCH = results.stdout.rstrip()
+
+    conf.start_msg("Building app")
+    conf.end_msg(APPNAME, _warn_color(APPNAME, "UNKNOWN"))
+    conf.start_msg("Version")
+    conf.end_msg(VERSION, _warn_color(VERSION, "UNKNOWN"))
+    conf.start_msg("git branch")
+    conf.end_msg(BRANCH, _warn_color(BRANCH, "UNKNOWN"))
+    conf.start_msg("git HEAD commit")
+    conf.end_msg(COMMIT, _warn_color(COMMIT, "UNKNOWN"))
+
+    #if conf.check_cc(cflags='-D TESTVAR="testValue"'):
+    conf.env.append_value('CFLAGS', '-D APPNAME="{0}"'.format(APPNAME))
+    conf.env.append_value('CFLAGS', '-D VERSION="{0}"'.format(VERSION))
+    conf.env.append_value('CFLAGS', '-D BRANCH="{0}"'.format(BRANCH))
+    conf.env.append_value('CFLAGS', '-D COMMIT="{0}"'.format(COMMIT))
 
 def _check_mac_osx_version(floor_version):
     '''
@@ -181,6 +231,8 @@ def configure(conf):
                 if Options.options.__dict__.get(key) is None:
                     Options.options.__dict__[key] = val
         fd.close()
+
+    _get_git_details(conf)
 
     # Load C compiler support
     conf.load('compiler_c')

@@ -9,6 +9,7 @@
 # include "acs.h"
 # include "hstcalerr.h"
 # include "acsrej.h"
+# include "hstcalversion.h"
 
 static void FreeNames (char *);
 
@@ -42,6 +43,7 @@ int main (int argc, char **argv) {
 
     /* Initialize the structure for managing trailer file comments */
     InitTrlBuf ();
+    trlVersion();
 
     /* Reject cosmic rays. */
     if (AcsRej (input, output, mtype, &par, newpar)) {

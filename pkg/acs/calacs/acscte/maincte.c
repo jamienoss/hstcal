@@ -15,6 +15,7 @@ int status = 0;			/* zero is OK */
 # include "acsinfo.h"
 # include "hstcalerr.h"
 # include "acscorr.h"		/* calibration switch names for acsccd */
+# include "hstcalversion.h"
 
 # ifdef _OPENMP
 #  include <omp.h>
@@ -194,6 +195,7 @@ int main (int argc, char **argv) {
     }
     /* Initialize the structure for managing trailer file comments */
     InitTrlBuf ();
+    trlVersion();
 
     /* Copy command-line value for QUIET to structure */
     SetTrlQuietMode(quiet);

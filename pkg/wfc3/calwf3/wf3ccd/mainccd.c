@@ -16,6 +16,7 @@ int status = 0;			/* zero is OK */
 # include "hstcalerr.h"
 # include "wf3corr.h"		/* calibration switch names for wf3ccd */
 # include "wf3version.h"
+# include "hstcalversion.h"
 
 static void FreeNames (char *, char *, char *, char *);
 int MkOutName (char *, char **, char **, int, char *, int);
@@ -157,7 +158,8 @@ int main (int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
-	
+    trlVersion();
+
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);
 
