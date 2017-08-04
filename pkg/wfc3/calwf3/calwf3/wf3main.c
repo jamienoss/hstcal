@@ -5,6 +5,7 @@
 # include "wf3.h"
 # include "hstcalerr.h"
 # include "wf3version.h"
+# include "hstcalversion.h"
 
 /* H. Bushouse	07-Sep-2011	Implemented new "--version" command line argument. */
 /* M. Sosey     added a -r to also print the version (-v is used, so warren chose r for revision */
@@ -88,6 +89,14 @@ int main (int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
+    char * versionText = NULL;
+    getVersionInfo(&versionText);
+    trlmessage(versionText);
+    if (versionText)
+    {
+        free(versionText);
+        versionText = NULL;
+    }
 
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode (quiet);
