@@ -47,7 +47,7 @@ int Do2D (ACSInfo *acs2d, int extver) {
    int extver       i: "imset" number, the current set of extensions
    */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	SingleGroup x;	/* used for both input and output */
 	int option = 0;
@@ -578,7 +578,7 @@ static void ShadMsg (ACSInfo *acs2d, int extver) {
 
 static int OscnTrimmed (Hdr *phdr, Hdr *hdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double ltv1, ltv2;
   int blevcorr;

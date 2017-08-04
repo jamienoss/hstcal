@@ -16,7 +16,7 @@
 
 int LoadHdr (char *input, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	
 	IODescPtr im;		/* descriptor for input image */
    	

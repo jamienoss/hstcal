@@ -59,7 +59,7 @@ int extver	   i: extension/imset to be flat-fielded
 SingleGroup *x    io: image to be calibrated; written to in-place
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	SingleGroupLine w, zl, ztrim;	/* scratch space */
 	WF3sect lfsect, elfsect;
@@ -260,7 +260,7 @@ SingleGroup *x    io: image to be calibrated; written to in-place
 static int divFlat (SingleGroup *x, char *flatname, WF3Info *wf32d,
 		    int applygain) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int pchipext;
 	SingleGroupLine y, ytrim; /* scratch space */

@@ -75,7 +75,7 @@ int DoCCD (WF3Info *wf3, int extver) {
        int extver	i: "imset" number, the current set of extensions
      */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     SingleGroup x;	/* used for both input and output */
     SingleGroup fullarray;

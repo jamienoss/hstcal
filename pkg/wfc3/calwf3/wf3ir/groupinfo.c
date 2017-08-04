@@ -6,7 +6,7 @@
 # include "wf3info.h"
 # include "trl.h"
 
-int status = HSTCAL_OK;
+int status = 0;
 
 /* GETGROUPINFO: Get group-specific information, such as exposure time,
 ** data units, and TDF status.

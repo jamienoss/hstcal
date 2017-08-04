@@ -25,7 +25,7 @@ int line		i: row number from input data to divide
 SingleGroupLine *b	i: second input data
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int i;
 	float a_sci, b_sci;	/* science data values from a and b */

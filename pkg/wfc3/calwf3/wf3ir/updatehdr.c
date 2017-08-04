@@ -3,7 +3,7 @@
 # include "hstio.h"     /* defines HST I/O functions */
 # include "wf3.h"
 
-int status = HSTCAL_OK;
+int status = 0;
 
 /* UPDATEHDR: Update various keywords in output image header at the
 ** end of calibration processing. The keywords that get updated are:

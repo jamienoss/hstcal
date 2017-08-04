@@ -28,7 +28,7 @@ double cd[4]            io: CD matrix
 double crpix[2]         io: reference pixel
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	/* If we're actually unbinning (blkrep rather than blkavg), then
 	   the offset that we use to compute the new parameters needs

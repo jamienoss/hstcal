@@ -21,7 +21,7 @@ static int checkCCD (Hdr *, ACSInfo *, int *);
 */
 int GetCTEFlags (ACSInfo *acs, Hdr *phdr) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int missing = 0;    /* true if any calibration file is missing */
     int nsteps = 0;     /* number of calibration steps to perform */
@@ -72,7 +72,7 @@ static int checkPCTE (Hdr *phdr, ACSInfo *acs, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -135,7 +135,7 @@ static int checkCCD (Hdr *phdr, ACSInfo *acs, int *missing) {
        int *missing     io: incremented if the table is missing
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int calswitch;            /* returned by GetTabRef and ignored */
     int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
     void MissingFile (char *, char *, int *);

@@ -25,7 +25,7 @@ int avg               i: == 0 means we should sum the values within a bin;
 SingleGroup *b        o: output data
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double block[2];	/* number of input pixels for one output */
 	double offset[2];	/* offset of binned image */

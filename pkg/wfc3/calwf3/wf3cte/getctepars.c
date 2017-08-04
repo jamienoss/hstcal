@@ -88,7 +88,7 @@ No.    Name         Type      Cards   Dimensions   Format
 
 	 */
 
-	int status = HSTCAL_OK; /* variable for return status */
+	int status = 0; /* variable for return status */
     int ctraps; /*see if more traps were added to reference file*/
     
 	/* HSTIO VARIABLES */
@@ -505,7 +505,7 @@ No.    Name         Type      Cards   Dimensions   Format
  */
 int CompareCTEParams(SingleGroup *group, CTEParams *pars) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double rn_amp;
     int cte_len;

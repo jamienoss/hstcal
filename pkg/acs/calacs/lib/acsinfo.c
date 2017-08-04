@@ -167,7 +167,7 @@ void InitRefImg (RefImage *img) {
 
 int GetImageRef (RefFileInfo *refnames, Hdr *phdr,
                  char *keyword, RefImage *image, int *calswitch) {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int GetRefName (RefFileInfo *, Hdr *, char *, char *);
     int ImgPedigree (RefImage *);
@@ -197,7 +197,7 @@ int GetImageRef (RefFileInfo *refnames, Hdr *phdr,
 */
 int GetTabRef (RefFileInfo *refnames, Hdr *phdr,
                char *keyword, RefTab *table, int *calswitch) {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int GetRefName (RefFileInfo *, Hdr *, char *, char *);
     int TabPedigree (RefTab *);
@@ -221,7 +221,7 @@ int GetTabRef (RefFileInfo *refnames, Hdr *phdr,
 
 int checkTabRefPedigree (char *filename, RefTab *table, int *calswitch)
 {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int TabPedigree (RefTab *);
 

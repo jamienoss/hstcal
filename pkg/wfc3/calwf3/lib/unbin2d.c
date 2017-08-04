@@ -58,7 +58,7 @@ SingleGroup *a        i: input data
 SingleGroup *b        o: output data
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double block[2];	/* number of input pixels for one output */
 	double offset[2] = {0., 0.};	/* offset of binned image */
@@ -340,7 +340,7 @@ SingleNicmosGroup *a        i: input data
 SingleNicmosGroup *b        o: output data
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double block[2];	/* number of input pixels for one output */
 	double offset[2] = {0., 0.};	/* offset of binned image */

@@ -48,7 +48,7 @@ int GetSpotTab (char *spottab, time_t date, float *shiftx, float *shifty) {
 ACS2dInfo *acs2d     io: calibration switches, etc
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	TblInfo tabinfo;	/* pointer to table descriptor, etc */
 	TblRow tabrow;		/* values read from a table row */
@@ -101,7 +101,7 @@ ACS2dInfo *acs2d     io: calibration switches, etc
 
 static int OpenSpotTab (char *tname, TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	tabinfo->tp = c_tbtopn (tname, IRAF_READ_ONLY, 0);
 	if (c_iraferr()) {
@@ -133,7 +133,7 @@ static int OpenSpotTab (char *tname, TblInfo *tabinfo) {
 
 static int ReadSpotTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
     int parseTabDate(char *, time_t *);
 
 	c_tbegtt (tabinfo->tp, tabinfo->cp_date, row,
@@ -159,7 +159,7 @@ static int ReadSpotTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
 static int CloseSpotTab (TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbtclo (tabinfo->tp);
 	if (c_iraferr())

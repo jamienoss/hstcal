@@ -24,7 +24,7 @@ WF3Info *wf3   io: calibration switches and info
 Hdr *hdr         i: header of current extension
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int sdqflags;			/* serious data quality flags */
 	int GetKeyDbl (Hdr *, char *, int, double, double *);

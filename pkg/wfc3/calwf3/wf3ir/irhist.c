@@ -33,7 +33,7 @@
 
 int blevIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 	int TabHistory (RefTab *, Hdr *);
@@ -58,7 +58,7 @@ int blevIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int crIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 
@@ -78,7 +78,7 @@ int crIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int CCDIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int TabHistory (RefTab *, Hdr *);
 
 	addHistoryKw (phdr, "CCD parameters table: ");
@@ -90,7 +90,7 @@ int CCDIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int dqiIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int logit;			/* true if we should log file name */
 	int flag;
 	int OmitStep (int);
@@ -128,7 +128,7 @@ int dqiIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int noisIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int OmitStep (int);
 
 	if (OmitStep (wf3->noiscorr))
@@ -143,7 +143,7 @@ int noisIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int darkIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int ImgHistory (RefImage *, Hdr *);
@@ -165,7 +165,7 @@ int darkIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int flatIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
@@ -204,7 +204,7 @@ int flatIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int photIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int TabHistory (RefTab *, Hdr *);
@@ -226,7 +226,7 @@ int photIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int nlinIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int logit;			/* true if we should log file name */
 	int OmitStep (int);
 	int ImgHistory (RefImage *, Hdr *);
@@ -248,7 +248,7 @@ int nlinIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int unitIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 
@@ -266,7 +266,7 @@ int unitIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int zoffIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 
@@ -284,7 +284,7 @@ int zoffIRHistory (WF3Info *wf3, Hdr *phdr) {
 
 int zsigIRHistory (WF3Info *wf3, Hdr *phdr) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int OmitStep (int);
 	int PutKeyStr (Hdr *, char *, char *, char *);
 

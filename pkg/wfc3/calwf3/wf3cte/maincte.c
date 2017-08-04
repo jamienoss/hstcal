@@ -66,7 +66,7 @@ int main (int argc, char **argv) {
     int n;
     
 	/* Initialize status to OK and MsgText to null */
-	status     = WF3_OK;
+	int status     = WF3_OK;
 
     /* A structure to pass the calibration switches to WFC3CTE */
     CCD_Switch cte_sw;

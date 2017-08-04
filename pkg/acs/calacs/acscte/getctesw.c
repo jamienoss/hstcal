@@ -19,7 +19,7 @@ static int GetSw (Hdr *, char *, int *);
  */
 int GetcteSw (ACSInfo *acs, Hdr *phdr) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;        /* keyword location in header */
 
     key = findKw (phdr, "PCTECORR");
@@ -45,7 +45,7 @@ static int GetSw (Hdr *phdr, char *calswitch, int *flag) {
        int *flag        o: value (0 or 1) of calibration switch
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int GetSwitch (Hdr *, char *, int *);
 

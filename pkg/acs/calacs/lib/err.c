@@ -12,7 +12,7 @@ extern char MsgText[ACS_LINE+1];
 
 void errchk() {
 		
-	int status = HSTCAL_OK;
+	int status = 0;
 	
 	if (hstio_err()) {
 	fprintf (stdout, "\n*** ERROR in HST I/O functions:\n%s\n",

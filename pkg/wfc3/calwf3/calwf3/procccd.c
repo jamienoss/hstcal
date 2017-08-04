@@ -60,7 +60,7 @@
 
 int ProcessCCD (AsnInfo *asn, WF3Info *wf3hdr, int *save_tmp, int printtime, int onecpu) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     RefFileInfo sciref;		    /* ref file keywords and names */
     CCD_Switch sci_sw;		    /* all cal switches for science file */

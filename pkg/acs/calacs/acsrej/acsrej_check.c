@@ -35,7 +35,7 @@ int acsrej_check (IRAFPointer tpin, int extver, int ngrps, clpar *par, int newpa
             multiamp *noise, multiamp *gain, int *dim_x, int *dim_y, 
             int nimgs)
 {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     IODescPtr   ip;
     Hdr         prihdr, scihdr;         /* header structures */
@@ -221,7 +221,7 @@ int acsrej_check (IRAFPointer tpin, int extver, int ngrps, clpar *par, int newpa
 
 static int getACSnsegn (Hdr *hdr, char *fdata, multiamp *ron, multiamp *gn) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     
     char    *nsekeyw[NAMPS] = { "READNSEA", "READNSEB", "READNSEC", "READNSED" };
     char    *gnkeyw[NAMPS] = { "ATODGNA", "ATODGNB", "ATODGNC", "ATODGND" };
@@ -267,7 +267,7 @@ static int checkgn (multiamp gn, char *fdata) {
 }
 static int getACSampxy (Hdr *hdr, int det, int chip, char *ccdamp, int dimx, int dimy, int *ampx, int *ampy) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     ACSInfo acsrej;
     char tabname[ACS_LINE];
 

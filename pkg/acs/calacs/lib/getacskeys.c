@@ -29,7 +29,7 @@ int GetACSKeys (ACSInfo *acs, Hdr *phdr) {
    Hdr *phdr        i: primary header
    */
   
-	int status = HSTCAL_OK;
+	int status = 0;
   
 	int nextend;			/* number of FITS extensions */
 	int i;

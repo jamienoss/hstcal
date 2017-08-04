@@ -25,7 +25,7 @@ SingleGroup *out  io: image to be calibrated; the headers are modified
 short sdqflags    i: "serious" data quality flags
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double value;			/* current data value */
 	double valsum, valmin, valmax;

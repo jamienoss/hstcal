@@ -46,7 +46,7 @@ int doPCTEGen1 (ACSInfo *acs, SingleGroup *x) {
        x      io: image to be calibrated; written to in-place
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* interpolated cte profile shape parameters */
     double chg_leak[MAX_TAIL_LEN*NUM_LOGQ];
@@ -270,7 +270,7 @@ int get_amp_array_size_acs_cte(const ACSInfo *acs, SingleGroup *x,
                               const int amp, char *amploc, char *ccdamp,
                               int *xsize, int *ysize, int *xbeg, int *xend,
                               int *ybeg, int *yend) {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int bias_loc;
     int bias_ampx, bias_ampy;
@@ -323,7 +323,7 @@ static int make_amp_array(const ACSInfo *acs, const SingleGroup *im,
                           double amp_sci_array[arr1*arr2],
                           double amp_err_array[arr1*arr2]) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* iteration variables */
     int i, j;
@@ -377,7 +377,7 @@ static int unmake_amp_array(const ACSInfo *acs, const SingleGroup *im,
                             double amp_sci_array[arr1*arr2],
                             double amp_err_array[arr1*arr2]) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* iteration variables */
     int i, j;

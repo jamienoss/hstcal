@@ -39,7 +39,7 @@ int rej_check (IRAFPointer tpin, int extver, int ngrps, clpar *par,
 	       IODescPtr ipsci[], IODescPtr ipdq[], multiamp *noise,
 	       multiamp *gain, int *dim_x, int *dim_y, int nimgs, char expflagFinal[]) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     IODescPtr   ip;
     Hdr         prihdr, scihdr;         /* header structures */
@@ -245,7 +245,7 @@ int rej_check (IRAFPointer tpin, int extver, int ngrps, clpar *par,
 
 static int getnsegn (Hdr *hdr, char *fdata, multiamp *ron, multiamp *gn) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     
     char   *nsekeyw[NAMPS] = { "READNSEA", "READNSEB", "READNSEC", "READNSED"};
     char   *gnkeyw[NAMPS] = { "ATODGNA", "ATODGNB", "ATODGNC", "ATODGND"};
@@ -274,7 +274,7 @@ static int getnsegn (Hdr *hdr, char *fdata, multiamp *ron, multiamp *gn) {
 
 static int checkgn (multiamp gn, char *fdata) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     
     int i;
     int ampset = 0;
@@ -296,7 +296,7 @@ static int checkgn (multiamp gn, char *fdata) {
 static int getampxy (Hdr *hdr, int det, int chip, char *ccdamp, int dimx,
 		     int dimy, int *ampx, int *ampy) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     WF3Info wf3rej;
     char tabname[SZ_LINE+1];
 

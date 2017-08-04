@@ -11,7 +11,7 @@
 
 int FileExists (char *fname) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int exists;
 
 	int flag;
@@ -51,7 +51,7 @@ int FileExists (char *fname) {
 
 int TrlExists (char *trlname) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int exists;
 	
 	FILE *fp;

@@ -7,7 +7,7 @@
 # include "wf3info.h"
 # include "trl.h"
 
-int status = HSTCAL_OK;
+int status = 0;
 
 /* DoNoisIR: Call NOISCALC for each readout of a MultiAccum.
 **

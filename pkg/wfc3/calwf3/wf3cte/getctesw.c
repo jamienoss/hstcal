@@ -18,7 +18,7 @@ int GetSw (Hdr *, char *, int *);
 
 int GetCTESwitch (WF3Info *wf3, Hdr *phdr){
     
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;       
      
     key = findKw (phdr, "PCTECORR");
@@ -53,7 +53,7 @@ int GetSw (Hdr *phdr, char *calswitch, int *flag) {
        int *flag        o: value (0 or 1) of calibration switch
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int GetSwitch (Hdr *, char *, int *);
 

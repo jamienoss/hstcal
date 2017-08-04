@@ -25,7 +25,7 @@ char *calswitch   i: name of keyword (e.g. FLATCORR)
 int *flag         o: value of switch:  PERFORM, OMIT, or COMPLETE
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	FitsKw key;		/* keyword location in header */
 	char *word;		/* scratch space for header keyword value */

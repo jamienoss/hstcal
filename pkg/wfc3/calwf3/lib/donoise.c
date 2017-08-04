@@ -59,7 +59,7 @@ SingleGroup *x	io: image to be calibrated; written to in-place
 int *done        o: true if we actually did assign error array values
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	float bias;		/* bias level to subtract (dn) */
 	float rn2[NAMPS];       /* square of noise values for observation */

@@ -22,7 +22,7 @@ int posid			i: sub-product id for exposure
 int expid			i: id of exposure within sub-product
 ACSInfo *acs		o: exposure specific flags and info
 */
-	int status = HSTCAL_OK;
+	int status = 0;
 	
 	char rootname[ACS_FNAME+1];
 	char mtype[SZ_STRKWVAL+1];
@@ -86,7 +86,7 @@ int GetSingle (AsnInfo *asn, ACSInfo *acs) {
 AsnInfo *asn      	i: calibration flags and other info
 ACSInfo *acs		o: exposure specific flags and info
 */
-	int status = HSTCAL_OK;
+	int status = 0;
 	char rootname[ACS_FNAME];
 	*rootname = '\0';
 	void FindAsnRoot (const char *, char *);

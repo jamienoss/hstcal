@@ -89,7 +89,7 @@ WF3Info *wf3	 i: calibration switches, etc
 SingleGroup *x	io: image to be calibrated; written to in-place
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	TblInfo tabinfo;	/* pointer to table descriptor, etc */
 	TblRow tabrow;		/* values read from a table row */
@@ -207,7 +207,7 @@ SingleGroup *x	io: image to be calibrated; written to in-place
 
 static int OpenAtoDTab (char *tname, TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	tabinfo->tp = c_tbtopn (tname, IRAF_READ_ONLY, 0);
 	if (c_iraferr()) {
@@ -249,7 +249,7 @@ static int OpenAtoDTab (char *tname, TblInfo *tabinfo) {
 
 static int ReadAtoDTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbegtt (tabinfo->tp, tabinfo->cp_amp, row,
 			tabrow->ccdamp, SZ_CBUF);
@@ -279,7 +279,7 @@ static int ReadAtoDTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
 static int ReadAtoDArray (TblInfo *tabinfo, int row, TblArray *tabarray) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int nret;		/* number of elements actually read */
 
 	/* Find out how many elements there are in the ATOD array,
@@ -314,7 +314,7 @@ static int ReadAtoDArray (TblInfo *tabinfo, int row, TblArray *tabarray) {
 
 static int CloseAtoDTab (TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbtclo (tabinfo->tp);
 	if (c_iraferr())

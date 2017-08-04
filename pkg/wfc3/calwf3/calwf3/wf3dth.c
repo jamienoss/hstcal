@@ -68,7 +68,7 @@
 int Wf3Dth ( char *in_list, char *output, int dthcorr, int printtime,
 	    int verbose){
 	
-	int status = HSTCAL_OK;
+	int status = 0;
 	
 	char mtype[SZ_CBUF+1];		/* role of exposure in Association */
 	IRAFPointer tpin;
@@ -114,7 +114,7 @@ int Wf3Dth ( char *in_list, char *output, int dthcorr, int printtime,
 
 void InitDthTrl (char *inlist, char *output) {
 	
-	int status = HSTCAL_OK;
+	int status = 0;
 	
 	IRAFPointer tpin;
 	int n, nfiles;

@@ -55,7 +55,7 @@ int GetLinTab (ACSInfo *acs2d) {
 ACS2dInfo *acs2d     io: calibration switches, etc
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	TblInfo tabinfo;	/* pointer to table descriptor, etc */
 	TblRow tabrow;		/* values read from a table row */
@@ -127,7 +127,7 @@ ACS2dInfo *acs2d     io: calibration switches, etc
 
 static int OpenLinTab (char *tname, TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	tabinfo->tp = c_tbtopn (tname, IRAF_READ_ONLY, 0);
 	if (c_iraferr()) {
@@ -167,7 +167,7 @@ static int OpenLinTab (char *tname, TblInfo *tabinfo) {
 
 static int ReadLinTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbegtt (tabinfo->tp, tabinfo->cp_det, row,
 			tabrow->detector, ACS_CBUF-1);
@@ -197,7 +197,7 @@ static int ReadLinTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
 static int CloseLinTab (TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbtclo (tabinfo->tp);
 	if (c_iraferr())

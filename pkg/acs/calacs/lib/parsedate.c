@@ -12,7 +12,7 @@ int parseObsDate (Hdr *phdr, time_t *date) {
         converts it to a time in seconds since 1970.
     */
 
-	int status = HSTCAL_OK;
+	int status = 0;
     char dateobs[ACS_CBUF];
     struct tm stime;
 
@@ -50,7 +50,7 @@ int parseObsDateVal (char *dateobs, time_t *date) {
         converts it to a time in seconds since 1970.
     */
 
-	int status = HSTCAL_OK;
+	int status = 0;
     struct tm stime;
 
     const char delimiters[] = " /-";
@@ -87,7 +87,7 @@ int parseTabDate (char *date, time_t *dtime) {
         converts it to a time in seconds since 1970.
     */
 
-	int status = HSTCAL_OK;
+	int status = 0;
     struct tm stime;
 
     const char delimiters[] = " /-";

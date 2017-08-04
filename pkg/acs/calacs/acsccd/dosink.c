@@ -37,7 +37,7 @@ int SinkDetect(ACSInfo *acs, SingleGroup *x) {
        ACSInfo *acs       i: calibration switches, etc
        SingleGroup *x    io: image to be calibrated; written to in-place
     */
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int i, j, jdone, jend, jstep, n;  /* counters */
     short *keep_going, dqval;
@@ -197,7 +197,7 @@ static int DetSinkChip (char *fname, int chip, int *extver) {
        int *extver   o: extension (IMSET) from file corresponding
        to input image chip ID
     */
-    int status = HSTCAL_OK;
+    int status = 0;
 
     Hdr scihdr, prihdr;
     IODescPtr ip;

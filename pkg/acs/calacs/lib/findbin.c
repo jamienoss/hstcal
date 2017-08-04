@@ -42,7 +42,7 @@ int *rx, *ry      o: ratio of bin sizes
 int *x0, *y0      o: location of start of subimage in ref image
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int sci_bin[2];			/* bin size of science image */
 	int sci_corner[2];		/* science image corner location */
@@ -133,7 +133,7 @@ int *x0, *y0      o: location of start of subimage in ref image
 #if false
 static int getBin (int *sci_corner, int *ref_corner, int *sci_bin, int
 *ref_bin, int *same_size, int *rx, int *ry, int *x0, int *y0) {
-    int status = HSTCAL_OK;
+    int status = 0;
 	int cshift[2];			/* shift of sci relative to ref */
 	int ratiox, ratioy;		/* local variables for rx, ry */
 	int xzero, yzero;		/* local variables for x0, y0 */
@@ -217,7 +217,7 @@ int *rx, *ry      o: ratio of bin sizes
 int *x0, *y0      o: location of start of subimage in ref image
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int sci_bin[2];			/* bin size of science image */
 	int sci_corner[2];		/* science image corner location */

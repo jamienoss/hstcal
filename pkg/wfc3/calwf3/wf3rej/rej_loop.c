@@ -154,7 +154,7 @@ int rej_loop (IODescPtr ipsci[], IODescPtr ipdq[], char imgname[][SZ_FNAME+1],
 	      FloatTwoDArray *ave, FloatTwoDArray *avevar, float *efacsum, 
               ShortTwoDArray *dq, int *nrej, char *shadfile)
 {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     Hdr     dqhdr;              /* data quality header structure */
     int     width;
@@ -1154,7 +1154,7 @@ static int initShad (Hdr *scihdr, int dimx, char *shadname, int chipext,
 		     int *refx, int *rx, int *ry, int *x0, int *y0) {
 
     SingleGroupLine y;
-    int status = HSTCAL_OK;
+    int status = 0;
     int same_size = 0;
 
     int FindLineHdr (Hdr *, Hdr *, int, int, int *, int *, int *, int *, int *);

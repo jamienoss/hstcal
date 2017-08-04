@@ -26,7 +26,7 @@ ACSInfo *acs2d     i: calibration switches, etc
 SingleGroup *x    io: image to be calibrated; written to in-place
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	SingleGroupLine y, z, zl;	/* z and zl are scratch space */
 	ACSsect ysect, zsect;	/* scratch space to use for expansion */

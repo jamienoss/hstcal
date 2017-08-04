@@ -38,7 +38,7 @@ relative to the max exposure.
 int cr_scaling (char *expname, IRAFPointer tpin, float efac[], int *nimgs,
 		double *expend, double *expstart, DataUnits bunit[]) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     Hdr         hdr;
     int         nzero, k;

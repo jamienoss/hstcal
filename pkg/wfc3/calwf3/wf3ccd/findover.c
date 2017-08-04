@@ -165,7 +165,7 @@ int nx, ny		i: lengths of first and second image axes
 int offsetx, offsety	i: Trim values from LTV1,2
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int row;
 	TblInfo tabinfo;
 	TblRow tabrow;
@@ -356,7 +356,7 @@ int offsetx, offsety	i: Trim values from LTV1,2
 
 static int OpenOverTab (char *tname, TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	
 	int nocol[NUMCOLS];
 	int i, j, missing;
@@ -460,7 +460,7 @@ static int OpenOverTab (char *tname, TblInfo *tabinfo) {
 
 static int ReadOverTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbegtt (tabinfo->tp, tabinfo->cp_amp, row, tabrow->ccdamp, SZ_CBUF);
 	if (c_iraferr())
@@ -574,7 +574,7 @@ static int ReadOverTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
 static int CloseOverTab (TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbtclo (tabinfo->tp);
 	if (c_iraferr())

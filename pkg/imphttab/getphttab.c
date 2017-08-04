@@ -82,7 +82,7 @@ int GetPhotTab (PhotPar *obs, char *photmode) {
        where ref is the information about the reference file from the header
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     PhtCols tabinfo;    /* pointer to table descriptor, etc */
     PhtRow tabrow;        /* values read from a table row */
@@ -281,7 +281,7 @@ int GetPhotTab (PhotPar *obs, char *photmode) {
  */
 static int OpenPhotTab (char *tabname, char *photvar, PhtCols *tabinfo) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     char tname[SZ_FNAME];
     char **colnames, **ecolnames, **pncolnames, **pvcolnames;
@@ -409,7 +409,7 @@ static int InterpretPhotmode(char *photmode, PhotPar *obs){
     char **obsnames;
     int obselems;
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Temporary string for parameterized variable value from photmode */
     char tempmode[SZ_FITS_REC];
@@ -578,7 +578,7 @@ int PrintMissingCols_IMPHTTAB (int missing, int numcols, int *nocol,
        IRAFPointer tp    i: pointer to table, close it if necessary
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int j;
     /* If any columns are missing... */
     if (missing) {
@@ -603,7 +603,7 @@ int PrintMissingCols_IMPHTTAB (int missing, int numcols, int *nocol,
 /* This routine reads the relevant data from one row. */
 static int ReadPhotTab (PhtCols *tabinfo, int row, PhtRow *tabrow) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     c_tbegtt (tabinfo->tp, tabinfo->cp_obsmode, row,
             tabrow->obsmode, SZ_FITS_REC-1);
@@ -630,7 +630,7 @@ static int ReadPhotArray (PhtCols *tabinfo, int row, PhtRow *tabrow) {
     col=0;
     i=0;
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     c_tbegtt (tabinfo->tp, tabinfo->cp_datacol, row,
             tabrow->datacol, SZ_COLNAME-1);
@@ -1146,7 +1146,7 @@ static void ClosePhotRow (PhtRow *tabrow) {
 /* This routine closes the imphttab table. */
 static int ClosePhotTab (PhtCols *tabinfo){
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     c_tbtclo (tabinfo->tp);
     if (c_iraferr())
@@ -1224,7 +1224,7 @@ void FreeBoundingPoint(BoundingPoint *point){
 static int PhotRowPedigree (PhotPar *obs, int row,
         IRAFPointer tp, IRAFPointer cp_pedigree, IRAFPointer cp_descrip) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Get pedigree and descrip.  If either or both are missing,
        that's not an error in this case.
@@ -1289,7 +1289,7 @@ void InitPhotPar(PhotPar *obs, char *name, char *pedigree) {
 
 
 int AllocPhotPar(PhotPar *obs, int npar){
-    int status = HSTCAL_OK;
+    int status = 0;
     int i;
 
     obs->npar = npar;

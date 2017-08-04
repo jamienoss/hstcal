@@ -38,7 +38,7 @@
 
 int TabPedigree (RefTab *ref) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	IRAFPointer tp;		/* for the reference table */
 	int GotFileName (char *);

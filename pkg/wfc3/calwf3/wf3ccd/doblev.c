@@ -94,7 +94,7 @@ int *overscan   io: true if bias determined from an overscan region in x
 int *driftcorr   o: true means correction for drift along lines was applied
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double biaslevel;	 /* value to subtract from a line of image */
 	double averagedrift;	 /* drift averaged over all (output) columns */
@@ -414,7 +414,7 @@ short sdqflags    i: dq flag value representing a bad pixel
 floar rn          i: calibrated readnoise level for this amp
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double biaslevel;	/* bias level in one line of input image */
 	int too_few = 0;	/* number of lines with too few good pixels */

@@ -44,7 +44,7 @@ int rej_init (IODescPtr ipsci[], IODescPtr ipdq[], clpar *par, int nimgs,
 	      int dim_x, int dim_y, multiamp noise, multiamp gain, float efac[],
 	      float skyval[], DataUnits bunit[], SingleGroup *sg, float *work) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     float  scale, val, raw, raw0, signal0;
     float  *buf;

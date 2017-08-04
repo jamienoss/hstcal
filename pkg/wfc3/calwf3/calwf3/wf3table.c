@@ -80,7 +80,7 @@ int LoadAsn (AsnInfo *asn) {
      **  asn			io: Association info structure
      */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     void printInfo (AsnInfo *);
     int SetInput (AsnInfo *);
     int SetAsnSingle (AsnInfo *);
@@ -138,7 +138,7 @@ int LoadAsn (AsnInfo *asn) {
 
 int SetAsnSingle (AsnInfo *asn){
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int numsp = 1;
     int i;
 
@@ -169,7 +169,7 @@ int SetInput (AsnInfo *asn) {
     /* Arguments:
      **  asn			io: Association info structure
      */	
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Local Variables */
     char filename[SZ_FNAME+1];	
@@ -463,7 +463,7 @@ int GetAsnTable (AsnInfo *asn) {
     /* Arguments:
      **	asn		o: Association info structure
      */
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Local variables */
     int i;				/* loop index */
@@ -1036,7 +1036,7 @@ void initAsnInfo (AsnInfo *asn) {
 
 int allocAsnInfo (AsnInfo *asn, int numsp, int *spmems) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Local variables */
     int i;		/* loop index */
@@ -1203,7 +1203,7 @@ int GetGlobalInfo (AsnInfo *asn) {
     /* Arguments:
      **	asn	io: association info structure
      */
-    int status = HSTCAL_OK;
+    int status = 0;
     Hdr phdr;               /* primary header */
 
     char detector[SZ_FITS_REC+1];
@@ -1294,7 +1294,7 @@ int checkGlobalInfo (AsnInfo *asn) {
     /* Arguments:
      **	asn	io: Association info structure
      */
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Check instrument = WF3 */
     if (strncmp (asn->instr, "WFC3", 4) != 0 ) {
@@ -1399,7 +1399,7 @@ static int IsProduct (char *input) {
 
 int GetAsnName (char *filename, char *asn_name) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     IODescPtr im;           /* descriptor for an image */
     Hdr phdr;               /* primary header */
 
@@ -1443,7 +1443,7 @@ int updateAsnTable (AsnInfo *asn, int prodid, int posid) {
      **	prodid		i: product id for member that needs to be updated
      **	posid		i: position id for member that needs to be updated
      */
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /* Local variables */
     int col;			/* loop index */
@@ -1516,7 +1516,7 @@ int updateAsnTable (AsnInfo *asn, int prodid, int posid) {
 
 static int UpdateHdr (char *output) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     Hdr phdr;               /* primary header */
     IODescPtr im;		/* descriptor for output image */

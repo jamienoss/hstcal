@@ -24,7 +24,7 @@ int bin[2]       o: pixel size in X and Y
 int corner[2]    o: corner of subarray in X and Y
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double ltm[2];		/* diagonal elements of MWCS matrix */
 	double ltv[2];		/* MWCS linear transformation vector */

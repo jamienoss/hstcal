@@ -21,7 +21,7 @@ ACSInfo *acs    i: calibration switches, etc
 SingleGroup *x    io: image to be calibrated; primary header is modified
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     char *photstr;		/* the photmode string */
     char *scratch;

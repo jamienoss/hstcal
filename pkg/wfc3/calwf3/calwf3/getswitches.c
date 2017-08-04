@@ -35,7 +35,7 @@ CCD_Switch *sw  o: values (0 or 1) of calibration switches
 Hdr *phdr       i: primary header
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	if (GetSw (phdr, "ATODCORR", &sw->atodcorr))
 	    return (status);
@@ -92,7 +92,7 @@ IR_Switch *sw  o: values (0 or 1) of calibration switches
 Hdr *phdr       i: primary header
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	if (GetSw (phdr, "ZSIGCORR", &sw->zsigcorr))
 	    return (status);
@@ -133,7 +133,7 @@ char *calswitch  i: name of keyword (e.g. FLATCORR)
 int *flag        o: value (0 or 1) of calibration switch
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int GetSwitch (Hdr *, char *, int *);
 

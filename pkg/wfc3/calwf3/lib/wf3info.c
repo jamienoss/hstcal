@@ -226,7 +226,7 @@ void InitRefImg (RefImage *img) {
 int GetImageRef (RefFileInfo *refnames, Hdr *phdr,
 		char *keyword, RefImage *image, int *calswitch) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int GetRefName (RefFileInfo *, Hdr *, char *, char *);
 	int ImgPedigree (RefImage *);
@@ -259,7 +259,7 @@ int GetImageRef (RefFileInfo *refnames, Hdr *phdr,
 int GetTabRef (RefFileInfo *refnames, Hdr *phdr,
 		char *keyword, RefTab *table, int *calswitch) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int GetRefName (RefFileInfo *, Hdr *, char *, char *);
 	int TabPedigree (RefTab *);
@@ -314,7 +314,7 @@ void CheckTabType (RefTab *table, char *filetype, char *keyword, int *badtype) {
 
 int CheckFilter (char *image, char *filter, char *keyword, int *badtype) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	FitsKw key;		/* location of keyword in header */
 	IODescPtr im;		/* descriptor for primary header unit */
@@ -365,7 +365,7 @@ int CheckFilter (char *image, char *filter, char *keyword, int *badtype) {
 
 int CheckDetector (char *image, int detector, char *keyword, int *badtype) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	FitsKw key;		/* location of keyword in header */
 	IODescPtr im;		/* descriptor for primary header unit */
@@ -422,7 +422,7 @@ int CheckDetector (char *image, int detector, char *keyword, int *badtype) {
 
 int CheckGain (char *image, float gain, char *keyword, int *badtype) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	FitsKw key;		/* location of keyword in header */
 	IODescPtr im;   /* descriptor for primary header unit */

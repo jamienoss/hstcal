@@ -49,7 +49,7 @@ int doFlash (ACSInfo *acs2d, SingleGroup *x, float *meanflash) {
        float *meanflash   o: mean of post-flash image values subtracted
      */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     SingleGroupLine y, z;  /* y and z are scratch space */
     int extver = 1;        /* get this imset from post-flash image */

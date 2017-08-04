@@ -58,7 +58,7 @@ static void FreeAcsInput (char **, int);
 int AcsSum (char *input, char *output, char *mtype, int printtime, int verbose)
 {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     IRAFPointer tpin;
 
@@ -229,7 +229,7 @@ AcsSumInfo *acs  io: calibration switches and info
 Hdr *phdr       i: primary header
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int sdqflags;            /* "serious" data quality flags */
     int nextend;            /* number of FITS extensions */
     int nrptexp;            /* number of exposures */
@@ -298,7 +298,7 @@ Hdr *phdr       i: primary header
 
 static int SumGrps (AcsSumInfo *acs, char *mtype) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     SingleGroup x;                /* first imset */
     SingleGroupLine y;            /* line from Nth imset */
     double exptime;                /* exposure time of current image */
@@ -480,7 +480,7 @@ double *expend    i: last exposure end time read from input file
 int nimages       i: the number of imsets that were combined
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int PutKeyDbl (Hdr *, char *, double, char *);
     int PutKeyInt (Hdr *, char *, int, char *);
     int PutKeyStr (Hdr *, char *, char *, char *);
@@ -578,7 +578,7 @@ int line             i: line from input/output to be summed
 SingleGroupLine *b   i: second input data line
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int i;
     short dqa, dqb, dqab;    /* data quality for a, b, combined */
@@ -611,7 +611,7 @@ SingleGroupLine *b   i: second input data line
 
 void InitSumTrl (char *input, char *output) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     IRAFPointer    tpin;
     int n;
 

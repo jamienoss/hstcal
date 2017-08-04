@@ -18,7 +18,7 @@ int bin[2]       o: pixel size in X and Y
 int corner[2]    o: corner of subarray in X and Y
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	double dbinx, dbiny, dxcorner, dycorner;
 
 	dbinx = (double)rsize / ltm[0];

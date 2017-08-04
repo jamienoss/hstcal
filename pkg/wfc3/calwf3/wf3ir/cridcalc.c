@@ -31,7 +31,7 @@ static int RejFirstRead (short *, float *, short, float);
 static int RejCRs (short *, float *, short, float, int *);
 static void EstimateDarkandGlow(const short nsamp,float *time,float,float *tot_ADUs);
 
-int status = HSTCAL_OK;
+int status = 0;
 
 static int  crrej (WF3Info *, MultiNicmosGroup *, SingleNicmosGroup *);
 static void fitsamps (const short, float *, float *, short *,float *, float *, float,

@@ -29,7 +29,7 @@ void Init2DTrl (char *, char *);
 int ACS2d (char *input, char *output, CalSwitch *acs2d_sw, RefFileInfo *refnames,
 		int printtime, int verbose) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	ACSInfo acs2d;	/* calibration switches, reference files, etc */
 	int extver;
@@ -169,7 +169,7 @@ int ACS2d (char *input, char *output, CalSwitch *acs2d_sw, RefFileInfo *refnames
 
 void Init2DTrl (char *input, char *output) {
 	
-	int status = HSTCAL_OK;
+	int status = 0;
 	int exist;
 
 	char trl_in[ACS_LINE+1]; 	/* trailer filename for input */

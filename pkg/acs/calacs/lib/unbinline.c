@@ -41,7 +41,7 @@ ACSsect *a        i: input binned data
 ACSsect *b        o: output expanded data
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	double block[2];	/* number of input pixels for one output */
 	double offset[2] = {0., 0.};	/* offset of binned image */

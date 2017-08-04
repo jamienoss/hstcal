@@ -44,7 +44,7 @@ int doPhot (ACSInfo *acs2d, SingleGroup *x) {
    SingleGroup *x    io: image to be calibrated; primary header is modified
    */
 
-  int status = HSTCAL_OK;
+  int status = 0;
 
   PhotPar obs;
 

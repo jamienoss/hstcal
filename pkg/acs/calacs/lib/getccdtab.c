@@ -101,7 +101,7 @@ int     dimx      i: number of columns in exposure
 int     dimy      i: number of lines in exposure
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	TblInfo tabinfo;	/* pointer to table descriptor, etc */
 	TblRow tabrow;		/* values read from a table row */
@@ -210,7 +210,7 @@ int     dimy      i: number of lines in exposure
 
 static int OpenCCDTab (char *tname, TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
     int colnum, datatype, lendata, lenfmt;
 	char *colname;
@@ -346,7 +346,7 @@ char *tabname		i: name of table columns were read from
 IRAFPointer tp		i: pointer to table, close it if necessary
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int j;
 	/* If any columns are missing... */
 	if (missing) {
@@ -372,7 +372,7 @@ IRAFPointer tp		i: pointer to table, close it if necessary
 
 static int ReadCCDTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbegtt (tabinfo->tp, tabinfo->cp_amp, row,
 			tabrow->ccdamp, ACS_CBUF-1);
@@ -468,7 +468,7 @@ static int ReadCCDTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
 static int CloseCCDTab (TblInfo *tabinfo) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	c_tbtclo (tabinfo->tp);
 	if (c_iraferr())

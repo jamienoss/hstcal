@@ -62,7 +62,7 @@ int doDark (ACSInfo *acs2d, SingleGroup *x, float *meandark) {
    float *meandark    o: mean of dark image values subtracted
    */
   
-  int status = HSTCAL_OK;
+  int status = 0;
 
   const float darkscaling = 3.0;  /* Extra idle time */
   

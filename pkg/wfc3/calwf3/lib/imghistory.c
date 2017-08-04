@@ -15,7 +15,7 @@ RefImage *ref     i: info about reference image
 Hdr *phdr         io: header to receive history records
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	char history[SZ_LINE+1];
 

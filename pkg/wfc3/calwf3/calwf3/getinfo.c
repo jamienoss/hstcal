@@ -37,7 +37,7 @@ CCD_Switch *sci_sw    o: all calibration switches (0 or 1) for science file
 RefFileInfo *sciref  io: list of keyword,filename pairs for science file
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	IODescPtr im;		/* descriptor for an image */
 	Hdr phdr;		/* primary header */
@@ -118,7 +118,7 @@ IR_Switch *sci_sw     o: all calibration switches (0 or 1) for science file
 RefFileInfo *sciref  io: list of keyword,filename pairs for science file
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	IODescPtr im;		/* descriptor for an image */
 	Hdr phdr;		/* primary header */

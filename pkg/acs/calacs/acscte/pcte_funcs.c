@@ -20,7 +20,7 @@
 
 int getCTE_NAME(char * filename, char * cteName, int cteNameBufferLength)
 {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     Hdr hdr;
     initHdr(&hdr);//For correctness (this is foolishly initialized in LoadHdr())
@@ -44,7 +44,7 @@ int getCTE_NAME(char * filename, char * cteName, int cteNameBufferLength)
 
 int PixCteParams (char *filename, const double expstart, ACSCTEParams *pars) {
 
-  int status = HSTCAL_OK; /* variable for return status */
+  int status = 0; /* variable for return status */
 
   /* local variables */
   /* hstio variables */
@@ -451,7 +451,7 @@ int PixCteParams (char *filename, const double expstart, ACSCTEParams *pars) {
  */
 int CompareCteParams(SingleGroup *x, ACSCTEParams *pars) {
 
-  int status = HSTCAL_OK;
+  int status = 0;
 
   /* functions from calacs/lib/key.c */
   int GetKeyInt (Hdr *hd, char *keyword, int use_def, int def, int *value);
@@ -578,7 +578,7 @@ int CompareCteParams(SingleGroup *x, ACSCTEParams *pars) {
 int CalcCteFrac(double * cte_frac, const double expstart, const double scalemjd[NUM_SCALE], const double scaleval[NUM_SCALE])
 {
 
-  int status = HSTCAL_OK;
+  int status = 0;
 
   /* iteration variables */
   int i;
@@ -642,7 +642,7 @@ int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[N
                    double chg_open_interp[MAX_TAIL_LEN*NUM_LOGQ]) {
 
   /* status variable for return */
-  int status = HSTCAL_OK;
+  int status = 0;
 
   /* index variables for tracking where we are in psi_node/chg_leak.
    * these will always be one apart. so we don't really need two, but
@@ -727,7 +727,7 @@ int InterpolatePhi(const double dtde_l[NUM_PHI], const int q_dtde[NUM_PHI],
                    const int shft_nit, double dtde_q[MAX_PHI]) {
 
   /* status variable for return */
-  int status = HSTCAL_OK;
+  int status = 0;
 
   int p; /* iteration variable over phi nodes in reference file */
   int q; /* iteration variable over single phi values between nodes in ref file */
@@ -778,7 +778,7 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
                     double dpde_l[NUM_LEV]) {
 
   /* status variable for return */
-  int status = HSTCAL_OK;
+  int status = 0;
 
   int l,t;  /* iteration variables for tail and levels */
   int q;    /* iteration variable for q levels in between those specified in levels */
@@ -870,7 +870,7 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
   */
 
   /* status variable for return */
-  int status = HSTCAL_OK;
+  int status = 0;
 
   /* iteration variables */
   int i, j, it_count;

@@ -75,7 +75,7 @@ int *driftcorr       i: true if correction can be applied
 float rn             i: readnoise (units of DN)
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	double *scratch;
 	double value;		/* median of values in column */
 	double zerocol;		/* zero point for fit */

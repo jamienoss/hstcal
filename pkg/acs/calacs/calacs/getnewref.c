@@ -21,7 +21,7 @@ char *keyword     i: keyword name for reference file
 RefFileInfo ref  io: list of keyword,filename pairs
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	char *filename;
 	int GetKeyStr (Hdr *, char *, int, char *, char *, int);
 	int NewRefFile (RefFileInfo *, char *, char *);

@@ -22,7 +22,7 @@ int FindBlev (SingleGroup *x, int j, int *biassect, short sdqflags,
    int *npix           o: number of pixels used to compute bias level
    */
   
-	int status = HSTCAL_OK;
+	int status = 0;
   
 	double *over;	/* values extracted from overscan region */
 	int nvals;	/* number of good pixels extracted from overscan */

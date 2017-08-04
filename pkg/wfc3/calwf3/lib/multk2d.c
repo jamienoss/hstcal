@@ -11,7 +11,7 @@ SingleGroup *a   io: input data; output product
 float k          i: multiply a by this constant
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int i, j;
 	int dimx, dimy;

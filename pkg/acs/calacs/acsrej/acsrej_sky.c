@@ -16,7 +16,7 @@
 void acsrej_sky (char *sky, IODescPtr ipsci[], IODescPtr ipdq[], 
         int nimgs, short badinpdq, float skyval[])
 {
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int         *histgrm;   /* pointer to the histogram */
     int         nbins;      /* number of bins */

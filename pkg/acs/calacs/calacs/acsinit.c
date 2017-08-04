@@ -22,7 +22,7 @@ int ACSRefInit (ACSInfo *acs, CalSwitch *sci_sw, RefFileInfo *sciref) {
        sciref   o: reference file name and info
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int missing;  /* number of missing reference files */
 
@@ -102,7 +102,7 @@ void ACSDefaults (ACSInfo *acs) {
 */
 int InsertACSSuffix (ACSInfo *acs) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int MkName (char *, char *, char *, char *, char *, int);
 

@@ -71,7 +71,7 @@ int WF3cte (char *input, char *output, CCD_Switch *cte_sw,
     CTE correction in ACS which occurs later in the process after basic structures are defined.
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     WF3Info wf3; /*structure with calibration switches and reference files for passing*/
     Hdr phdr; /*primary header for input image, all output information saved here*/
@@ -596,11 +596,9 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
        then serial-shifted to the left.
 
 */
-    int status = HSTCAL_OK;
-
     int i,j,k;              /*loop counters*/
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
-    int status = HSTCAL_OK;      /* variable for return status */
+    int status = 0;      /* variable for return status */
     float bias_post[4];
     float bsig_post[4];
     float bias_pre[4];
@@ -664,7 +662,7 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
 int findPostScanBias(SingleGroup *raz, float *mean, float *sigma){
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int arrsize = 55377;
     int i,j,k;              /*Looping variables */
     float plist[arrsize];  /*bias bpixels to measure*/
@@ -732,7 +730,7 @@ int findPreScanBias(SingleGroup *raz, float *mean, float *sigma){
     /** this calls resistmean, which does a better job clipping outlying pixels
       that just a standard stddev clip single pass*/
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int arrsize = 55377;
     int i,j,k;              /*Looping variables */
     float plist[arrsize];    /*bias pixels to measure*/
@@ -806,7 +804,7 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
 
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int i, j, NIT; /*loop variables*/
     int imid;
@@ -963,7 +961,7 @@ int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS]
        accommodation is made for both considerations.
        */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     double mval=0.0;
     double    dval0, dval0u, w0;
@@ -1070,7 +1068,7 @@ int find_dadj(int i ,int j, double obsloc[][RAZ_ROWS], double rszloc[][RAZ_ROWS]
  ***/
 int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, CTEParams *cte) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int i,j;
     double cte_i=0.0;
@@ -1167,7 +1165,7 @@ int rsz2rsc(WF3Info *wf3, SingleGroup *rsz, SingleGroup *rsc, CTEParams *cte) {
 
 int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEParams *cte, int verbose, double expstart){
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     /*looping vars*/
     int NREDO, REDO;
@@ -1418,7 +1416,7 @@ int inverse_cte_blur(SingleGroup *rsz, SingleGroup *rsc, SingleGroup *fff, CTEPa
 
 int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int j;
     int ttrap;
 
@@ -1516,7 +1514,7 @@ int sim_colreadout_l(double *pixi, double *pixo, double *pixf, CTEParams *cte){
 
 int initCTETrl (char *input, char *output) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     char trl_in[SZ_LINE+1];     /* trailer filename for input */
     char trl_out[SZ_LINE+1];    /* output trailer filename */

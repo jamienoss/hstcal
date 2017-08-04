@@ -18,7 +18,7 @@ int to_electrons(ACSInfo *acs, SingleGroup *x) {
    int *done         o: true if we actually did assign error array values
    */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	float rn[NAMPS];
   float gain[NAMPS];		    /* gain values for observation */

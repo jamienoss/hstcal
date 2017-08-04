@@ -22,6 +22,7 @@ int CreateEmptyChip(WF3Info *wf3, SingleGroup *full){
      alloc and init the full data with the group and sizes you want
   */
 
+  int status = 0;
   int row, col;
 
   if (full->group_num == 1){
@@ -79,7 +80,7 @@ int Sub2Full(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int real_dq, int f
   int col = 0;
   int row = 0;
   int scix, sciy;
-
+  int status = 0;
 
   /*zero dq boolean says whether to use the actual dq values or another values
   flag can be used to initialize the dq array to something other than 0
@@ -156,7 +157,7 @@ int Full2Sub(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int dq, int sci, i
   int col, row;
   int scix=0;
   int sciy=0;
-
+  int status = 0;
 
   /*dq boolean says to  copy back the DQ values to the full array
     sci boolean says to copy the science pixels*/

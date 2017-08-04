@@ -136,7 +136,7 @@ int FindOverscan (ACSInfo *acs, int nx, int ny, int *overscan) {
        int overscan          o: indicates whether there is overscan or not
     */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int row;
     TblInfo tabinfo;
     TblRow tabrow;
@@ -235,7 +235,7 @@ int FindOverscan (ACSInfo *acs, int nx, int ny, int *overscan) {
 */
 static int OpenOverTab (char *tname, TblInfo *tabinfo) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int nocol[NUMCOLS];
     int i, j, missing;
@@ -320,7 +320,7 @@ static int OpenOverTab (char *tname, TblInfo *tabinfo) {
 */
 static int ReadOverTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     c_tbegtt (tabinfo->tp, tabinfo->cp_amp, row,
             tabrow->ccdamp, ACS_CBUF-1);
@@ -394,7 +394,7 @@ static int ReadOverTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 /* This routine closes the oscn table. */
 static int CloseOverTab (TblInfo *tabinfo) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     c_tbtclo (tabinfo->tp);
     if (c_iraferr())

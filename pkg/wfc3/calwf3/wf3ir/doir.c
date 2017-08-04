@@ -7,7 +7,7 @@
 # include "hstcalerr.h"
 # include "trl.h"
 
-int status = HSTCAL_OK;
+int status = 0;
 
 /* DOIR: Applies IR calibration steps to an input science data file.
 ** All calibration steps modify the input image data in-place.

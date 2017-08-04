@@ -84,7 +84,7 @@ void PrSwitch (char *, int);
 int WF32d (char *input, char *output, CCD_Switch *wf32d_sw,
 	   RefFileInfo *refnames, int printtime, int verbose) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	WF3Info wf32d;	/* calibration switches, reference files, etc */
 	int extver;
@@ -224,7 +224,7 @@ int WF32d (char *input, char *output, CCD_Switch *wf32d_sw,
 
 void Init2DTrl (char *input, char *output) {
 
-	int status = HSTCAL_OK;
+	int status = 0;
 	int exist;
 
 	char trl_in[SZ_LINE+1]; 	/* trailer filename for input */

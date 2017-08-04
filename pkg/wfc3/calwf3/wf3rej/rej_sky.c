@@ -37,7 +37,7 @@ void rej_sky (char *sky, IODescPtr ipsci[], IODescPtr ipdq[], int nimgs,
 **				units of count rates. (PR 69969; Trac #814)
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int         *histgrm;   /* pointer to the histogram */
     int         nbins;      /* number of bins */

@@ -74,7 +74,7 @@ int MkOutName (char *input, char **isuffix, char **osuffix, int nsuffix,
        int maxch          i: maximum size of output
        */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     char *extn;		/* extension on input (or default) */
 
     int is_len;		/* length of current isuffix */
@@ -158,7 +158,7 @@ int MkOutName (char *input, char **isuffix, char **osuffix, int nsuffix,
 
 int DefaultExtn (char *input, int maxch) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
     int dotlocn;		/* location of '.' in input name */
 
     dotlocn = FindExtn (input);
@@ -202,7 +202,7 @@ static int FindExtn (char *fname) {
 
 static int strcatN (char *outstr, char *instr, int maxch) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     if (strlen (instr) + strlen (outstr) > maxch) {
         trlerror ("(MkOutName) strings are too long:");
@@ -221,7 +221,7 @@ static int strcatN (char *outstr, char *instr, int maxch) {
    */
 int MkNewExtn (char *input, char *newext) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     int dotlocn;
     char *output;

@@ -28,7 +28,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
             RefFileInfo *refnames, int printtime, int verbose,
             const unsigned nThreads, const unsigned cteAlgorithmGen, const char * pcteTabNameFromCmd) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     ACSInfo acs;	/* calibration switches, reference files, etc */
 
@@ -159,7 +159,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
 
 void InitCTETrl (char *input, char *output) {
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     char trl_in[ACS_LINE+1]; 	/* trailer filename for input */
     char trl_out[ACS_LINE+1]; 	/* output trailer filename */

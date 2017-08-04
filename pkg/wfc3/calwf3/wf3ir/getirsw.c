@@ -27,7 +27,7 @@ Revision History:
 int GetirSw (WF3Info *wf3, Hdr *phdr) {
 
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	if (GetSw (phdr, "ZSIGCORR", &wf3->zsigcorr))
 	    return (status);
@@ -65,7 +65,7 @@ char *calswitch  i: name of keyword (e.g. FLATCORR)
 int *flag        o: value (0 or 1) of calibration switch
 */
 
-	int status = HSTCAL_OK;
+	int status = 0;
 
 	int GetSwitch (Hdr *, char *, int *);
 

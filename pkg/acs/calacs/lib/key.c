@@ -54,7 +54,7 @@ double def        i: value to be returned if keyword not found
 double *value     o: value gotten
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;		/* location of keyword in header */
 
     key = findKw (hd, keyword);
@@ -93,7 +93,7 @@ float def         i: value to be returned if keyword not found
 float *value      o: value gotten
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;		/* location of keyword in header */
 
     key = findKw (hd, keyword);
@@ -133,7 +133,7 @@ int def           i: value to be returned if keyword not found
 int *value        o: value gotten
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;		/* location of keyword in header */
 
     key = findKw (hd, keyword);
@@ -173,7 +173,7 @@ Bool def          i: value to be returned if keyword not found
 Bool *value       o: value gotten
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;		/* location of keyword in header */
 
     key = findKw (hd, keyword);
@@ -214,7 +214,7 @@ char *value       o: value gotten
 int maxch         i: allocated size of string
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
     FitsKw key;		/* location of keyword in header */
     int i;
 
@@ -270,7 +270,7 @@ double value      i: value to be updated or added
 char *comment     i: comment to add, if keyword doesn't exist
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     status = putKeyD (hd, keyword, value, comment);
 
@@ -293,7 +293,7 @@ float value       i: value to be updated or added
 char *comment     i: comment to add, if keyword doesn't exist
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     status = putKeyF (hd, keyword, value, comment);
 
@@ -316,7 +316,7 @@ int value         i: value to be updated or added
 char *comment     i: comment to add, if keyword doesn't exist
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     status = putKeyI (hd, keyword, value, comment);
 
@@ -339,7 +339,7 @@ Bool value        i: value to be updated or added
 char *comment     i: comment to add, if keyword doesn't exist
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     status = putKeyB (hd, keyword, value, comment);
 
@@ -362,7 +362,7 @@ char *value       i: value to be updated or added
 char *comment     i: comment to add, if keyword doesn't exist
 */
 
-    int status = HSTCAL_OK;
+    int status = 0;
 
     status = putKeyS (hd, keyword, value, comment);
 
