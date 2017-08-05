@@ -43,7 +43,7 @@ int main (int argc, char **argv) {
 
     /* Initialize the structure for managing trailer file comments */
     InitTrlBuf ();
-    trlVersion();
+    trlGitInfo();
 
     /* Reject cosmic rays. */
     if (AcsRej (input, output, mtype, &par, newpar)) {

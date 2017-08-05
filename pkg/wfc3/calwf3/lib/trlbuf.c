@@ -646,7 +646,7 @@ void trlmessage (char *message) {
 
     void asnmessage (char *);
 
-    if (!message)
+    if (!message || !*message)
         return;
 
     /* Send output to STDOUT and explicitly flush STDOUT, if desired */

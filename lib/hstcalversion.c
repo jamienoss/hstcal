@@ -5,31 +5,43 @@
 
 #include "hstcalversion.h"
 
-char * getVersionInfo(char ** buffer)
+char * sprintfGitInfo(char ** buffer)
 {
     if (!buffer)
         return NULL;
     if (*buffer)
         assert(0); // Incorrect usage - NULL ptr must be passed in.
 
-    const char * format = "Running %s-%s, git branch: %s HEAD @: %s";
-    size_t length = strlen(format) + strlen(APPNAME) + strlen(VERSION) + strlen(BRANCH) + strlen(COMMIT); // NOTE: this doesn't require an explicit +1 for '\0' as it is 8 larger than needed from '%s'.
+    const char * format = "git tag: %s\ngit branch: %s\nHEAD @: %s";
+    size_t length = strlen(format) + strlen(VERSION) + strlen(BRANCH) + strlen(COMMIT); // NOTE: this doesn't require an explicit +1 for '\0' as it is larger than needed due to '%s' & '\n'.
     *buffer = malloc(length*sizeof(char));
     if (!*buffer)
         return NULL;
-    sprintf(*buffer, format, APPNAME, VERSION, BRANCH, COMMIT);
+    sprintf(*buffer, format, VERSION, BRANCH, COMMIT);
     return *buffer;
 }
 
-//Move this to common hstcal/lib/trlbuf.c when finished #191
-void trlVersion(void)
+void printGitInfo(void)
 {
-    char * versionText = NULL;
-    getVersionInfo(&versionText);
-    printf("%s\n", versionText);//trlmessage(versionText); //waiting on #191
-    if (versionText)
+    char * gitInfo = NULL;
+    sprintfGitInfo(&gitInfo);
+    printf("%s\n", gitInfo);
+    if (gitInfo)
     {
-        free(versionText);
-        versionText = NULL;
+        free(gitInfo);
+        gitInfo = NULL;
+    }
+}
+
+//Move this to common hstcal/lib/trlbuf.c when finished #191
+void trlGitInfo(void)
+{
+    char * gitInfo = NULL;
+    sprintfGitInfo(&gitInfo);
+    printf("%s\n", gitInfo);//trlmessage(versionText); //waiting on #191
+    if (gitInfo)
+    {
+        free(gitInfo);
+        gitInfo = NULL;
     }
 }

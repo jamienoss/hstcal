@@ -104,20 +104,36 @@ def _err_color(var, val):
     else:
         return "GREEN"
 
+def call(cmd):
+    try:
+        results = subprocess.run(cmd, shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE)
+        if not results.returncode:
+            return results.stdout.rstrip()
+    except AttributeError:
+        try:
+            results = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+            return str(results).rstrip()
+        except subprocess.CalledProcessError:
+            return None
+    except:
+        return None
+
+    return None
+
 def _get_git_details(conf):
     global APPNAME, VERSION, COMMIT, BRANCH
 
-    results = subprocess.run('git describe --dirty', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if not results.returncode:
-        VERSION = results.stdout.rstrip()
+    tmp = call('git describe --dirty')
+    if tmp:
+        VERSION = tmp
 
-    results = subprocess.run('git rev-parse HEAD', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if not results.returncode:
-        COMMIT = results.stdout.rstrip()
+    tmp = call('git rev-parse HEAD')
+    if tmp:
+        COMMIT = tmp
 
-    results = subprocess.run('git rev-parse --abbrev-ref HEAD', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if not results.returncode:
-        BRANCH = results.stdout.rstrip()
+    tmp = call('git rev-parse --abbrev-ref HEAD')
+    if tmp:
+        BRANCH = tmp
 
     conf.start_msg("Building app")
     conf.end_msg(APPNAME, _warn_color(APPNAME, "UNKNOWN"))

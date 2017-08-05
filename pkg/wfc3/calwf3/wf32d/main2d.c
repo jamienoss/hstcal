@@ -103,7 +103,11 @@ int main (int argc, char **argv) {
 		printf("%s\n",WF3_CAL_VER_NUM);
 		exit(0);
 	    }
-
+        if (!(strcmp(argv[i],"--git")))
+        {
+            printGitInfo();
+            exit(0);
+        }
 	    if (strcmp (argv[i], "-dqi") == 0) {	/* turn on */
 		wf32d_sw.dqicorr = PERFORM;
 		switch_on = 1;
@@ -145,7 +149,7 @@ int main (int argc, char **argv) {
 	    }
 	}
 	if (inlist[0] == '\0' || too_many) {
-	    printf ("syntax:  wf32d [-t] [-v] [-q] [-r] input output\n");
+	    printf ("syntax:  wf32d [-t] [-v] [-q] [-r] [--version] [--git] input output\n");
 	    printf ("  command-line switches:\n");
 	    printf ("       -dqi  -atod\n");
 	    printf ("       -dark -flat -shad -phot -stat\n");
@@ -155,7 +159,7 @@ int main (int argc, char **argv) {
 	
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
-    trlVersion();
+    trlGitInfo();
 
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);

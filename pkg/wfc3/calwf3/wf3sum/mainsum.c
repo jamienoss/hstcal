@@ -91,7 +91,7 @@ int main (int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
-    trlVersion();
+    trlGitInfo();
 
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);

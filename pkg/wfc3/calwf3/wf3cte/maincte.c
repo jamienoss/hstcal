@@ -137,7 +137,7 @@ int main (int argc, char **argv) {
     }
     /* INITIALIZE THE STRUCTURE FOR MANAGING TRAILER FILE COMMENTS */
     InitTrlBuf ();
-    trlVersion();
+    trlGitInfo();
 
     /* COPY COMMAND-LINE VALUE FOR QUIET TO STRUCTURE */
     SetTrlQuietMode(quiet);

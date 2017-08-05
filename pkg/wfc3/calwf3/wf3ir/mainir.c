@@ -106,7 +106,11 @@ int main (int argc, char **argv) {
 		printf("%s\n",WF3_CAL_VER_NUM);
 		exit(0);
 	    }
-
+        if (!(strcmp(argv[i],"--git")))
+        {
+            printGitInfo();
+            exit(0);
+        }
 	    if (argv[i][0] == '-') {
 		for (j = 1;  argv[i][j] != '\0';  j++) {
 		    if (argv[i][j] == 't') {
@@ -134,7 +138,7 @@ int main (int argc, char **argv) {
 	}
     
 	if (inlist[0] == '\0' || too_many) {
-	    printf ("syntax:  wf3ir [-t] [-v] [-q] [-r] input output\n");
+	    printf ("syntax:  wf3ir [-t] [-v] [-q] [-r] [--version] [--git] input output\n");
 	    printf ("  command-line switches:\n");
 	    printf ("       -bseq -pede\n");
 	    FreeNames (inlist, outlist, input, output);
@@ -143,7 +147,7 @@ int main (int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
-    trlVersion();
+    trlGitInfo();
 
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);

@@ -18,7 +18,7 @@ int	status;		/* value of zero indicates OK */
 
 static void printSyntax()
 {
-    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-r] [-1|--nthreads <N>] [--ctegen <1|2>] [--pctetab <path>] input \n");
+    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-r] [--version] [--git] [-1|--nthreads <N>] [--ctegen <1|2>] [--pctetab <path>] input \n");
 }
 
 int main(int argc, char **argv) {
@@ -65,6 +65,11 @@ int main(int argc, char **argv) {
         if (!(strcmp(argv[i],"--version")))
         {
             printf("%s\n",ACS_CAL_VER);
+            exit(0);
+        }
+        if (!(strcmp(argv[i],"--git")))
+        {
+            printGitInfo();
             exit(0);
         }
         if (strncmp(argv[i], "--ctegen", 8) == 0)
@@ -158,7 +163,7 @@ int main(int argc, char **argv) {
 
 	/* Initialize the structure for managing trailer file comments */
 	InitTrlBuf ();
-    trlVersion();
+    trlGitInfo();
 
 	/* Copy command-line value for QUIET to structure */
 	SetTrlQuietMode(quiet);
