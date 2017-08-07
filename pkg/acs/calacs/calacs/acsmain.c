@@ -18,7 +18,7 @@ int	status;		/* value of zero indicates OK */
 
 static void printSyntax()
 {
-    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-r] [--version] [--git] [-1|--nthreads <N>] [--ctegen <1|2>] [--pctetab <path>] input \n");
+    printf ("syntax:  calacs.e [-t] [-s] [-v] [-q] [-r] [--version] [--gitinfo] [-1|--nthreads <N>] [--ctegen <1|2>] [--pctetab <path>] input \n");
 }
 
 int main(int argc, char **argv) {
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
             printf("%s\n",ACS_CAL_VER);
             exit(0);
         }
-        if (!(strcmp(argv[i],"--git")))
+        if (!(strcmp(argv[i],"--gitinfo")))
         {
             printGitInfo();
             exit(0);

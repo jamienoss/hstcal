@@ -53,7 +53,7 @@ int main (int argc, char **argv) {
 			printf("%s\n",WF3_CAL_VER_NUM);
 			exit(0);
 		}
-        if (!(strcmp(argv[i],"--git")))
+        if (!(strcmp(argv[i],"--gitinfo")))
         {
             printGitInfo();
             exit(0);
@@ -88,7 +88,7 @@ int main (int argc, char **argv) {
 	}
 
 	if (input[0] == '\0' || too_many) {
-		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--version] [--git] input \n");
+		printf ("syntax:  calwf3.e [-t] [-s] [-v] [-q] [-r] [-1] [--version] [--gitinfo] input \n");
 		exit (ERROR_RETURN);
 	}
 

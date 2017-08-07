@@ -106,7 +106,7 @@ int main (int argc, char **argv) {
 		printf("%s\n",WF3_CAL_VER_NUM);
 		exit(0);
 	    }
-        if (!(strcmp(argv[i],"--git")))
+        if (!(strcmp(argv[i],"--gitinfo")))
         {
             printGitInfo();
             exit(0);
@@ -153,7 +153,7 @@ int main (int argc, char **argv) {
 	}
 
 	if (inlist[0] == '\0' || too_many) {
-	    printf ("syntax:  wf3ccd [-t] [-v] [-q] [-r] [--version] [--git] input output\n");
+	    printf ("syntax:  wf3ccd [-t] [-v] [-q] [-r] [--version] [--gitinfo] input output\n");
 	    printf ("  command-line switches:\n");
 	    printf ("       -dqi  -atod -blev -bias\n");
 	    FreeNames (inlist, outlist, input, output);
