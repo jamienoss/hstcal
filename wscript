@@ -12,9 +12,6 @@ from waflib import Utils
 from waflib import TaskGen
 
 APPNAME = "HSTCAL"
-VERSION = "UNKNOWN"
-COMMIT = "UNKNOWN"
-BRANCH = "UNKNOWN"
 
 top = '.'
 out = 'build.' + platform.platform()
@@ -106,12 +103,12 @@ def _err_color(var, val):
 
 def call(cmd):
     try:
-        results = subprocess.run(cmd, shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE)
+        results = subprocess.run(cmd, shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if not results.returncode:
             return results.stdout.rstrip()
     except AttributeError:
         try:
-            results = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+            results = subprocess.check_output(cmd, shell=True, universal_newlines=True, stderr=subprocess.PIPE)
             return str(results).rstrip()
         except subprocess.CalledProcessError:
             return None
@@ -120,35 +117,56 @@ def call(cmd):
 
     return None
 
-def _get_git_details(conf):
-    global APPNAME, VERSION, COMMIT, BRANCH
-
+def _get_git_details(ctx):
     tmp = call('git describe --dirty')
     if tmp:
-        VERSION = tmp
+        ctx.env.gitTag = tmp
 
     tmp = call('git rev-parse HEAD')
     if tmp:
-        COMMIT = tmp
+        ctx.env.gitCommit = tmp
 
     tmp = call('git rev-parse --abbrev-ref HEAD')
     if tmp:
-        BRANCH = tmp
+        ctx.env.gitBranch = tmp
 
-    conf.start_msg("Building app")
-    conf.end_msg(APPNAME, _warn_color(APPNAME, "UNKNOWN"))
-    conf.start_msg("Version")
-    conf.end_msg(VERSION, _warn_color(VERSION, "UNKNOWN"))
-    conf.start_msg("git branch")
-    conf.end_msg(BRANCH, _warn_color(BRANCH, "UNKNOWN"))
-    conf.start_msg("git HEAD commit")
-    conf.end_msg(COMMIT, _warn_color(COMMIT, "UNKNOWN"))
+def _use_git_details(ctx):
+    _get_git_details(ctx)
 
-    #if conf.check_cc(cflags='-D TESTVAR="testValue"'):
-    conf.env.append_value('CFLAGS', '-D APPNAME="{0}"'.format(APPNAME))
-    conf.env.append_value('CFLAGS', '-D VERSION="{0}"'.format(VERSION))
-    conf.env.append_value('CFLAGS', '-D BRANCH="{0}"'.format(BRANCH))
-    conf.env.append_value('CFLAGS', '-D COMMIT="{0}"'.format(COMMIT))
+    ctx.start_msg("Building app")
+    ctx.end_msg(APPNAME, _warn_color(APPNAME, "UNKNOWN"))
+    ctx.start_msg("Version")
+    ctx.end_msg(ctx.env.gitTag, _warn_color(ctx.env.gitTag, "UNKNOWN"))
+    ctx.start_msg("git branch")
+    ctx.end_msg(ctx.env.gitCommit, _warn_color(ctx.env.gitCommit, "UNKNOWN"))
+    ctx.start_msg("git HEAD commit")
+    ctx.end_msg(ctx.env.gitBranch, _warn_color(ctx.env.gitBranch, "UNKNOWN"))
+
+    ctx.env.append_value('CFLAGS', '-D APPNAME="{0}"'.format(APPNAME))
+    ctx.env.append_value('CFLAGS', '-D VERSION="{0}"'.format(ctx.env.gitTag))
+    ctx.env.append_value('CFLAGS', '-D BRANCH="{0}"'.format(ctx.env.gitBranch))
+    ctx.env.append_value('CFLAGS', '-D COMMIT="{0}"'.format(ctx.env.gitCommit))
+
+def _is_same_git_details(ctx, diffList):
+    oldTag = ctx.env.gitTag[:]
+    oldCommit = ctx.env.gitCommit[:]
+    oldBranch = ctx.env.gitBranch[:]
+
+    _get_git_details(ctx)
+
+    isSame = True
+
+    if ctx.env.gitTag != oldTag:
+        diffList.append("'{0}' -> '{1}'".format(oldTag, ctx.env.gitTag))
+        isSame = False
+    if ctx.env.gitCommit != oldCommit:
+        diffList.append("'{0}' -> '{1}'\n".format(oldCommit, ctx.env.gitCommit))
+        isSame = False
+    if ctx.env.gitBranch != oldBranch:
+        diffList.append("'{0}' -> '{1}'\n".format(oldBranch, ctx.env.gitBranch))
+        isSame = False
+
+    return isSame
 
 def _check_mac_osx_version(floor_version):
     '''
@@ -235,6 +253,10 @@ def configure(conf):
     # NOTE: All of the variables in conf.env are defined for use by
     # wscript files in subdirectories.
 
+    conf.env.gitTag = "UNKNOWN"
+    conf.env.gitCommit = "UNKNOWN"
+    conf.env.gitBranch = "UNKNOWN"
+
     # Read in options from a file.  The file is just a set of
     # commandline arguments in the same syntax.  May be spread across
     # multiple lines.
@@ -248,7 +270,7 @@ def configure(conf):
                     Options.options.__dict__[key] = val
         fd.close()
 
-    _get_git_details(conf)
+    _use_git_details(conf)
 
     # Load C compiler support
     conf.load('compiler_c')
@@ -327,6 +349,13 @@ Press any key to continue or Ctrl+c to abort...\033[0m"""
     conf.recurse('cfitsio')
 
 def build(bld):
+    diffList = []
+    if not _is_same_git_details(bld, diffList):
+        diffString = ''
+        for item in diffList:
+            diffString = diffString + item + '\n'
+        bld.fatal("ERROR: git details differ - please re-configure.\n{0}".format(diffString))
+
     bld(name='lib', always=True)
     bld(name='test', always=True)
 
