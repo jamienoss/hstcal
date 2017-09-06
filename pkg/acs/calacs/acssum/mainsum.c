@@ -101,10 +101,10 @@ int main (int argc, char **argv) {
 	if (output[0] == '\0') {
 	    if (MkName (input, "_asn", "_sfl", "", output, ACS_LINE))
         {
-            CloseTrlBuf ();
             free (input);
             free (output);
             WhichError (status);
+            CloseTrlBuf ();
             exit (ERROR_RETURN);
         }
 	}
