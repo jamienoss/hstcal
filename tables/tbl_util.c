@@ -20,6 +20,66 @@ function value          o: name of the file with the environment variable
                            expanded to its actual value
 */
 
+        if (!filename || *filename == '\0')
+            return NULL;
+
+        //check null termination correctness
+        Bool isNullterminated = False;
+        for (unsigned i = 0; i < CHAR_FNAME_LENGTH+1; ++i)
+        {
+            if (filename[i] == '\0')
+            {
+                isNullterminated = True;
+                break;
+            }
+        }
+        if (!isNullterminated)
+        {
+            //ERROR
+            return NULL;
+        }
+
+        char * ret = malloc((CHAR_FNAME_LENGTH+1)*sizeof(char));
+        const char * dollar = strchr(filename, '$');
+        if (!dollar)
+            return strncpy(ret, filename, CHAR_FNAME_LENGTH+1);
+
+        Bool isUnixType = False;
+        if (dollar == filename)
+            isUnixType = True;
+
+        const char * fnameBegin = isUnixType ? strchr(dollar, '/') : dollar++;
+        if (!fnameBegin)
+            return strncpy(ret, filename, CHAR_FNAME_LENGTH+1);
+
+        unsigned varLength = isUnixType ? fnameBegin - dollar : dollar - filename;
+        char * var = malloc(varLength*sizeof(char));
+        if (!var)
+        {
+            //ERROR
+            return NULL;
+        }
+        const char *
+        memcpy(var, filename+1, varLength*sizeof(char));
+
+        char * value = getenv(var);
+        if (var)
+        {
+            free (var);
+            var = NULL;
+        }
+
+        if (!value)
+            return strncpy(ret, filename, CHAR_FNAME_LENGTH+1);
+
+        strcpy(ret, value);
+        strcat(ret, fnameBegin);
+        return ret;
+
+
+
+
+
         int i, j;
         int dollar, start;
         int done;
