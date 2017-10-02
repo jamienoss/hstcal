@@ -38,7 +38,7 @@ int photcalc (WF3Info *wf3, MultiNicmosGroup *input) {
 	PhotPar obs;
 	float photfnu;
 	char  photmode[CHAR_LINE_LENGTH+1], obsmode[CHAR_LINE_LENGTH+1];
-    int status;
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int GetKeyStr (Hdr *, char *, int, char *, char *, int);

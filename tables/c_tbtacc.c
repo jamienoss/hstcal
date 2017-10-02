@@ -15,7 +15,7 @@ function value          o: 1 if 'tablename' exists and is a table, 0 otherwise
         IRAFPointer tp;
         TableDescr *tbl_descr;
         int value;
-        int status;
+        int status = HSTCAL_OK;
 
         tp = c_tbtopn (tablename, IRAF_READ_ONLY, NULL);
         status = checkError();

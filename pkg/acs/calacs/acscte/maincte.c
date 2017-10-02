@@ -5,8 +5,6 @@
 # include <time.h>
 # include <string.h>
 
-int status = 0;			/* zero is OK */
-
 # include <c_iraf.h>		/* for c_irafinit */
 #include "hstcal.h"
 # include "ximio.h"
@@ -45,6 +43,7 @@ static void printSyntax()
 
 int main (int argc, char **argv) {
 
+    int status = HSTCAL_OK;
     char *inlist;		/* input blv_tmp file name */
     char *outlist;		/* output blc_tmp file name */
     /*int switch_on = 0;*/	/* was any switch specified? */

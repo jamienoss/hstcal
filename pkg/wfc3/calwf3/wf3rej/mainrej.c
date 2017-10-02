@@ -14,7 +14,6 @@
 # include "hstcalversion.h"
 # include "trlbuf.h"
 
-int status = 0;             /* zero is OK */
 struct TrlBuf trlbuf = { 0 };
 
 /* Standard string buffer for use in messages */
@@ -22,6 +21,7 @@ char MsgText[MSG_BUFF_LENGTH]; // Global char auto initialized to '\0'
 
 int main (int argc, char **argv) {
 
+    int status = HSTCAL_OK;
     char    *input, output[CHAR_LINE_LENGTH+1];      /* file names */
     clpar   par;                                    /* parameters used */
     int     newpar[MAX_PAR+1];          /* user specifiable parameters */

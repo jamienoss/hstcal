@@ -95,7 +95,7 @@ void compute_values(char photmode[CHAR_LINE_LENGTH], char test_title[CHAR_LINE_L
                     double ans_photflam, float ans_photplam, float ans_photbw,
                     FILE *fp) {
     PhotPar obs;
-    int status;
+    int status = HSTCAL_OK;
     char refname[CHAR_LINE_LENGTH], refpedigree[SZ_FITS_REC];
     double diff_photflam, diff_photplam, diff_photbw;
 

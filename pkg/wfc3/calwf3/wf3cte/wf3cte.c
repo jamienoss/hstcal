@@ -601,7 +601,6 @@ int raw2raz(WF3Info *wf3, SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
     int i,j,k;              /*loop counters*/
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
-    int status = HSTCAL_OK;      /* variable for return status */
     float bias_post[4];
     float bsig_post[4];
     float bias_pre[4];

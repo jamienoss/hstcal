@@ -4,8 +4,6 @@
 # include <stdlib.h>		/* calloc */
 # include <string.h>
 
-int status = 0;			/* zero is OK */
-
 # include <c_iraf.h>		/* for c_irafinit */
 
 #include "hstcal.h"
@@ -32,6 +30,7 @@ char MsgText[MSG_BUFF_LENGTH]; // Global char auto initialized to '\0'
 
 int main (int argc, char **argv) {
 
+    int status = HSTCAL_OK;
 	char *input, *output;	/* file names */
 	char *mtype;        	/* MEMTYPE of output */
 	int printtime = NO;	/* print time after each step? */

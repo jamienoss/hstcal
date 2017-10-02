@@ -561,8 +561,6 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
     assert(input->sci.data.storageOrder == COLUMNMAJOR);
     output->sci.data.storageOrder = COLUMNMAJOR;
 
-    int status = HSTCAL_OK;
-
     const unsigned nRows = input->sci.data.ny;
     const unsigned nColumns = input->sci.data.nx;
 

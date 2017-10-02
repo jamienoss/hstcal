@@ -15,7 +15,6 @@
 /* CALWF3 driver: retrieves input table name and calls pipeline
  */
 
-int	status;		/* value of zero indicates OK */
 struct TrlBuf trlbuf = { 0 };
 
 /* Standard string buffer for use in messages */
@@ -33,6 +32,7 @@ int main (int argc, char **argv) {
 	int too_many = NO;	/* too many command-line arguments? */
 	int onecpu = NO;  /* suppress openmp usage by using only 1 thread?*/
     int i, j;		/* loop indexes */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
@@ -40,7 +40,6 @@ int main (int argc, char **argv) {
 	void WhichError (int);
 
 	/* Initialize status to OK and MsgText to null */
-	status     = WF3_OK;
 	MsgText[0] = '\0';
 	input[0]   = '\0';
 

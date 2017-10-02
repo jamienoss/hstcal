@@ -5,8 +5,6 @@
 # include <time.h>
 # include <string.h>
 
-int status = 0;			/* zero is OK */
-
 #include "hstcal.h"
 # include "c_iraf.h"		/* for c_irafinit */
 # include "ximio.h"
@@ -40,6 +38,7 @@ char MsgText[MSG_BUFF_LENGTH]; // Global char auto initialized to '\0'
 
 int main (int argc, char **argv) {
 
+    int status = HSTCAL_OK;
 	char *inlist;		/* input file name */
 	char *outlist;		/* output blev file name */
 	int switch_on = 0;	/* was any switch specified? */

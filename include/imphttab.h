@@ -13,7 +13,6 @@
 /* Standard string for use in Error Messages */
 /*char MsgText[CHAR_LINE_LENGTH+1];*/
 void errchk ();                 /* HSTIO error check */
-int status;
 
 /* Codes to specify whether a reference file exists or not. */
 # define EXISTS_YES       1

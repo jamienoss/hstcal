@@ -4,8 +4,6 @@
 # include <stdlib.h>		/* calloc */
 # include <string.h>
 
-int status = 0;			/* zero is OK */
-
 #include "hstcal.h"
 # include "c_iraf.h"		/* for c_irafinit */
 
@@ -32,6 +30,7 @@ struct TrlBuf trlbuf = { 0 };
         
 int main (int argc, char **argv) {
 
+    int status = HSTCAL_OK;
 	char *input, *output;	/* file names */
 	char *mtype;        	/* MEMTYPE of output */
 	int printtime = NO;	/* print time after each step? */

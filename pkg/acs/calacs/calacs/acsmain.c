@@ -16,7 +16,6 @@
 /* CALACS driver: retrieves input table name and calls pipeline
 */
 
-int	status;		/* value of zero indicates OK */
 struct TrlBuf trlbuf = { 0 };
 
 /* Standard string buffer for use in messages */
@@ -43,13 +42,14 @@ int main(int argc, char **argv) {
 	int too_many = NO;	/* too many command-line arguments? */
 	int i, j;		/* loop indexes */
     unsigned nThreads = 0;
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	void c_irafinit (int, char **);
 	int CalAcsRun (char *, int, int, int, int, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd);
     void WhichError (int);
 
-	/* Initialize status to OK and MsgText to null */
+	/* Initialize MsgText to null */
 	status = ACS_OK;
 	MsgText[0] = '\0';
 	input[0] = '\0';

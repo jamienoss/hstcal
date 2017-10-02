@@ -72,8 +72,7 @@ int main (int argc, char **argv) {
     int n_in, n_out;	/* number of files in each list */
     int n;
     
-	/* Initialize status to OK and MsgText to null */
-	status     = WF3_OK;
+    int status = HSTCAL_OK;
 
     /* A structure to pass the calibration switches to WFC3CTE */
     CCD_Switch cte_sw;

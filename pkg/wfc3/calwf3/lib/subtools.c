@@ -22,7 +22,7 @@ int CreateEmptyChip(WF3Info *wf3, SingleGroup *full){
   /* Create a full size, but empty group, which contains necessary meta data
      alloc and init the full data with the group and sizes you want
   */
-
+  int status = HSTCAL_OK;
   int row, col;
 
   if (full->group_num == 1){
@@ -71,7 +71,7 @@ int Sub2Full(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int real_dq, int f
   flag is used to populate the DQ array when real_dq is false
   the chip is decided by group num
   */
-
+  int status = HSTCAL_OK;
   int sci_bin[2];			/* bin size of science image */
   int sci_corner[2];		/* science image corner location */
   int ref_bin[2];			/* bin size of full image */
@@ -149,6 +149,7 @@ int Full2Sub(WF3Info *wf3, SingleGroup *x, SingleGroup *full, int dq, int sci, i
   /* Take a full frame image and cut out the original subarray, this only
   works on one chip
   */
+  int status = HSTCAL_OK;
   int sci_bin[2];			/* bin size of science image */
   int sci_corner[2];		/* science image corner location */
   int ref_bin[2];			/* bin size of full image */
