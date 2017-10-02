@@ -27,7 +27,7 @@
 /*convert the sci and dq extensions to the long format*/
 int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
-    extern int status;
+    int status = HSTCAL_OK;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;
 
@@ -53,7 +53,7 @@ int makeRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 /* Transform a RAZ format image back into the separate input arrays calwf3 likes*/
 int undoRAZ(SingleGroup *cd, SingleGroup *ab, SingleGroup *raz){
 
-    extern int status;
+    int status = HSTCAL_OK;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;
 
@@ -87,7 +87,7 @@ full size raz image and all the rows
 */
 
 int makedqRAZ(SingleGroup *x, SingleGroup *raz){
-    extern int status;
+    int status = HSTCAL_OK;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;
 
@@ -122,7 +122,7 @@ int makedqRAZ(SingleGroup *x, SingleGroup *raz){
 /* Transform dq in a  RAZ format image back into the separate input arrays calwf3 likes*/
 int undodqRAZ(SingleGroup *x, SingleGroup *raz){
 
-    extern int status;
+    int status = HSTCAL_OK;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;
 
@@ -155,7 +155,7 @@ int undodqRAZ(SingleGroup *x, SingleGroup *raz){
  for use in the SINK pixel detection*/
 
 int makeSciSingleRAZ(SingleGroup *x, SingleGroup *raz){
-    extern int status;
+    int status = HSTCAL_OK;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;
 
@@ -189,7 +189,7 @@ int makeSciSingleRAZ(SingleGroup *x, SingleGroup *raz){
 /*convert  floating point arrays into raz format*/
 int makeFloatRaz(FloatTwoDArray *x, FloatTwoDArray  *raz, int group){
 
-    extern int status;
+    int status = HSTCAL_OK;
     int subcol = (RAZ_COLS/4); /* for looping over quads  */
     int i,j;
 

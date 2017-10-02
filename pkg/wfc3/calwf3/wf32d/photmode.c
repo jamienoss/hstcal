@@ -46,7 +46,7 @@ WF3Info *wf3     i: calibration switches, etc
 Hdr *hdr	io: image header to be modified
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	char *photstr;		/* the photmode string */
 	char *scratch;		/* scratch space string */

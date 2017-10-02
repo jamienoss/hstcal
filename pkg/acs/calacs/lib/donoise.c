@@ -47,7 +47,7 @@ int doNoise (ACSInfo *acs, SingleGroup *x, int *done) {
    int *done         o: true if we actually did assign error array values
    */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	float rn[NAMPS],rn2[NAMPS]; /* square of noise values for observation */
   float gain[NAMPS];          /* gain values for observation */

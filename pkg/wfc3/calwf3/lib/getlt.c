@@ -17,7 +17,7 @@ double ltm[2]    o: diagonal elements of MWCS linear transformation matrix
 double ltv[2]    o: MWCS linear transformation vector, one indexed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int GetKeyDbl (Hdr *, char *, int, double, double *);
 
 	/* Get linear transformation info for pixel coordinates. */
@@ -53,7 +53,7 @@ double ltm[2]    o: diagonal elements of MWCS linear transformation matrix
 double ltv[2]    o: MWCS linear transformation vector, zero indexed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int GetLT (Hdr *, double *, double *);
 

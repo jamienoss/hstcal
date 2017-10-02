@@ -6,7 +6,7 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-extern int status;
+int status = HSTCAL_OK;
 
 /* DOUNIT: Call UNITCORR for all readouts of a MultiAccum.
 **

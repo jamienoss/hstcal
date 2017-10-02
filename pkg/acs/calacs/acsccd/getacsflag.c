@@ -47,7 +47,7 @@ static int checkSink (Hdr *, ACSInfo *, int *, int *);
 */
 int GetACSFlags (ACSInfo *acs, Hdr *phdr) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int missing = 0;    /* true if any calibration file is missing */
     int nsteps = 0;     /* number of calibration steps to perform */
@@ -109,7 +109,7 @@ static int checkAtoD (Hdr *phdr, ACSInfo *acs, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -155,7 +155,7 @@ static int checkBias (Hdr *phdr, ACSInfo *acs, int *missing, int *nsteps) {
    int *nsteps      io: incremented if this step can be performed
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -195,7 +195,7 @@ static int checkBlev (Hdr *phdr, ACSInfo *acs, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -237,7 +237,7 @@ static int checkCCD (Hdr *phdr, ACSInfo *acs, int *missing) {
        int *missing     io: incremented if the table is missing
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
     int calswitch;            /* returned by GetTabRef and ignored */
     int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
     void MissingFile (char *, char *, int *);
@@ -302,7 +302,7 @@ static int checkDQI (Hdr *phdr, ACSInfo *acs, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int GotFileName (char *);
     int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
@@ -341,7 +341,7 @@ static int checkSink (Hdr *phdr, ACSInfo *acs, int *missing, int *nsteps) {
        int *missing     io: incremented if the file is missing
        int *nsteps      io: incremented if this step can be performed
     */
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);

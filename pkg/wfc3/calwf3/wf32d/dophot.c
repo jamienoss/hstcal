@@ -76,7 +76,7 @@ int doPhot (WF3Info *wf32d, SingleGroup *x) {
 	   SingleGroup *x    io: image to be calibrated; primary header is modified
 	 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	PhotPar obs;
 	float photfnu;

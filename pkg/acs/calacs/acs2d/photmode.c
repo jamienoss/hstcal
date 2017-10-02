@@ -22,7 +22,7 @@ ACSInfo *acs    i: calibration switches, etc
 SingleGroup *x    io: image to be calibrated; primary header is modified
 */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     char *photstr;		/* the photmode string */
     char *scratch;

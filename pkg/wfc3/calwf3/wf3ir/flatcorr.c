@@ -4,7 +4,7 @@
 # include "wf3.h"
 # include "wf3info.h"
 
-extern int status;
+int status = HSTCAL_OK;
 
 static int flatcorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 

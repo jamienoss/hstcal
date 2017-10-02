@@ -130,7 +130,7 @@ WF3Info *wf3    i: calibration switches, etc
 SingleGroup *x    io: image to be calibrated; DQ array written to in-place
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	TblInfo tabinfo;	/* pointer to table descriptor, etc */
 	TblRow tabrow;		/* values read from a table row */
@@ -352,7 +352,7 @@ SingleGroup *x    io: image to be calibrated; DQ array written to in-place
 
 int OpenBpixTab (char *tname, TblInfo *tabinfo) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	tabinfo->tp = c_tbtopn (tname, IRAF_READ_ONLY, 0);
 	if (c_iraferr())
@@ -409,7 +409,7 @@ int OpenBpixTab (char *tname, TblInfo *tabinfo) {
 
 int ReadBpixTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	/* read in values from selection columns */
 	/* If AMP column exists, read it, otherwise it is not necessary */
@@ -470,7 +470,7 @@ int ReadBpixTab (TblInfo *tabinfo, int row, TblRow *tabrow) {
 
 int CloseBpixTab (TblInfo *tabinfo) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	c_tbtclo (tabinfo->tp);
 	if (c_iraferr())

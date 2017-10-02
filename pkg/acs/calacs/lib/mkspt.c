@@ -32,7 +32,7 @@ int mkNewSpt (char *in_list, char *mtype, char *output) {
     char    *output             o: rootname of output SPT file
 */
 
-    extern int  status;
+    int status = HSTCAL_OK;
     IRAFPointer tpin;
     int         n;
 	Hdr         header;		                /* SPT header */

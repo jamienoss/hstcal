@@ -66,7 +66,7 @@ int    LoadAsn (AsnInfo *asn) {
    **  asn            io: Association info structure
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
     void printInfo (AsnInfo *);
     int SetInput (AsnInfo *);
     int SetAsnSingle (AsnInfo *);
@@ -124,7 +124,7 @@ int    LoadAsn (AsnInfo *asn) {
 
 int SetAsnSingle (AsnInfo *asn){
 
-    extern int status;
+    int status = HSTCAL_OK;
     int numsp = 1;
     int i;
 
@@ -155,7 +155,7 @@ int SetInput (AsnInfo *asn) {
 /* Arguments:
 **  asn            io: Association info structure
 */
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* Local Variables */
     char filename[CHAR_FNAME_LENGTH+1];
@@ -434,7 +434,7 @@ int GetAsnTable (AsnInfo *asn) {
 /* Arguments:
 **    asn        o: Association info structure
 */
-    extern int status;
+    int status = HSTCAL_OK;
     /* Local variables */
     int i;                /* loop index */
     int nrows;            /* number of rows in ASNTAB */
@@ -931,7 +931,7 @@ void initAsnInfo (AsnInfo *asn) {
 
 int allocAsnInfo (AsnInfo *asn, int numsp, int *spmems) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* Local variables */
     int i;            /* loop index */
@@ -1094,7 +1094,7 @@ int GetGlobalInfo (AsnInfo *asn) {
 /* Arguments:
 **    asn    io: association info structure
 */
-    extern int status;
+    int status = HSTCAL_OK;
     Hdr phdr;               /* primary header */
 
     char detector[ACS_FITS_REC+1];
@@ -1190,7 +1190,7 @@ int checkGlobalInfo (AsnInfo *asn) {
 /* Arguments:
 **    asn    io: Association info structure
 */
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* Check instrument = ACS */
     if (strncmp (asn->instr, "ACS", 3) != 0 ) {
@@ -1290,7 +1290,7 @@ static int IsProduct (char *input) {
 
 int GetAsnName ( char *filename, char *asn_name) {
 
-    extern int status;
+    int status = HSTCAL_OK;
     IODescPtr im;           /* descriptor for an image */
     Hdr phdr;               /* primary header */
 
@@ -1340,7 +1340,7 @@ int updateAsnTable (AsnInfo *asn, int prodid, int posid) {
 **    prodid        i: product id for member that needs to be updated
 **    posid        i: position id for member that needs to be updated
 */
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* Local variables */
     int col;            /* loop indexes */
@@ -1409,7 +1409,7 @@ int updateAsnTable (AsnInfo *asn, int prodid, int posid) {
 
 static int UpdateHdr (char *output) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     Hdr phdr;               /* primary header */
     IODescPtr im;        /* descriptor for output image */

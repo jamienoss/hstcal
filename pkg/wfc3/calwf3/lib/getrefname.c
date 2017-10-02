@@ -29,7 +29,7 @@ char *keyword     i: keyword name
 char *refname     o: directory name and reference file name
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int foundit;			/* true if keyword was found in ref */
 

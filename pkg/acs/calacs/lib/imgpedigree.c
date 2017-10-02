@@ -25,7 +25,7 @@
 
 int ImgPedigree (RefImage *ref) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	FitsKw key;		/* location of keyword in header */
 	IODescPtr im;		/* descriptor for primary header unit */

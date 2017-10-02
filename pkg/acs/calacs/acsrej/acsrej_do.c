@@ -32,7 +32,7 @@ static void closeSciDq (int, IODescPtr [], IODescPtr [], clpar *);
 */
 int acsrej_do (IRAFPointer tpin, char *outfile, char *mtype, clpar *par, int newpar[])
 {
-    extern int  status;
+    int status = HSTCAL_OK;
 
     IODescPtr   ipsci[MAX_FILES];   /* science image descriptor */
     IODescPtr   ipdq[MAX_FILES];    /* data quality image descriptor */

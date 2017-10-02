@@ -20,7 +20,7 @@ int line			 i: line of input data to subtract 1-d data from
 SingleGroupLine *b   i: second input data
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int i;
 	float da, db;		/* errors for a and b */

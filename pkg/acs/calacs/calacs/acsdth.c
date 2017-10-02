@@ -53,7 +53,7 @@ static int putEmptyDQ(char *, int, DQHdrData *, int);
 
 int AcsDth (char *in_list, char *output, int dthcorr, int printtime, int verbose) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	/*int option = 0;*/  /* For creating new output image */
 	/*int logit;*/  /* true if we should log file name */
@@ -177,7 +177,7 @@ static int putEmptyShortHD(char *fname, char *ename, int ever, ShortHdrData *x, 
 
 void InitDthTrl (char *inlist, char *output) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	IRAFPointer tpin;
 	int  n, nfiles;

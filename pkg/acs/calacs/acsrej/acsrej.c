@@ -25,7 +25,7 @@ static void InitRejTrl (char *, char *);
 int AcsRej (char *in_list, char *output, char *mtype, clpar *par, int newpar[]) 
 {
   
-  extern int      status;
+  int status = HSTCAL_OK;
   IRAFPointer     tpin;
   int             flag;
   int             old_status;
@@ -118,7 +118,7 @@ int AcsRej (char *in_list, char *output, char *mtype, clpar *par, int newpar[])
 
 static void InitRejTrl (char *input, char *output) {
   
-  extern int  status;
+  int status = HSTCAL_OK;
   IRAFPointer tpin;
   int         n;
   int         nfiles;                     /* Number of files in list */

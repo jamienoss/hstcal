@@ -71,7 +71,7 @@ Hdr *phdr             i: primary header of science file
 RefFileInfo *sciref  io: list of keyword,filename pairs
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int refimage_used = 0;	/* = 1 if do bias, dark, flat, or shadcorr */
 
@@ -213,7 +213,7 @@ Hdr *phdr             i: primary header of science file
 RefFileInfo *sciref  io: list of keyword,filename pairs
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int GetNewRef (Hdr *, char *, RefFileInfo *);
 

@@ -24,7 +24,7 @@ int posid		i: sub-product id for exposure
 int expid		i: id of exposure within sub-product
 WF3Info *wf3		o: exposure specific flags and info
 */
-	extern int status;
+	int status = HSTCAL_OK;
 	
 	char rootname[CHAR_FNAME_LENGTH+1];
 	char outroot[SZ_CBUF+1];
@@ -99,7 +99,7 @@ int GetSingle (AsnInfo *asn, WF3Info *wf3) {
 AsnInfo *asn      	i: calibration flags and other info
 WF3Info *wf3		o: exposure specific flags and info
 */
-	extern int status;
+	int status = HSTCAL_OK;
 	char rootname[CHAR_FNAME_LENGTH+1];
 	char outroot[SZ_CBUF+1];
 	void FindAsnRoot (char *, char *);

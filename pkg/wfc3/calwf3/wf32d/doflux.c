@@ -60,7 +60,7 @@ int doFlux (WF3Info *wf32d){
 	   WF3Info *wf3     i: calibration switches, etc
 	 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	SingleGroup chip2;
 	SingleGroup chip1;
 	double ratio;

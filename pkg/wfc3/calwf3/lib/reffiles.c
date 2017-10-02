@@ -44,7 +44,7 @@ char *keyword      i: keyword name of reference file
 char *filename     i: name of reference file
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	RefFileInfo *previous, *current, *newrec;
 	int foundit = 0;

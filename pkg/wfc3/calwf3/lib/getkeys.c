@@ -44,7 +44,7 @@ WF3Info *wf3  	io: calibration switches and info
 Hdr *phdr        i: primary header
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int nextend;			/* number of FITS extensions */
 	int i;

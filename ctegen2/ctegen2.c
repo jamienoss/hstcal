@@ -38,7 +38,7 @@ static void setAtomicInt(int * atom, const int value)
 }
 int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
 {
-    extern int status;
+    int status = HSTCAL_OK;
 
     if (!input || !output || !trapPixelMap || !ctePars)
         return (status = ALLOCATION_PROBLEM);
@@ -477,7 +477,7 @@ int populateTrapPixelMap(SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
 
     clock_t begin = clock();
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     const unsigned nRows = trapPixelMap->sci.data.ny;
     const unsigned nColumns = trapPixelMap->sci.data.nx;
@@ -553,7 +553,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
        is less than the readnoise.
 */
 
-    extern int status;
+    int status = HSTCAL_OK;
     if (!input || !output || !ctePars)
         return (status = ALLOCATION_PROBLEM);
 
@@ -561,7 +561,7 @@ int cteSmoothImage(const SingleGroup * input, SingleGroup * output, CTEParamsFas
     assert(input->sci.data.storageOrder == COLUMNMAJOR);
     output->sci.data.storageOrder = COLUMNMAJOR;
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     const unsigned nRows = input->sci.data.ny;
     const unsigned nColumns = input->sci.data.nx;

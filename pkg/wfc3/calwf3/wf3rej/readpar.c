@@ -45,7 +45,7 @@ static int strtor (char *, float []);
 int rejpar_in (clpar *par, int newpar[], int nimgs, float exptot, int *niter,
 	       float sigma[]) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     IRAFPointer     tp;
     IRAFPointer     colptr, colptr1;
@@ -279,7 +279,7 @@ int rejpar_in (clpar *par, int newpar[], int nimgs, float exptot, int *niter,
 
 static int strtor (char *str, float arr[]) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* indexes in the string; the substring to be copied to tmp (from
        which a numerical value will be read) runs from ip0 to ip

@@ -27,7 +27,7 @@ static int checkBiac (Hdr *, WF3Info *, int *);
 
 int GetCTEFlags (WF3Info *wf3, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int missing = 0;	/* true if any calibration file is missing */
 	int nsteps = 0;		/* number of calibration steps to perform */
@@ -73,7 +73,7 @@ static int checkCCD (Hdr *phdr, WF3Info *wf3, int *missing, int *nsteps) {
 	   int *nsteps      io: incremented if this step can be performed
 	 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
 	void MissingFile (char *, char *, int *);
@@ -109,7 +109,7 @@ WF3Info *wf3      i: switches, file names, etc
 int *missing     io: incremented if the file is missing
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int calswitch;
 	int GetSwitch (Hdr *, char *, int *);

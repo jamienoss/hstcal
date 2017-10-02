@@ -8,7 +8,7 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-extern int status;
+int status = HSTCAL_OK;
 
 /* IMAGEIO: Contains routines for reading and writing image
 ** data to be calibrated. These are the routines:

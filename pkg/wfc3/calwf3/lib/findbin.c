@@ -49,7 +49,7 @@ int FindLine (SingleGroup *x, SingleGroupLine *y,
        int *x0, *y0		o: location of start of subimage in ref image
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int sci_bin[2];			/* bin size of science image */
     int sci_corner[2];		/* science image corner location */
@@ -167,7 +167,7 @@ int FindLineHdr (Hdr *scihdr, Hdr *refhdr, int dimx, int refx,
        int *x0, *y0	o: location of start of subimage in ref image
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int sci_bin[2];			/* bin size of science image */
     int sci_corner[2];		/* science image corner location */
@@ -269,7 +269,7 @@ int FindBin (SingleGroup *x, SingleGroup *y, int *same_size,
        int *x0, *y0      o: location of start of subimage in ref image
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int sci_bin[2];			/* bin size of science image */
     int sci_corner[2];		/* science image corner location */
@@ -366,7 +366,7 @@ int FindBinIR (SingleNicmosGroup *x, SingleNicmosGroup *y, int *same_size,
        int *x0, *y0      o: location of start of subimage in ref image
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int sci_bin[2];			/* bin size of science image */
     int sci_corner[2];		/* science image corner location */

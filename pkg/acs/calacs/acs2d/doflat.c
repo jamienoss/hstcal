@@ -38,7 +38,7 @@ int doFlat (ACSInfo *acs2d, int extver, SingleGroup *x) {
    SingleGroup *x    io: image to be calibrated; written to in-place
    */
   
-	extern int status;
+	int status = HSTCAL_OK;
   
 	SingleGroupLine w, zl, ztrim;	/* scratch space */
 	ACSsect lfsect, elfsect;
@@ -196,7 +196,7 @@ int doFlat (ACSInfo *acs2d, int extver, SingleGroup *x) {
 
 static int divFlat (SingleGroup *x, char *flatname, ACSInfo *acs2d) {
   
-  extern int status;
+  int status = HSTCAL_OK;
   
   int pchipext;
   SingleGroupLine y, ytrim;                  /* scratch space */

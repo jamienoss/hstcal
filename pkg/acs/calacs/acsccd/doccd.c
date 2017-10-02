@@ -40,7 +40,7 @@ int DoCCD (ACSInfo *acs_info) {
        acs   i: calibration switches and info
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     SingleGroup * x;  /* used for both input and output */
     ACSInfo * acs;    /* hold a copy of the acs_info struct for each extension */

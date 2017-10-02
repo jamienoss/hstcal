@@ -28,7 +28,7 @@ int line		 i: line of input data to subtract 1-d data from
 SingleGroupLine *b	 i: second input data
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int i;
 	float da, db;		/* errors for a and b */
@@ -82,7 +82,7 @@ strip is removed from the data so that they are the same size before the subtrac
 In this case the size of *a does NOT match the size of *b
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int i,j;
 	float da, db;		/* errors for a and b */

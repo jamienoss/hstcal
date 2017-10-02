@@ -53,7 +53,7 @@ int doBlev (ACSInfo *acs, SingleGroup *x, int chip, float *meanblev,
    int *driftcorr    o: true means correction for drift along lines was applied
    */
 
-  extern int status;
+  int status = HSTCAL_OK;
 
   double biaslevel;           /* value to subtract from a line of image */
   double averagedrift;        /* drift averaged over all (output) columns */
@@ -333,7 +333,7 @@ static void FitToOverscan (SingleGroup *x, int ny, int trimy1,
    float rn         i: calibrated readnoise level for this amp
    */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double biaslevel;	/* bias level in one line of input image */
 	int too_few = 0;	/* number of lines with too few good pixels */

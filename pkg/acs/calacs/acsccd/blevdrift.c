@@ -56,7 +56,7 @@ int biassect[2]      i: section to use for finding bias level
 int *driftcorr       i: true if correction can be applied
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	double *scratch;
 	double value;		/* median of values in column */
 	double zerocol;		/* zero point for fit */

@@ -17,7 +17,7 @@
 # include "wf3corr.h"    /* calibration switch names */
 # include "trlbuf.h"        /* trailer functions */
 
-extern int status;
+int status = HSTCAL_OK;
 
 static void mkNames (char *, char *, char *);
 
@@ -350,7 +350,7 @@ static void mkNames (char *rawfile, char *imafile, char *fltfile) {
 
 void InitIRTrl (char *input, char *output) {
 
-        extern int status;
+        int status = HSTCAL_OK;
 
         char trl_in[CHAR_LINE_LENGTH+1];         /* trailer filename for input */
         char trl_out[CHAR_LINE_LENGTH+1];        /* output trailer filename */

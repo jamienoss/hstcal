@@ -36,7 +36,7 @@ static int checkShad (Hdr *, WF3Info *, int *, int *);
 
 int Get2dFlags (WF3Info *wf32d, Hdr *phdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int missing = 0;	/* true if any calibration file is missing */
 	int nsteps = 0;		/* number of calibration steps to perform */
@@ -90,7 +90,7 @@ WF3Info *wf32d   i: switches, file names, etc
 int *missing     io: incremented if the table is missing
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int calswitch;			/* returned by GetTabRef and ignored */
 	int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
 	void MissingFile (char *, char *, int *);
@@ -139,7 +139,7 @@ int *missing     io: incremented if the file is missing
 int *nsteps      io: incremented if this step can be performed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int calswitch; 
 	int GetSwitch (Hdr *, char *, int *);
@@ -220,7 +220,7 @@ int *missing     io: incremented if the table is missing
 int *nsteps      io: incremented if this step can be performed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int GotFileName (char *);
 	int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
@@ -274,7 +274,7 @@ int *missing     io: incremented if a file is missing
 int *nsteps      io: incremented if this step can be performed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int calswitch;
 	int GetSwitch (Hdr *, char *, int *);
@@ -408,7 +408,7 @@ int *missing     io: incremented if the table is missing
 int *nsteps      io: incremented if this step can be performed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
 	int GotFileName (char *);
@@ -445,7 +445,7 @@ int *missing     io: incremented if the file is missing
 int *nsteps      io: incremented if this step can be performed
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int calswitch;
 	int GetSwitch (Hdr *, char *, int *);

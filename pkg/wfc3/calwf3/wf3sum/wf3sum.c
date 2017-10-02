@@ -69,7 +69,7 @@ static void FreeWf3Input (char **, int);
 
 int Wf3Sum (char *input, char *output, char *mtype, int printtime, int verbose){
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	IRAFPointer tpin; 
 
@@ -232,7 +232,7 @@ Wf3SumInfo *wf3  io: calibration switches and info
 Hdr *phdr         i: primary header
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int sdqflags;			/* "serious" data quality flags */
 	int nextend;			/* number of FITS extensions */
 	int nrptexp;			/* number of exposures */
@@ -296,7 +296,7 @@ Hdr *phdr         i: primary header
 
 static int SumGrps (Wf3SumInfo *wf3, char *mtype) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 	SingleGroup x;			/* first imset */
 	SingleGroupLine y;		/* line from Nth imset */
 	double exptime;			/* exposure time of current image */
@@ -478,7 +478,7 @@ double *expend    i: last exposure end time read from input file
 int nimages       i: the number of imsets that were combined
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	int PutKeyDbl (Hdr *, char *, double, char *);
 	int PutKeyInt (Hdr *, char *, int, char *);
 	int PutKeyStr (Hdr *, char *, char *, char *);
@@ -575,7 +575,7 @@ int line	     i: line from input/output to be summed
 SingleGroupLine *b   i: second input data line
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int i;
 	short dqa, dqb, dqab;	/* data quality for a, b, combined */
@@ -606,7 +606,7 @@ SingleGroupLine *b   i: second input data line
 
 static void InitSumTrl (char *input, char *output) {
 	
-	extern int status;
+	int status = HSTCAL_OK;
 	IRAFPointer tpin;
 	int n;
 	

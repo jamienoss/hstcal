@@ -42,7 +42,7 @@ status gets passed up for use in caller.
 int Wf3Rej (char *in_list, char *output, char *mtype, clpar *par, int newpar[], int makespt) 
 {
 
-    extern int      status;
+    int status = HSTCAL_OK;
     IRAFPointer     tpin;
     int             flag;
     int		    old_status;
@@ -184,7 +184,7 @@ int Wf3Rej (char *in_list, char *output, char *mtype, clpar *par, int newpar[], 
 
 int InitRejTrl (char *input, char *output) {
 
-    extern int  status;
+    int status = HSTCAL_OK;
     IRAFPointer tpin;
     int         n;
     int         nfiles;             /* Number of files in list */

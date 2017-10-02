@@ -19,7 +19,7 @@ int line			 i: line in input data to operate on
 SingleGroupLine *b   i: second input data
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int i;
 	float a_sci, b_sci;	/* science data values from a and b */
@@ -64,7 +64,7 @@ SingleGroupLine *a   	io: input data; output product
 SingleGroupLine *b   	 i: second input data
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int i;
 	float a_sci, b_sci;	/* science data values from a and b */

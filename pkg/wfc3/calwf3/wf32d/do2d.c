@@ -73,7 +73,7 @@ WF3Info *wf32d   i: calibration switches and info
 int extver       i: "imset" number, the current set of extensions
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	SingleGroup x;	/* used for both input and output */
 	int option = 0;
@@ -465,7 +465,7 @@ static void ShadMsg (WF3Info *wf32d, int extver) {
 
 static int OscnTrimmed (Hdr *phdr, Hdr *hdr) {
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double ltv1, ltv2;
 	int blevcorr;

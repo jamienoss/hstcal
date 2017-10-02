@@ -124,7 +124,7 @@ int InitTrlFile (char *inlist, char *output)
 char *inlist        i: list of input trailer filenames
 char *output        i: full filename of output (final) trailer file
 */
-    extern int status;
+    int status = HSTCAL_OK;
 
     IRAFPointer tpin;
     FILE * ip = NULL;
@@ -295,7 +295,7 @@ static int AppendTrlFile(void)
         'tmpptr' buffer used during reallocation of oprefix buffer size.
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
     char buf[CHAR_LINE_LENGTH+1];
 
     char *oprefix;
@@ -376,7 +376,7 @@ int WriteTrlFile (void)
         This function closes the trailer file.
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     /* Now that we have copied the information to the final
         trailer file, we can close it and the temp file...
@@ -391,7 +391,7 @@ int InitTrlBuf (void)
     /* This initialization routine must be called before any others in this
         file.
     */
-    extern int status;
+    int status = HSTCAL_OK;
 
     trlbuf.trlfile[0] = '\0';
     trlbuf.fp = NULL;
@@ -453,7 +453,7 @@ static void AddTrlBuf (const char *message)
     /* arguments:
     char *message         i: new trailer file line to add to buffer
     */
-    extern int status;
+    int status = HSTCAL_OK;
 
     if ( ! trlbuf.init )
         assert(0); //TRLBUF NOT INIT, YOU MAY HAVE PROBLEMS
@@ -477,7 +477,7 @@ void InitTrlPreface (void)
     /*
         This function will copy contents of the buffer into the preface
     */
-    extern int status;
+    int status = HSTCAL_OK;
 
     trlbuf.preface = realloc (trlbuf.preface, (strlen(trlbuf.buffer) +2));
     if (trlbuf.preface == NULL) {
@@ -514,7 +514,7 @@ static void ResetTrlBuf (void)
         already exists!
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     free(trlbuf.buffer);
     trlbuf.buffer = realloc(NULL, initLength);
@@ -570,7 +570,7 @@ void CloseTrlBuf (void)
         It will then close any open trailer files as well.
     */
 
-    extern int status;
+    int status = HSTCAL_OK;
     FILE *ofp;
 
     /* Do we have any messages which need to be written out? */

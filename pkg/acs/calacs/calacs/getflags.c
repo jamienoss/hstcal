@@ -31,7 +31,7 @@ CalSwitch *sw   o: values (0 or 1) of calibration switches
 Hdr *phdr       i: primary header
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	FitsKw key;		/* keyword location in header */
     char flashkey[ACS_CBUF];
 
@@ -115,7 +115,7 @@ char *calswitch  i: name of keyword (e.g. FLATCORR)
 int *flag        o: value (0 or 1) of calibration switch
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	int GetSwitch (Hdr *, char *, int *);
 

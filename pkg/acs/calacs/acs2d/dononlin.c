@@ -49,7 +49,7 @@ int *gsat         o: > 0 if global saturation limit exceeded
 int *lsat         o: > 0 if locally saturated pixels found
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double local_limit;	/* max local rate * exposure time */
 	double ratio;		/* ratio of true to observed count rate */

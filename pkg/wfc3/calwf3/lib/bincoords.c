@@ -45,7 +45,7 @@ double offset[2]  i: offset of binned image in units of unbinned pixels
 Hdr scihdr, errhdr, dqhdr   o: headers to receive modified coord parameters
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double ltm[2], ltv[2];
 	double cd[4];		/* cd1_1, cd1_2, cd2_1, cd2_2 */
@@ -168,7 +168,7 @@ double offset[2]  i: offset of binned image in units of unbinned pixels
 Hdr scihdr, errhdr, dqhdr, smplhdr, intghdr   o: headers to receive modified coord parameters
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 
 	double ltm[2], ltv[2];
 	double cd[4];		/* cd1_1, cd1_2, cd2_1, cd2_2 */
@@ -340,7 +340,7 @@ double value      i: value to be updated or added
 char *comment     i: comment to add, if keyword doesn't exist
 */
 
-	extern int status;
+	int status = HSTCAL_OK;
 	FitsKw key;		/* location of keyword in header */
 
 	key = findKw (hd, keyword);

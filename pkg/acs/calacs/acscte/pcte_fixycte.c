@@ -28,7 +28,7 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV], int onecpu) {
 
   /* status variable for return */
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i, i2, j, n;
@@ -290,7 +290,7 @@ int sim_readout_nit(const int arrx, double pix_cur[arrx], double pix_read[arrx],
                     const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
                     const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]) {
   /* status variable for return */
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i,j;
@@ -330,7 +330,7 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
                 const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]) {
 
   /* status variable for return */
-  extern int status;
+  int status = HSTCAL_OK;
 
   /* iteration variables */
   int i, l;

@@ -32,7 +32,7 @@ static int checkShad (Hdr *, ACSInfo *, int *, int *);
 
 int Get2dFlags (ACSInfo *acs2d, Hdr *phdr) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int missing = 0;	/* true if any calibration file is missing */
     int nsteps = 0;		/* number of calibration steps to perform */
@@ -100,7 +100,7 @@ static int checkCCD (Hdr *phdr, ACSInfo *acs2d, int *missing) {
    int *missing     io: incremented if the table is missing
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
     int calswitch;			/* returned by GetTabRef and ignored */
     int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
     void MissingFile (char *, char *, int *);
@@ -139,7 +139,7 @@ static int checkDark (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -183,7 +183,7 @@ static int checkDarkCTE (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -227,7 +227,7 @@ static int checkFlash (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
        int *nsteps      io: incremented if this step can be performed
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -299,7 +299,7 @@ static int checkFlashCTE (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) 
        int *nsteps      io: incremented if this step can be performed
      */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -378,7 +378,7 @@ static int checkDQI (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
    int *nsteps      io: incremented if this step can be performed
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int GotFileName (char *);
     int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
@@ -420,7 +420,7 @@ static int checkFlat (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
    int *nsteps      io: incremented if this step can be performed
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -538,7 +538,7 @@ static int checkNonLin (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
    int *nsteps      io: incremented if this step can be performed
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);
@@ -601,7 +601,7 @@ static int checkPhot (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
    int *nsteps      io: incremented if this step can be performed
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int GetTabRef (RefFileInfo *, Hdr *, char *, RefTab *, int *);
     int GotFileName (char *);
@@ -638,7 +638,7 @@ static int checkShad (Hdr *phdr, ACSInfo *acs2d, int *missing, int *nsteps) {
    int *nsteps      io: incremented if this step can be performed
    */
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int calswitch;
     int GetSwitch (Hdr *, char *, int *);

@@ -38,7 +38,7 @@
 # define  FATAL   1
 # define  WARNING 2
 
-extern int status;
+int status = HSTCAL_OK;
 
 /* GETNLINDATA: Read linearity coefficients and their associated
 ** data quality flags and node values from the NLINFILE reference file.
@@ -752,7 +752,7 @@ static int strtor (char *, float []);
 int crrpar_in (clpar *par, int newpar[], int nimgs, float exptot, int *niter,
 	       float sigma[]) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     IRAFPointer     tp;
     IRAFPointer     colptr, colptr1, colptr2;
@@ -982,7 +982,7 @@ int crrpar_in (clpar *par, int newpar[], int nimgs, float exptot, int *niter,
 
 static int strtor (char *str, float arr[]) {
 
-    extern int status;
+    int status = HSTCAL_OK;
 
     int	    ip;         /* index of the string to be searched */
     int	    n, i, ipx;

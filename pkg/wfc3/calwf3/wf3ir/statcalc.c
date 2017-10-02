@@ -7,7 +7,7 @@
 # include "wf3.h"
 # include "wf3info.h"
 
-extern int status;
+int status = HSTCAL_OK;
 
 /* STATCALC: Compute statistics for science images. The min, max,
 ** mean and standard deviation of "good" (unflagged) pixels are computed
