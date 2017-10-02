@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "hstcalerr.h"
 #include "hstcal.h"
 #include "c_iraf.h"
 #include "imphttab.h"

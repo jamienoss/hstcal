@@ -1,4 +1,5 @@
 # include <fitsio.h>
+#include "hstcalerr.h"
 # include "ctables.h"
 
 int c_tbtacc (char *tablename) {
