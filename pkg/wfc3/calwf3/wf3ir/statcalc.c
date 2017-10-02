@@ -8,8 +8,6 @@
 # include "wf3.h"
 # include "wf3info.h"
 
-int status = HSTCAL_OK;
-
 /* STATCALC: Compute statistics for science images. The min, max,
 ** mean and standard deviation of "good" (unflagged) pixels are computed
 ** for the entire image, as well as each quadrant. A tally of the
@@ -37,6 +35,7 @@ int statcalc (WF3Info *wf3, SingleNicmosGroup *input, short sdqflags) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int   ibeg, iend, jbeg, jend;	/* image limits */
 	int   npix;			/* number of good pixel values */
 	float mean,  min,  max;		/* statistics values */

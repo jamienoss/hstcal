@@ -33,8 +33,6 @@ static int RejFirstRead (short *, float *, short, float);
 static int RejCRs (short *, float *, short, float, int *);
 static void EstimateDarkandGlow(const short nsamp,float *time,float,float *tot_ADUs);
 
-int status = HSTCAL_OK;
-
 static int  crrej (WF3Info *, MultiNicmosGroup *, SingleNicmosGroup *);
 static void fitsamps (const short, float *, float *, short *,float *, float *, float,
         float *, float *, short *, float *, short, short, float, float);
@@ -60,6 +58,8 @@ int cridcalc (WF3Info *wf3, MultiNicmosGroup *input, SingleNicmosGroup *crimage)
      ** crimage  o: CR reject output image
      **     flat    i: input flatfield image -- REMOVED
      */
+
+    int status = HSTCAL_OK;
 
     /* Function definitions */
     void PrSwitch (char *, int);
@@ -204,6 +204,7 @@ int cridcalc (WF3Info *wf3, MultiNicmosGroup *input, SingleNicmosGroup *crimage)
          */
 
         /* Local variables */
+        int status = HSTCAL_OK;
         short i, j, k, l;       /* pixel and loop indexes */
         short ibeg, iend, jbeg, jend;   /* loop limits */
         short nsamp;            /* number of samples for pixel */

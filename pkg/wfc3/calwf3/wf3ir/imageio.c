@@ -9,8 +9,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 /* IMAGEIO: Contains routines for reading and writing image
 ** data to be calibrated. These are the routines:
 **
@@ -47,6 +45,7 @@ int getPriHdr (WF3Info *wf3, Hdr *PriHdr) {
 
 	/* Local variables */
 	IODescPtr im;		/* file descriptor pointer */
+    int status = HSTCAL_OK;
 
 	/* Open the image */
 	im = openInputImage (wf3->input, "", 0);
@@ -83,6 +82,8 @@ int getRawData (WF3Info *wf3, MultiNicmosGroup *in) {
 **	wf3	i: WFC3 info structure
 **	in	o: input image data
 */
+
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int getGroupInfo (WF3Info *, SingleNicmosGroup *);
@@ -134,6 +135,8 @@ int putCalData (SingleNicmosGroup *out, char *fname) {
 **	fname	i: output file name
 */
 
+    int status = HSTCAL_OK;
+
 	/* Function definitions */
 	int updateHdr (SingleNicmosGroup *, char *);
 
@@ -170,6 +173,8 @@ int putCalDataSect (SingleNicmosGroup *out, char *fname, int x1, int y1,
 **	ysize	i: y size of section
 */
 
+    int status = HSTCAL_OK;
+
 	/* Function definitions */
 	int updateHdr (SingleNicmosGroup *, char *);
 
@@ -205,6 +210,7 @@ int putMultiCalData (MultiNicmosGroup *out, char *fname) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i;				/* loop index */
 
 	/* Function definitions */
@@ -244,7 +250,7 @@ int copyGroup (SingleNicmosGroup *to, SingleNicmosGroup *from) {
 **      to      o: new group
 **      from    i: group to be copied
 */
- 
+    int status = HSTCAL_OK;
         /* Initialize and allocate new group structure */
         initSingleNicmosGroup (to);
         if (allocSingleNicmosGroup 

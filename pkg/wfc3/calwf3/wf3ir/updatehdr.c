@@ -4,8 +4,6 @@
 # include "hstio.h"     /* defines HST I/O functions */
 # include "wf3.h"
 
-int status = HSTCAL_OK;
-
 /* UPDATEHDR: Update various keywords in output image header at the
 ** end of calibration processing. The keywords that get updated are:
 **
@@ -27,6 +25,7 @@ int updateHdr (SingleNicmosGroup *input, char *fname) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	void UCalVer (Hdr *);
@@ -71,6 +70,7 @@ int updateHdr (SingleNicmosGroup *input, char *fname) {
 int updMinMaxf (FloatHdrData *image) {
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	float min, max;		/* data min and max */
 
 	/* Function definitions */
@@ -94,6 +94,7 @@ int updMinMaxf (FloatHdrData *image) {
 int updMinMaxs (ShortHdrData *image) {
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	float min, max;		/* data min and max */
 
 	/* Function definitions */

@@ -8,8 +8,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 static int darkcorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 
 /* DoDarkIR: Call DARKCORR routine for each readout of a MultiAccum.
@@ -29,6 +27,7 @@ int doDarkIR (WF3Info *wf3, MultiNicmosGroup *input) {
 
 	/* Local variables */
 	SingleNicmosGroup dark;
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int getDarkImage (WF3Info *, SingleNicmosGroup *, int);
@@ -89,6 +88,7 @@ static int darkcorr (WF3Info *wf3, SingleNicmosGroup *input,
 */
 
         /* Local variables */
+        int status = HSTCAL_OK;
         int i1, i2, j1, j2;             /* stats pixel limits */
         short dqmask;                   /* mask for stat rejs */
         float low, high;                /* stat rej limits */

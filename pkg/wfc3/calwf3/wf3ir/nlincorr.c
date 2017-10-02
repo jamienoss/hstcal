@@ -9,8 +9,6 @@
 # include "wf3dq.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 static int nlincorr (WF3Info *, SingleNicmosGroup *, NlinData *,
 		     SingleNicmosGroup *);
 
@@ -39,6 +37,7 @@ int doNlinIR (WF3Info *wf3, MultiNicmosGroup *input,
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	NlinData nlin;
 
 	/* Function definitions */
@@ -134,6 +133,7 @@ static int nlincorr (WF3Info *wf3, SingleNicmosGroup *input, NlinData *nlin,
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i, j, li, lj, k;	/* pixel indexes */
 	int ibeg, iend;		/* loop limits */
 	int jbeg, jend;		/* loop limits */

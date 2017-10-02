@@ -8,8 +8,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 /* GETGROUPINFO: Get group-specific information, such as exposure time,
 ** data units, and TDF status.
 **
@@ -29,6 +27,7 @@ int getGroupInfo (WF3Info *wf3, SingleNicmosGroup *in) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int getExpTime   (WF3Info *, Hdr *);
@@ -60,6 +59,7 @@ int getExpTime (WF3Info *wf3, Hdr *header) {
 **	wf3	io: WFC3 info structure
 **	header	 i: image header
 */
+    int status = HSTCAL_OK;
 
 	/* Initialize the exposure time */
 	wf3->exptime[wf3->group-1] = 0;
@@ -98,6 +98,7 @@ int getDataUnits (WF3Info *wf3, Hdr *header) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	char units[9];				/* BUNIT keyword value */
 
 	/* Read the BUNIT keyword */
@@ -133,6 +134,7 @@ int getTDFTrans (WF3Info *wf3, Hdr *header) {
 **	wf3	io: WFC3 info structure
 **	header	 i: image header
 */
+    int status = HSTCAL_OK;
 
 	/* Read the TDFTRANS keyword */
 	wf3->tdftrans[wf3->group-1] = -1;

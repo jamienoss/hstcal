@@ -7,8 +7,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 /* DOUNIT: Call UNITCORR for all readouts of a MultiAccum.
 **
 ** Revision history:
@@ -23,6 +21,7 @@ int doUnitIR (WF3Info *wf3, MultiNicmosGroup *input) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int unitcorr (WF3Info *, SingleNicmosGroup *);
@@ -69,6 +68,7 @@ int unitcorr (WF3Info *wf3, SingleNicmosGroup *input) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i, j;		/* pixel indexes */
 	int ibeg, iend;		/* loop limits */
 	int jbeg, jend;		/* loop limits */

@@ -8,8 +8,6 @@
 # include "hstcalerr.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 /* DOIR: Applies IR calibration steps to an input science data file.
 ** All calibration steps modify the input image data in-place.
 **
@@ -65,6 +63,7 @@ int DoIR (WF3Info *wf3, MultiNicmosGroup *input, SingleNicmosGroup *crimage) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i;				/* loop index */
 	int overscan;			/* indicates whether overscan done */
 	char buff[SZ_FITS_REC+1];

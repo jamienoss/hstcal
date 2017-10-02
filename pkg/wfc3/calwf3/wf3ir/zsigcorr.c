@@ -9,8 +9,6 @@
 # include "wf3dq.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 static int zsigcorr (WF3Info *, MultiNicmosGroup *, NlinData *, 
 		     SingleNicmosGroup *);
 
@@ -34,6 +32,7 @@ int doZsigIR (WF3Info *wf3, MultiNicmosGroup *input, SingleNicmosGroup *zsig) {
 
 	/* Local variables */
 	NlinData nlin;
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int getNlinData  (WF3Info *, NlinData *);
@@ -119,6 +118,7 @@ static int zsigcorr (WF3Info *wf3, MultiNicmosGroup *input, NlinData *nlin,
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i, j, li, lj;		/* pixel indexes */
 	int ibeg, iend, jbeg, jend;	/* loop limits */
 	int li_beg, lj_beg;		/* loop limits */

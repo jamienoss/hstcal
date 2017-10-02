@@ -4,8 +4,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 static int zoffcorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 
 /* DOZOFF: Call the ZOFFCORR step for all MULTIACCUM groups.
@@ -24,6 +22,7 @@ int doZoffIR (WF3Info *wf3, MultiNicmosGroup *input, SingleNicmosGroup *zoff) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	void PrSwitch (char *, int);
@@ -63,6 +62,7 @@ static int zoffcorr (WF3Info *wf3, SingleNicmosGroup *input,
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i, j;		/* loop indexes */
 	double ztime;		/* zero-read exposure time */
 

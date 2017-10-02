@@ -17,8 +17,6 @@
 # include "wf3corr.h"    /* calibration switch names */
 # include "trlbuf.h"        /* trailer functions */
 
-int status = HSTCAL_OK;
-
 static void mkNames (char *, char *, char *);
 
 /* Do basic IR calibration.
@@ -52,6 +50,7 @@ int WF3ir (char *raw_file, char *flt_file, IR_Switch *ir_sw,
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	Hdr phdr;			/* Primary header */
 	MultiNicmosGroup  allinput;	/* Input image data */
 	SingleNicmosGroup crimage;	/* CR reject output image */

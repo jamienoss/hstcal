@@ -32,8 +32,6 @@ typedef struct {
 	int ccdchip;
 } TblRow;
 
-int status = HSTCAL_OK;
-
 static int dqicorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 
 
@@ -75,6 +73,7 @@ int doDQIIR (WF3Info *wf3, MultiNicmosGroup *input) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	TblInfo tabinfo;	/* pointer to table descriptor, etc */
 	TblRow  tabrow;		/* values read from a table row */
 
@@ -207,6 +206,7 @@ static int dqicorr (WF3Info *wf3, SingleNicmosGroup *input,
 **	input	io: image to be masked
 **	mask	 i: mask image
 */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	void aor (SingleNicmosGroup *, SingleNicmosGroup *);

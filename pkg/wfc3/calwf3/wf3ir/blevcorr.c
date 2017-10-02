@@ -9,10 +9,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
-
-
 /* DOBLEV: Apply blevcorr to each readout of a MultiAccum.
 **
 ** Revision history:
@@ -31,6 +27,7 @@ int doBlevIR (WF3Info *wf3, MultiNicmosGroup *input, SingleNicmosGroup *zoff) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int blevcorr (WF3Info *, SingleNicmosGroup *);
@@ -93,6 +90,7 @@ int blevcorr (WF3Info *wf3, SingleNicmosGroup *input) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i, j, q;		/* loop limits */
 	int i1, i2, j1, j2;	/* pixel indexes */
 	float mean;		/* ref pixel stats */

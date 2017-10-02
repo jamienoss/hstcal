@@ -8,8 +8,6 @@
 # include "wf3info.h"
 # include "trlbuf.h"
 
-int status = HSTCAL_OK;
-
 /* DoNoisIR: Call NOISCALC for each readout of a MultiAccum.
 **
 ** Revision history:
@@ -28,6 +26,7 @@ int doNoisIR (WF3Info *wf3, MultiNicmosGroup *input) {
 **	wf3	 i: WFC3 info structure
 **	input	io: input image
 */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int noiscalc (WF3Info *, SingleNicmosGroup *);
@@ -91,6 +90,7 @@ int noiscalc (WF3Info *wf3, SingleNicmosGroup *input) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i, j;		/* loop indexes */
 	int ibeg, iend;		/* loop limits */
 	int jbeg, jend;		/* loop limits */

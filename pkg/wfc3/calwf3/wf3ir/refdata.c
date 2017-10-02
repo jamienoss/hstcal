@@ -38,8 +38,6 @@
 # define  FATAL   1
 # define  WARNING 2
 
-int status = HSTCAL_OK;
-
 /* GETNLINDATA: Read linearity coefficients and their associated
 ** data quality flags and node values from the NLINFILE reference file.
 ** The coefficient, DQ, and node arrays are returned in a single NlinData 
@@ -56,6 +54,7 @@ int getNlinData (WF3Info *wf3, NlinData *nlin) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i;		/* loop index */
 	IODescPtr im;	/* image pointer */
 
@@ -175,6 +174,7 @@ int getNlinData (WF3Info *wf3, NlinData *nlin) {
 int getFlats (WF3Info *wf3, SingleNicmosGroup *in, SingleNicmosGroup *flat) {
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int dummy;
 	int rx, ry;
 	SingleNicmosGroup dflt;
@@ -309,6 +309,7 @@ int getFlatImage (WF3Info *wf3, RefImage *ref, SingleNicmosGroup *flat) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	int getRefImage (RefImage *, int, SingleNicmosGroup *);
@@ -331,6 +332,7 @@ int getDarkInfo (WF3Info *wf3) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i;			/* loop index */
 	char kword[8+1];	/* keyword name */
 
@@ -391,6 +393,7 @@ int getDarkImage (WF3Info *wf3, SingleNicmosGroup *dark1, int ngroup) {
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int i;					/* loop index */
 	double etime_lower, etime_upper;	/* dark exposure times */
 	SingleNicmosGroup dark2;		/* temporary dark image */
@@ -555,6 +558,7 @@ int getRefImage (RefImage *step, int extver, SingleNicmosGroup *image) {
 **	extver	 i: extension version number to load
 **	image	 o: reference image data
 */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 
@@ -615,6 +619,7 @@ void checkKeyI (char *filename, Hdr *header, char *keyword, int scival,
 	       int severity) {
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int keyval;
 
 	keyval = 0;
@@ -641,6 +646,7 @@ void checkKeyS (char *filename, Hdr *header, char *keyword, char *scival,
 	       int severity) {
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	char keyval[SZ_FITS_VAL+1];
 
 	keyval[0] = '\0';
@@ -667,6 +673,7 @@ void checkKeyS (char *filename, Hdr *header, char *keyword, char *scival,
 int RebinRef (SingleNicmosGroup *in, SingleNicmosGroup *ref, int avg) {
 
         /* Local variables */
+    int status = HSTCAL_OK;
         int rx, ry;             /* bin ratio of dark vs. science image */
         int x0, y0;             /* offset of dark vs. science image */
         int same_size;          /* true if no binning of dark image required */

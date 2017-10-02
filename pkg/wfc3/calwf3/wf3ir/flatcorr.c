@@ -5,8 +5,6 @@
 # include "wf3.h"
 # include "wf3info.h"
 
-int status = HSTCAL_OK;
-
 static int flatcorr (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
 
 /* DOFLAT: Call FLATCORR for each readout of a MultiAccum.
@@ -28,6 +26,7 @@ int doFlatIR (WF3Info *wf3, MultiNicmosGroup *input,
 */
 
 	/* Local variables */
+    int status = HSTCAL_OK;
 	int avg = 1;
 	SingleNicmosGroup flat;
 
@@ -100,6 +99,7 @@ int flatcorr (WF3Info *wf3, SingleNicmosGroup *input,
 **	input	io: image to be flat fielded
 **	flat	 i: flat field image
 */
+    int status = HSTCAL_OK;
 
 	/* Function definitions */
 	void adiv_noref (WF3Info *, SingleNicmosGroup *, SingleNicmosGroup *);
