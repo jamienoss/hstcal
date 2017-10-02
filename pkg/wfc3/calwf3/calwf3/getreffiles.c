@@ -1,4 +1,5 @@
 # include <stdio.h>
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "hstio.h"
 # include "wf3.h"

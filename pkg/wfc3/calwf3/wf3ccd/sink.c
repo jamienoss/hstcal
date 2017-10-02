@@ -46,6 +46,7 @@
 
 # include <time.h>
 # include <string.h>
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "wf3dq.h"
 # include "hstio.h"

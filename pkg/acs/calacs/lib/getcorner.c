@@ -1,5 +1,6 @@
 # include <stdio.h>
 # include <math.h>		/* for fabs */
+#include "hstcalerr.h"
 # include "hstio.h"		/* for Hdr */
 
 /* This routine gets from the extension header the keywords

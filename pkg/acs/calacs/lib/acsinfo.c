@@ -14,6 +14,7 @@
 */
 #include <string.h>
 
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "hstio.h"
 # include "acs.h"

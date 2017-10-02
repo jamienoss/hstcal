@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <ctype.h>
 # include <string.h>
+#include "hstcalerr.h"
 # include "hstio.h"
 # include <time.h>
 

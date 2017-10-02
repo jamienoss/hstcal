@@ -22,6 +22,7 @@ MLS: 08/2015 Added some initializations the clang complained about
 # include <ctype.h>
 # include <math.h>
 
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "hstio.h"
 # include "xtables.h"

@@ -2,6 +2,7 @@
 # include <math.h>
 # include <stdio.h>
 
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "hstio.h"	/* defines HST I/O functions */
 # include "wf3.h"

@@ -5,6 +5,7 @@
    ltm[0] and ltm[1] are assumed to be greater than zero.
 */
 
+#include "hstcalerr.h"
 # include "trlbuf.h"
 # include "wf3.h"
 

@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <string.h>
 
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "ximio.h"	/* defines IRAF imio functions */
 # include "hstio.h"	/* defines HST I/O functions */

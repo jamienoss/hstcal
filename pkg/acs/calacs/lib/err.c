@@ -3,6 +3,7 @@
 # include <stdio.h>
 # include <string.h>
 
+#include "hstcalerr.h"
 #include "hstcal.h"
 # include "hstio.h"	/* defines HST I/O functions */
 # include "acs.h"	/* defines ACS data structures */

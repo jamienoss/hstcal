@@ -1,3 +1,5 @@
+#include "hstcalerr.h"
+
 /* This routine uses the LTV and LTM keyword values to compute the corner
    location and pixel size.  The corner location
    and pixel size are in units of unbinned pixels. 

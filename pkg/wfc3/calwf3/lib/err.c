@@ -3,6 +3,7 @@
 # include <stdio.h>
 # include <string.h>
 
+#include "hstcalerr.h"
 # include "hstio.h"	/* defines HST I/O functions */
 # include "msg.h"	/* for MsgText and asnerror */
 # include "hstcal.h"

@@ -1,3 +1,5 @@
+#include "hstcalerr.h"
+
 /* This routine modifies some of the coordinate parameters in place
    to account for a linear transformation, a change in scale and
    a shift of the origin.  The parameters that are modified are

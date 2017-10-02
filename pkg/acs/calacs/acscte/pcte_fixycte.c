@@ -5,6 +5,7 @@
 #include <omp.h>
 # endif
 
+#include "hstcalerr.h"
 #include "pcte.h"
 #include "acs.h"
 #include "trlbuf.h"

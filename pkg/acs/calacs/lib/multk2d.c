@@ -1,3 +1,4 @@
+#include "hstcalerr.h"
 # include "hstio.h"
 
 /* The science data and the error array values are multiplied by k;
