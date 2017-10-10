@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "hstio.h"
 #include "hstcal_memory.h"
+
+// findPtr() returns index of ptr, index > 0. Returns 0 if not found.
+static int findPtr(PtrRegister * reg, void * ptr);
 
 void * newPtrRegister()
 {
@@ -68,21 +70,12 @@ void addPtr(PtrRegister * reg, void * ptr, void * freeFunc)
 }
 void freePtr(PtrRegister * reg, void * ptr)
 {
-    //Can't be used to free itself, use freeReg(), use of i > 0 in below for is reason.
+    //Can't be used to free itself, use freeReg(), use of i > 0 in findPtr() for is reason.
     if (!reg || !ptr || !reg->cursor)
         return;
 
-    int i;
-    Bool found = False;
-    for (i = reg->cursor; i > 0 ; --i)
-    {
-        if (reg->ptrs[i] == ptr)
-        {
-            found = True;
-            break;
-        }
-    }
-    if (!found)
+    int indx = findPtr(reg, ptr);
+    if (!indx)
     {
         freeOnExit(reg); // Note: Whilst the point of this outer IF accounts for direct calls to freePtr() with unregistered ptrs,
                          // it is also called internally from freeOnExit(). A bug in the register code is liable to create an infinite
@@ -91,22 +84,53 @@ void freePtr(PtrRegister * reg, void * ptr)
     }
 
     //call function to free ptr
-    reg->freeFunctions[i](ptr);
+    reg->freeFunctions[indx](ptr);
 
-    if (i == reg->cursor)
+    if (indx == reg->cursor)
     {
-        reg->ptrs[i] = NULL;
-        reg->freeFunctions[i] = NULL;
+        reg->ptrs[indx] = NULL;
+        reg->freeFunctions[indx] = NULL;
     }
     else
     {
         //move last one into gap to close - not a stack so who cares
-        reg->ptrs[i] = reg->ptrs[reg->cursor];
+        reg->ptrs[indx] = reg->ptrs[reg->cursor];
         reg->ptrs[reg->cursor] = NULL;
-        reg->freeFunctions[i] = reg->freeFunctions[reg->cursor];
+        reg->freeFunctions[indx] = reg->freeFunctions[reg->cursor];
         reg->freeFunctions[reg->cursor] = NULL;
     }
     --reg->cursor;
+}
+void updatePtr(PtrRegister * reg, void * oldPtr, void * newPtr)
+{
+    // It is by design that this cannot be used to manually remove a ptr,
+    // i.e. newPtr == NULL.
+    // The !newPtr below prevents this.
+    if (!reg || !reg->cursor || !oldPtr || !newPtr)
+        return;
+
+    int indx = findPtr(reg, oldPtr);
+    if (!indx)
+    {
+        freeOnExit(reg);
+        assert(0); //internal error: the ptr trying to be updated was not added to the register
+    }
+
+    reg->ptrs[indx] = newPtr;
+}
+int findPtr(PtrRegister * reg, void * ptr)
+{
+    //Can't be used to find itself, use of i > 0 in below for is reason.
+    // Because of this a returned value of 0 := not found
+    if (!reg || !reg->cursor || !ptr)
+        return 0;
+
+    for (int i = reg->cursor; i > 0 ; --i)
+    {
+        if (reg->ptrs[i] == ptr)
+            return i;
+    }
+    return 0; // ptr was not found
 }
 void freeAll(PtrRegister * reg)
 {

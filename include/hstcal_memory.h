@@ -46,6 +46,7 @@ void * newPtrRegister(); //Allocates a PtrRegister, calls initPtrRegister, regis
 void initPtrRegister(PtrRegister * reg); // initializes members, inc. alloc of registers
 void addPtr(PtrRegister * reg, void * ptr, void * freeFunc); // self expanding
 void freePtr(PtrRegister * reg, void * ptr); // non contracting
+void updatePtr(PtrRegister * reg, void * oldPtr, void * newPtr); // needed when registered ptrs get reallocated
 void freeOnExit(PtrRegister * reg); //only calls freeAll() followed by freeOnlyReg()
 void freeAll(PtrRegister * reg); //frees all ptrs registered (excluding itself)
 void freeReg(PtrRegister * reg); //frees ONLY the registers themselves and NOT the pointers in PtrRegister::ptrs
