@@ -6,6 +6,7 @@
 
 # include <time.h>
 # include <string.h>
+# include <stdbool.h>
 
 #include "hstcal.h"
 # include "hstio.h"
@@ -27,7 +28,7 @@ void InitCTETrl (char *, char *);
  */
 int ACScte (char *input, char *output, CalSwitch *cte_sw,
             RefFileInfo *refnames, int printtime, int verbose,
-            const unsigned nThreads, const unsigned cteAlgorithmGen, const char * pcteTabNameFromCmd) {
+            const unsigned nThreads, const unsigned cteAlgorithmGen, const char * pcteTabNameFromCmd, const bool forwardModelOnly) {
 
     extern int status;
 
@@ -35,7 +36,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
 
     Hdr phdr;		/* primary header for input image */
 
-    int DoCTE (ACSInfo *);
+    int DoCTE (ACSInfo *, const bool forwardModelOnly);
     int FileExists (char *);
     int GetCTEFlags (ACSInfo *, Hdr *);
     int GetACSKeys (ACSInfo *, Hdr *);
@@ -140,7 +141,7 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
         TimeStamp("Begin processing", acs.rootname);
     }
 
-    if (DoCTE(&acs)) {
+    if (DoCTE(&acs, forwardModelOnly)) {
         return (status);
     }
 

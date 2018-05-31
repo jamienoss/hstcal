@@ -37,7 +37,7 @@ static void setAtomicInt(int * atom, const int value)
         *atom = value;
     }
 }
-int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * ctePars)
+int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup * trapPixelMap, CTEParamsFast * ctePars, const bool forwardModelOnly)
 {
     extern int status;
 
@@ -117,37 +117,43 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 
                     /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
                       IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                    {unsigned NITINV;
-                    for (NITINV = 1; NITINV <= ctePars->n_forward - 1; ++NITINV)
+                    if (!forwardModelOnly)
                     {
-                        memcpy(tempModel, model, nRows*sizeof(*model));
-                        if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
-                        {
-                            setAtomicFlag(&runtimeFail);
-                            setAtomicInt(&status, localStatus);
-                            localOK = False;
-                            break;
-                        }
+						{unsigned NITINV;
+						for (NITINV = 1; NITINV <= ctePars->n_forward - 1; ++NITINV)
+						{
+							memcpy(tempModel, model, nRows*sizeof(*model));
+							if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
+							{
+								setAtomicFlag(&runtimeFail);
+								setAtomicInt(&status, localStatus);
+								localOK = False;
+								break;
+							}
 
-                        //Now that the updated readout has been simulated, subtract this from the model
-                        //to reproduce the actual image, without the CTE trails.
-                        //Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
-                        //AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
-                        {unsigned i;
-                        for (i = 0; i < nRows; ++i)
-                        {
-                            double delta = model[i] - observed[i];
-                            double delta2 = delta * delta;
 
-                            //DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
-                            delta *= delta2 / (delta2 + rnAmp2);
+							//Now that the updated readout has been simulated, subtract this from the model
+							//to reproduce the actual image, without the CTE trails.
+							//Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
+							//AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
+							{unsigned i;
+							for (i = 0; i < nRows; ++i)
+							{
+								double delta = model[i] - observed[i];
+								double delta2 = delta * delta;
 
-                            //Now subtract the simulated readout
-                            model[i] = tempModel[i] - delta;
-                        }}
-                    }}
+								//DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
+								delta *= delta2 / (delta2 + rnAmp2);
+
+								//Now subtract the simulated readout
+								model[i] = tempModel[i] - delta;
+							}}
+
+						}}
+                    }
                     if (!localOK)
                         break;
+
 
                     //Do the last forward iteration but don't dampen... no idea why???
                     memcpy(tempModel, model, sizeof(*model)*nRows);
@@ -158,15 +164,22 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
                         localOK = False;
                         break;
                     }
-                    //Now subtract the simulated readout
-                    {unsigned i;
-                    for (i = 0; i < nRows; ++i)
-                        model[i] = tempModel[i] - (model[i] - observed[i]);
+                    if (!forwardModelOnly)
+                    {
+						//Now subtract the simulated readout
+						{unsigned i;
+						for (i = 0; i < nRows; ++i)
+							model[i] = tempModel[i] - (model[i] - observed[i]);
+						}
                     }
 
-                    REDO = ctePars->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
-                            ctePars->thresh) : False;
-
+                    if (!forwardModelOnly)
+                    {
+                    	REDO = ctePars->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
+                    			ctePars->thresh) : False;
+                    }
+                    else
+                    	REDO = False;
                 } while (localOK && REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
 
                 // Update source array

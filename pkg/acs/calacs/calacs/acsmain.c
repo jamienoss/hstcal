@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
+# include <stdbool.h>
 
 #include "hstcal_memory.h"
 #include "hstcal.h"
@@ -49,9 +50,11 @@ int main(int argc, char **argv) {
 	int i, j;		/* loop indexes */
     unsigned nThreads = 0;
 
+    bool forwardModelOnly = False;
+
 	/* Function definitions */
 	void c_irafinit (int, char **);
-	int CalAcsRun (char *, int, int, int, int, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd);
+	int CalAcsRun (char *, int, int, int, int, const unsigned nThreads, const int gen1cte, const char * pcteTabNameFromCmd, const bool forwardModelOnly);
     void WhichError (int);
 
 	/* Initialize status to OK and MsgText to null */
@@ -132,6 +135,11 @@ int main(int argc, char **argv) {
             nThreads = 1;
 #endif
             continue;
+        }
+        else if (strncmp(argv[i], "--forward_model_only", 20) == 0)
+        {
+        	printf("WARNING: only running CTE through forward model");
+        	forwardModelOnly = True;
         }
         if (argv[i][0] == '-')
         {
@@ -232,7 +240,7 @@ int main(int argc, char **argv) {
 #endif
 
 	/* Call the CALACS main program */
-	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, nThreads, cteAlgorithmGen, pcteTabNameFromCmd)) {
+	if (CalAcsRun (input, printtime, save_tmp, verbose, debug, nThreads, cteAlgorithmGen, pcteTabNameFromCmd, forwardModelOnly)) {
 
         if (status == NOTHING_TO_DO){
             /* If there is just nothing to do,

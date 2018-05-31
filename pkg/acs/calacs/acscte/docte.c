@@ -29,7 +29,7 @@ static int OscnTrimmed (Hdr*, Hdr *);
 #define SZ_CBUF 24
 int getCTE_NAME(char * filename, char * cteName, int cteNameBufferLength);
 
-int DoCTE (ACSInfo *acs_info) {
+int DoCTE (ACSInfo *acs_info, const bool forwardModelOnly) {
 
     /* arguments:
        acs   i: calibration switches and info
@@ -45,7 +45,7 @@ int DoCTE (ACSInfo *acs_info) {
     Bool subarray;
     int CCDHistory (ACSInfo *, Hdr *);
     int doPCTEGen1 (ACSInfo *, SingleGroup *);
-    int doPCTEGen2 (ACSInfo *,  CTEParamsFast * pars, SingleGroup *);
+    int doPCTEGen2 (ACSInfo *,  CTEParamsFast * pars, SingleGroup *, const bool forwardModelOnly);
     int pcteHistory (ACSInfo *, Hdr *);
     int GetACSGrp (ACSInfo *, Hdr *);
     int OmitStep (int);
@@ -276,7 +276,7 @@ int DoCTE (ACSInfo *acs_info) {
             }
             else
             {
-                if ((status = doPCTEGen2(&acs[i], &ctePars, &x[i])))
+                if ((status = doPCTEGen2(&acs[i], &ctePars, &x[i], forwardModelOnly)))
                     return status;
             }
             double time_spent = ((double) clock()- begin +0.0) / CLOCKS_PER_SEC;

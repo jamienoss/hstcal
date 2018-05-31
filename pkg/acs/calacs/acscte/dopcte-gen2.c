@@ -30,7 +30,7 @@ static int insertAmp(SingleGroup * amp, const SingleGroup * image, const unsigne
 static int alignAmpData(FloatTwoDArray * amp, const unsigned ampID);
 static int alignAmp(SingleGroup * amp, const unsigned ampID);
 
-int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
+int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage, const bool forwardModelOnly)
 {
 
     /* arguments:
@@ -158,13 +158,16 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
             return (status = ALLOCATION_PROBLEM);
         }
 
-        //CALCULATE THE SMOOTH READNOISE IMAGE
-        trlmessage("(pctecorr) Calculating smooth readnoise image...");
-        if (ctePars->noise_mit != 0)
+        if (!forwardModelOnly)
         {
-            trlerror("(pctecorr) Only noise model 0 implemented!");
-            freeOnExit(&ptrReg);
-            return (status = ERROR_RETURN);
+			//CALCULATE THE SMOOTH READNOISE IMAGE
+			trlmessage("(pctecorr) Calculating smooth readnoise image...");
+			if (ctePars->noise_mit != 0)
+			{
+				trlerror("(pctecorr) Only noise model 0 implemented!");
+				freeOnExit(&ptrReg);
+				return (status = ERROR_RETURN);
+			}
         }
         SingleGroup smoothedImage;
         initSingleGroup(&smoothedImage);
@@ -176,12 +179,15 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
         }
         setStorageOrder(&smoothedImage, COLUMNMAJOR);
 
-        // do some smoothing on the data so we don't amplify the read noise.
-        if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, ctePars, ctePars->rn_amp)))
+        if (!forwardModelOnly)
         {
-            freeOnExit(&ptrReg);
-            return (status);
-       }
+			// do some smoothing on the data so we don't amplify the read noise.
+			if ((status = cteSmoothImage(&columnMajorImage, &smoothedImage, ctePars, ctePars->rn_amp)))
+			{
+				freeOnExit(&ptrReg);
+				return (status);
+			}
+        }
        trlmessage("(pctecorr) ...complete.");
 
        trlmessage("(pctecorr) Creating charge trap image...");
@@ -201,16 +207,32 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage)
        }
        trlmessage("(pctecorr) ...complete.");
 
-       trlmessage("(pctecorr) Running correction algorithm...");
-       //perform CTE correction
-       SingleGroup * cteCorrectedImage = &columnMajorImage;
-       if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, ctePars)))
+	   SingleGroup * cteCorrectedImage = &columnMajorImage;
+       if (!forwardModelOnly)
        {
-           freeOnExit(&ptrReg);
-           return status;
+		   trlmessage("(pctecorr) Running correction algorithm...");
+		   //perform CTE correction
+		   if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, ctePars, false)))
+		   {
+			   freeOnExit(&ptrReg);
+			   return status;
+		   }
+	       trlmessage("(pctecorr) ...complete.");
+       }
+       else
+       {
+    	   // DO forward model here (I think)
+    	   // Really we should be calling simulateColumnReadout() but actually just call above with forwardModelOnly = true, as a temp hack
+    	   trlmessage("(pctecorr) Running forward model simulation...");
+		   //perform CTE correction
+		   if ((status = inverseCTEBlur(&smoothedImage, cteCorrectedImage, &trapPixelMap, ctePars, true)))
+		   {
+			   freeOnExit(&ptrReg);
+			   return status;
+		   }
+		   trlmessage("(pctecorr) ...complete.");
        }
        freePtr(&ptrReg, &trapPixelMap);
-       trlmessage("(pctecorr) ...complete.");
 
         // add 10% correction to error in quadrature.
         float totalCounts = 0;

@@ -1,6 +1,8 @@
 #ifndef CTEGEN2_INCL
 #define CTEGEN2_INCL
 
+#include <stdbool.h>
+
 #include "hstio.h"
 
 typedef struct {
@@ -78,7 +80,7 @@ typedef struct {
 } CTEParamsFast;
 
 int inverseCTEBlurWithRowMajorIput(const SingleGroup * rsz, SingleGroup * rsc, const SingleGroup * trapPixelMap, CTEParamsFast * cte);
-int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, SingleGroup * trapPixelMap, CTEParamsFast * cte);
+int inverseCTEBlur(const SingleGroup * rsz, SingleGroup * rsc, SingleGroup * trapPixelMap, CTEParamsFast * cte, const bool forwardModelOnly);
 
 int simulatePixelReadout_v1_1(double * const pixelColumn, const float * const traps, const CTEParamsFast * const cte,
         const FloatTwoDArray * const rprof, const FloatTwoDArray * const cprof, const unsigned nRows);

@@ -1,6 +1,8 @@
 #ifndef CALACS_INCL
 #define CALACS_INCL
 
+# include <stdbool.h>
+
 #include "trlbuf.h"
 #include "hstcal.h"
 
