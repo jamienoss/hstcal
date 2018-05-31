@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
         }
         else if (strncmp(argv[i], "--forward_model_only", 20) == 0)
         {
-        	printf("WARNING: only running CTE through forward model");
+        	printf("WARNING: running CTE forward model only");
         	forwardModelOnly = True;
         }
         if (argv[i][0] == '-')
