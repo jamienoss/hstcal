@@ -221,7 +221,6 @@ int doPCTEGen2 (ACSInfo *acs, CTEParamsFast * ctePars, SingleGroup * chipImage, 
        }
        else
        {
-    	   printf("in here");
     	   // DO forward model here (I think)
     	   // Really we should be calling simulateColumnReadout() but actually just call above with forwardModelOnly = true, as a temp hack
     	   trlmessage("(pctecorr) Running forward model simulation...");

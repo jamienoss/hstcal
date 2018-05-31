@@ -107,85 +107,21 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
                 }
 
                 traps = &(PixColumnMajor(trapPixelMap->sci.data, 0, j));
-                unsigned NREDO = 0;
-                Bool REDO;
-                do
-                {
-                    REDO = False; /*START OUT NOT NEEDING TO MITIGATE CRS*/
-                    /*STARTING WITH THE OBSERVED IMAGE AS MODEL, ADOPT THE SCALING FOR THIS COLUMN*/
-                    memcpy(model, observed, nRows*sizeof(*observed));
-
-                    /*START WITH THE INPUT ARRAY BEING THE LAST OUTPUT
-                      IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
-                    if (!forwardModelOnly)
-                    {
-                    	printf("gremlins\n");
-						{unsigned NITINV;
-						for (NITINV = 1; NITINV <= ctePars->n_forward - 1; ++NITINV)
-						{
-							memcpy(tempModel, model, nRows*sizeof(*model));
-							if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
-							{
-								setAtomicFlag(&runtimeFail);
-								setAtomicInt(&status, localStatus);
-								localOK = False;
-								break;
-							}
 
 
-							//Now that the updated readout has been simulated, subtract this from the model
-							//to reproduce the actual image, without the CTE trails.
-							//Whilst doing so, DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE, THIS IS
-							//AN ADDITIONAL AID IN MITIGATING THE IMPACT OF READNOISE
-							{unsigned i;
-							for (i = 0; i < nRows; ++i)
-							{
-								double delta = model[i] - observed[i];
-								double delta2 = delta * delta;
+                memcpy(model, observed, nRows*sizeof(*observed));
+                if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
+				{
+					setAtomicFlag(&runtimeFail);
+					setAtomicInt(&status, localStatus);
+					localOK = False;
 
-								//DAMPEN THE ADJUSTMENT IF IT IS CLOSE TO THE READNOISE
-								delta *= delta2 / (delta2 + rnAmp2);
+				}
 
-								//Now subtract the simulated readout
-								model[i] = tempModel[i] - delta;
-							}}
 
-						}}
-                    }
-                    if (!localOK)
-                    {
 
-                    printf("uh oh\n");
-                        break;
-                    }
 
-                    //printf("in here101\n");
-                    //Do the last forward iteration but don't dampen... no idea why???
-                    memcpy(tempModel, model, sizeof(*model)*nRows);
-                    if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))
-                    {
-                        setAtomicFlag(&runtimeFail);
-                        setAtomicInt(&status, localStatus);
-                        localOK = False;
-                        break;
-                    }
-                    if (!forwardModelOnly)
-                    {
-						//Now subtract the simulated readout
-						{unsigned i;
-						for (i = 0; i < nRows; ++i)
-							model[i] = tempModel[i] - (model[i] - observed[i]);
-						}
-                    }
 
-                    if (!forwardModelOnly)
-                    {
-                    	REDO = ctePars->fix_rocr ? correctCROverSubtraction(traps, model, observed, nRows,
-                    			ctePars->thresh) : False;
-                    }
-                    else
-                    	REDO = False;
-                } while (localOK && REDO && ++NREDO < 5); //If really wanting 5 re-runs then use NREDO++
 
                 // Update source array
                 // Can't use memcpy as arrays of diff types
