@@ -119,6 +119,7 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
                       IF WE'VE CR-RESCALED, THEN IMPLEMENT CTEF*/
                     if (!forwardModelOnly)
                     {
+                    	printf("gremlins\n");
 						{unsigned NITINV;
 						for (NITINV = 1; NITINV <= ctePars->n_forward - 1; ++NITINV)
 						{
@@ -152,9 +153,13 @@ int inverseCTEBlur(const SingleGroup * input, SingleGroup * output, SingleGroup 
 						}}
                     }
                     if (!localOK)
+                    {
+
+                    printf("uh oh\n");
                         break;
+                    }
 
-
+                    //printf("in here101\n");
                     //Do the last forward iteration but don't dampen... no idea why???
                     memcpy(tempModel, model, sizeof(*model)*nRows);
                     if ((localStatus = simulateColumnReadout(model, traps, ctePars, cteRprof, cteCprof, nRows, ctePars->n_par)))

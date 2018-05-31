@@ -159,7 +159,7 @@ int DoCTE (ACSInfo *acs_info, const bool forwardModelOnly) {
     /* perform CTE correction */
     PCTEMsg(&acs[0], 1);
 
-    if (acs_info->pctecorr == PERFORM)
+    if (acs_info->pctecorr == PERFORM || forwardModelOnly)
     {
         PtrRegister ptrReg;//move this up later
         initPtrRegister(&ptrReg);
