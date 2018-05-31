@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 #endif
             continue;
         }
-        else if (strncmp(argv[i], "--forward_model_only", 20) == 0)
+        else if (strncmp(argv[i], "--forwardModelOnly", 20) == 0)
         {
         	printf("WARNING: running CTE forward model only");
         	forwardModelOnly = True;
