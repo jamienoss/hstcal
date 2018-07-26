@@ -118,6 +118,13 @@ int ACScte (char *input, char *output, CalSwitch *cte_sw,
         freeHdr (&phdr);
         return (status);
     }
+
+    // The CTE forward model only wants imsets but might be working on
+    // fits files that have passed  through the entire pipeline already
+    // thus accumulating other non-imset extensions which should be ignored.
+    if (forwardModelOnly)
+        acs.nimsets = findNImsets();
+
     /* If we have MAMA data, do not even proceed here... */
     if (acs.detector == MAMA_DETECTOR) {
         /* Return ACS_OK, since processing can proceed, just with a

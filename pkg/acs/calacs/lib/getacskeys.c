@@ -90,10 +90,10 @@ int GetACSKeys (ACSInfo *acs, Hdr *phdr) {
 	/* Find out how many extensions there are in this file. */
 	if (GetKeyInt (phdr, "NEXTEND", USE_DEFAULT, EXT_PER_GROUP, &nextend))
     return (status);
-  
+
 	/* Convert number of extensions to number of SingleGroups. */
 	acs->nimsets = nextend / EXT_PER_GROUP;
-	if (acs->nimsets < 1) {
+	if (acs->nimsets < EXT_PER_GROUP) {
     sprintf (MsgText, "NEXTEND = %d; must be at least %d.", nextend, EXT_PER_GROUP);
     trlerror (MsgText);
 		return (status = INVALID_VALUE);

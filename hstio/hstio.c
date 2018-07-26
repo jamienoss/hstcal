@@ -1579,6 +1579,14 @@ int getDQLine (DQHdrLine *x, int line_num) {
         return (getShortLine (x->iodesc, line_num, x->line));
 }
 
+int findNImsets(char *fname, unsigned * nimsets)
+{
+    assert(nimsets);
+
+    IODescPtr in;
+    in = openInputImage(fname,"",0); if (hstio_err()) return -1;
+}
+
 int getSingleGroup(char *fname, int ever, SingleGroup *x) {
         IODescPtr in;
         in = openInputImage(fname,"",0); if (hstio_err()) return -1;

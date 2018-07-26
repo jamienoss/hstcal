@@ -279,8 +279,8 @@ def _use_cfitsio(conf):
         conf.env.DEFINES += ['HAVE_CFITSIO=1']
     else:
         # Let pkg-config figure it out (default behavior)
-        conf.check_cfg(package='cfitsio', args='--cflags --libs', uselib_store='CFITSIO')
-
+        cfitsio = conf.check_cfg(package='cfitsio', args='--cflags --libs', uselib_store='CFITSIO')
+        print(cfitsio)
 
 def configure(conf):
     # NOTE: All of the variables in conf.env are defined for use by
