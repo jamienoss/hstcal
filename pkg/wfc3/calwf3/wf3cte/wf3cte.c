@@ -872,7 +872,7 @@ int raz2rsz(WF3Info *wf3, SingleGroup *raz, SingleGroup *rsz, double rnsig, int 
     rms=setdbl;
 
     for(NIT=1; NIT<=100; NIT++){
-        #pragma omp parallel for schedule(dynamic) \
+        //#pragma omp parallel for schedule(dynamic) \
         private(i,j,imid,obs_loc,rsz_loc,dptr)\
         shared(raz, rsz, rnsig,rms,nrms, zadj)
         for(i=0; i<RAZ_COLS; i++){
